@@ -67,7 +67,11 @@ inline uint64_t cyclecount(void){
 #elif defined __x86_64__
 #include <x86intrin.h>
 inline uint64_t cyclecount(void){ 
+#ifdef __PGI
+   return 0;
+#else
    return __rdtsc();
+#endif
 }
 #else
 #warning No cycle counter implemented for this architecture
