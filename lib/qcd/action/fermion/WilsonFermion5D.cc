@@ -418,7 +418,7 @@ PARALLEL_FOR_LOOP
   alltime+=usecond();
 }
 
-
+#if 0
 template<class Impl>
 void WilsonFermion5D<Impl>::DhopInternalOMPbench(StencilImpl & st, LebesgueOrder &lo,
 						 DoubledGaugeField & U,
@@ -538,8 +538,9 @@ void WilsonFermion5D<Impl>::DhopInternalOMPbench(StencilImpl & st, LebesgueOrder
   dslashtime +=usecond();
   alltime+=usecond();
 }
+#endif
 
-
+#if 0
 template<class Impl>
 void WilsonFermion5D<Impl>::DhopInternalL1bench(StencilImpl & st, LebesgueOrder &lo,
 						DoubledGaugeField & U,
@@ -655,7 +656,7 @@ void WilsonFermion5D<Impl>::DhopInternalL1bench(StencilImpl & st, LebesgueOrder 
   dslashtime +=usecond();
   alltime+=usecond();
 }
-
+#endif
 
 template<class Impl>
 void WilsonFermion5D<Impl>::DhopInternalCommsOverlapCompute(StencilImpl & st, LebesgueOrder &lo,
