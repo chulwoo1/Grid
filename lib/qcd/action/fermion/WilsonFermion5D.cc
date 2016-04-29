@@ -301,8 +301,8 @@ void WilsonFermion5D<Impl>::DhopInternalCommsThenCompute(StencilImpl & st, Lebes
   int nwork = U._grid->oSites();
   
   commtime -=usecond();
-  auto handle = st.HaloExchangeBegin(in,compressor);
-  st.HaloExchangeComplete(handle);
+  st.HaloExchangeBegin(in,compressor);
+  st.HaloExchangeComplete();
   commtime +=usecond();
 
   jointime -=usecond();
@@ -417,6 +417,7 @@ PARALLEL_FOR_LOOP
   dslashtime +=usecond();
   alltime+=usecond();
 }
+
 
 template<class Impl>
 void WilsonFermion5D<Impl>::DhopInternalOMPbench(StencilImpl & st, LebesgueOrder &lo,

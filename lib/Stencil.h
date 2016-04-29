@@ -581,25 +581,25 @@ PARALLEL_FOR_LOOP
 
 
       template<class compressor>
-      std::thread HaloExchangeBegin(const Lattice<vobj> &source,compressor &compress) {
+      void HaloExchangeBegin(const Lattice<vobj> &source,compressor &compress) {
 	Mergers.resize(0); 
 	Packets.resize(0);
 	HaloGather(source,compress);
-        return std::thread([&] { this->Communicate(); });
+//        return std::thread([&] { this->Communicate(); });
       }
 
       template<class compressor>
       void HaloExchange(const Lattice<vobj> &source,compressor &compress) 
       {
-	auto thr = HaloExchangeBegin(source,compress);
-        HaloExchangeComplete(thr);
+	    HaloExchangeBegin(source,compress);
+        HaloExchangeComplete();
       }
 
-      void HaloExchangeComplete(std::thread &thr) 
+      void HaloExchangeComplete() 
       {
 	CommsMerge(); // spins
 	jointime-=usecond();
-	thr.join();
+//	thr.join();
 	jointime+=usecond();
       }
 

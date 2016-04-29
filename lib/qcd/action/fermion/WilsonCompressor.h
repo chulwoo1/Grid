@@ -179,25 +179,25 @@ namespace QCD {
       {    };
 
     template < class compressor>
-    std::thread HaloExchangeOptBegin(const Lattice<vobj> &source,compressor &compress) {
+    void HaloExchangeOptBegin(const Lattice<vobj> &source,compressor &compress) {
       this->Mergers.resize(0); 
       this->Packets.resize(0);
       this->HaloGatherOpt(source,compress);
-      return std::thread([&] { this->Communicate(); });
+//      return std::thread([&] { this->Communicate(); });
     }
 
     template < class compressor>
     void HaloExchangeOpt(const Lattice<vobj> &source,compressor &compress) 
     {
-      auto thr = this->HaloExchangeOptBegin(source,compress);
-      this->HaloExchangeOptComplete(thr);
+      this->HaloExchangeOptBegin(source,compress);
+      this->HaloExchangeOptComplete();
     }
 
-    void HaloExchangeOptComplete(std::thread &thr) 
+    void HaloExchangeOptComplete() 
     {
 	this->CommsMerge(); // spins
 	this->jointime-=usecond();
-	thr.join();
+//	thr.join();
 	this->jointime+=usecond();
     }
 
