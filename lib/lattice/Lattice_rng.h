@@ -29,9 +29,13 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 #ifndef GRID_LATTICE_RNG_H
 #define GRID_LATTICE_RNG_H
 
-//#include <random>
+#ifdef BOOST_RANLUX
 #include <boost/random.hpp>
 #include <boost/nondet_random.hpp>
+#else
+#include <random>
+#endif
+
 namespace Grid {
 
 
@@ -111,19 +115,27 @@ namespace Grid {
     int _seeded;
     // One generator per site.
     // Uniform and Gaussian distributions from these generators.
-#ifdef RNG_RANLUX
+#ifdef BOOST_RANLUX
     typedef uint64_t      RngStateType;
     typedef boost::random::ranlux48 RngEngine;
     static const int RngStateCount = 15;
+#elif defined (RNG_RANLUX)
+    typedef uint64_t      RngStateType;
+    typedef std::ranlux48 RngEngine;
+    static const int RngStateCount = 15;
 #else
-    typedef boost::random::mt19937 RngEngine;
+    typedef std::mt19937 RngEngine;
     typedef uint32_t     RngStateType;
-    static const int     RngStateCount = boost::random::mt19937::state_size;
+    static const int     RngStateCount = std::mt19937::state_size;
 #endif
     std::vector<RngEngine>             _generators;
+#ifdef BOOST_RANLUX
     std::vector<boost::random::uniform_real_distribution<RealD> > _uniform;
     std::vector<boost::random::normal_distribution<RealD> >       _gaussian;
-
+#else
+    std::vector<std::uniform_real_distribution<RealD> > _uniform;
+    std::vector<std::normal_distribution<RealD> >       _gaussian;
+#endif
     void GetState(std::vector<RngStateType> & saved,int gen) {
       saved.resize(RngStateCount);
       std::stringstream ss;
@@ -160,8 +172,13 @@ namespace Grid {
 
     GridSerialRNG() : GridRNGbase() {
       _generators.resize(1);
+#ifdef BOOST_RANLUX
       _uniform.resize(1,boost::random::uniform_real_distribution<RealD>{0,1});
       _gaussian.resize(1,boost::random::normal_distribution<RealD>(0.0,1.0) );
+#else
+      _uniform.resize(1,std::uniform_real_distribution<RealD>{0,1});
+      _gaussian.resize(1,std::normal_distribution<RealD>(0.0,1.0) );
+#endif
       _seeded=0;
     }
 
@@ -240,7 +257,11 @@ namespace Grid {
 
 
     void SeedRandomDevice(void){
+#ifdef BOOST_RANLUX
       boost::random_device rd;
+#else
+	  std::random_device rd;
+#endif
       Seed(rd);
     }
     void SeedFixedIntegers(std::vector<int> &seeds){
@@ -265,8 +286,13 @@ namespace Grid {
       _vol =_grid->iSites()*_grid->oSites();
 
       _generators.resize(_vol);
+#ifdef BOOST_RANLUX
       _uniform.resize(_vol,boost::random::uniform_real_distribution<RealD>{0,1});
       _gaussian.resize(_vol,boost::random::normal_distribution<RealD>(0.0,1.0) );
+#else
+      _uniform.resize(_vol,std::uniform_real_distribution<RealD>{0,1});
+      _gaussian.resize(_vol,std::normal_distribution<RealD>(0.0,1.0) );
+#endif
       _seeded=0;
     }
 
@@ -285,8 +311,11 @@ namespace Grid {
 
       typename source::result_type init = src();
       RngEngine pseeder(init);
+#ifdef BOOST_RANLUX
       boost::random::uniform_int_distribution<uint64_t> ui;
-
+#else
+	  std::uniform_int_distribution<uint64_t> ui;
+#endif
       for(int gidx=0;gidx<gsites;gidx++){
 
 	int rank,o_idx,i_idx;
@@ -352,7 +381,11 @@ PARALLEL_FOR_LOOP
     };
 
     void SeedRandomDevice(void){
+#ifdef BOOST_RANLUX
       boost::random_device rd;
+#else
+      std::random_device rd;
+#endif
       Seed(rd);
     }
     void SeedFixedIntegers(std::vector<int> &seeds){
