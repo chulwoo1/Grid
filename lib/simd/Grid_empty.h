@@ -37,19 +37,10 @@ Author: neo <cossu@post.kek.jp>
 
 namespace Grid {
 namespace Optimization {
-
-  template<class vtype>
-  union uconv {
-    float f;
-    vtype v;
-  };
-
-  union u128f {
-    float v;
+  struct u128f {
     float f[4];
   };
-  union u128d {
-    double v;
+  struct u128d {
     double f[2];
   };
   
