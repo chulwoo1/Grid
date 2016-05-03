@@ -133,9 +133,12 @@ void WilsonFermion5D<Impl>::DhopDir(const FermionField &in, FermionField &out,in
 
   assert(dirdisp<=7);
   assert(dirdisp>=0);
-
+int maxiters = 1000;
+#pragma acc kernels default(present)
 PARALLEL_FOR_LOOP
-  for(int ss=0;ss<Umu._grid->oSites();ss++){
+
+//  for(int ss=0;ss<Umu._grid->oSites();ss++){
+for(int ss=0;ss<maxiters;ss++){
     for(int s=0;s<Ls;s++){
       int sU=ss;
       int sF = s+Ls*sU; 

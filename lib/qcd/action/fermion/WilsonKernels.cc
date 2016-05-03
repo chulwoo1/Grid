@@ -389,6 +389,7 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   vstream(out._odata[sF],result);
 };
 
+#pragma acc routine seq
 template<class Impl> 
 void WilsonKernels<Impl>::DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
 					  std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
