@@ -135,6 +135,10 @@ case ${ac_SIMD} in
        echo Configuring without SIMD support - only for compiler DEBUGGING!
        AC_DEFINE([EMPTY_SIMD],[1],[EMPTY_SIMD only for DEBUGGING] )
       ;;     
+     STD_COMPLEX_SIMD)
+       echo Configuring with std::complex in place of SIMD vector
+       AC_DEFINE([STD_COMPLEX_SIMD],[1],[STD_COMPLEX_SIMD only for DEBUGGING?] )
+      ;;     
      *)
      AC_MSG_ERROR([${ac_SIMD} flag unsupported as --enable-simd option\nRun ./configure --help for the list of options]); 
      ;;

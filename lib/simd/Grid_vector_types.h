@@ -40,6 +40,9 @@ Author: neo <cossu@post.kek.jp>
 #ifdef EMPTY_SIMD
 #include "Grid_empty.h"
 #endif
+#ifdef STD_COMPLEX_SIMD
+#include "Grid_stdcomplex.h"
+#endif
 #ifdef SSE4
 #include "Grid_sse4.h"
 #endif
