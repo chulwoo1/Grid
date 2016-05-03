@@ -217,6 +217,7 @@ void WilsonKernels<Impl>::DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField 
 
 
   // Need controls to do interior, exterior, or both
+//#pragma acc routine seq
 template<class Impl> 
 void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
 					   Vector<SiteHalfSpinor>  &buf,
@@ -229,7 +230,7 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   SiteSpinor result;
   StencilEntry *SE;
   int ptype;
-
+#if 0
   ///////////////////////////
   // Xp
   ///////////////////////////
@@ -391,7 +392,6 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   accumReconTm(result,Uchi);
 
   vstream(out._odata[sF],result);
-#if 0
 #endif
 };
 

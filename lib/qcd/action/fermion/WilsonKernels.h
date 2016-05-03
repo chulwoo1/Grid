@@ -46,6 +46,7 @@ namespace Grid {
      typedef FermionOperator<Impl> Base;
      
     public:
+//#pragma acc routine seq
      void DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
 			   Vector<SiteHalfSpinor>  &buf,
 			   int sF,int sU,const FermionField &in, FermionField &out);
