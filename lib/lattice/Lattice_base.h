@@ -93,8 +93,13 @@ class LatticeExpressionBase {};
   //template<class T> using Vector = std::vector<T,alignedAllocator<T> >;               // Aligned allocator??
   //template<class T> using Matrix = std::vector<std::vector<T,alignedAllocator<T> > >; // Aligned allocator??
 
+#ifdef DUMB_VECTOR
   template<class T> using Vector = DumbVector<T,alignedAllocator<T> >;               // Aligned allocator??
   template<class T> using Matrix = DumbVector<DumbVector<T,alignedAllocator<T> > >; // Aligned allocator??
+#else
+  template<class T> using Vector = std::vector<T,alignedAllocator<T> >;               // Aligned allocator??
+  template<class T> using Matrix = std::vector<std::vector<T,alignedAllocator<T> > >; // Aligned allocator??
+#endif
 
 template <typename Op, typename T1>                           
 class LatticeUnaryExpression  : public std::pair<Op,std::tuple<T1> > , public LatticeExpressionBase {

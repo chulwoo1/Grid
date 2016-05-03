@@ -218,6 +218,7 @@ PARALLEL_FOR_LOOP
       // provide the multiply by link that is differentiated between Gparity (with flavour index) and non-Gparity
       inline void multLink(SiteHalfSpinor &phi,const SiteDoubledGaugeField &U,const SiteHalfSpinor &chi,int mu,StencilEntry *SE,StencilImpl &St){
 
+#if 0
 	typedef SiteHalfSpinor vobj;
 	typedef typename SiteHalfSpinor::scalar_object sobj;
 
@@ -282,8 +283,8 @@ PARALLEL_FOR_LOOP
 	  mult(&phi(1),&U(1)(mu),&chi(1));
 	}
 	
+#endif
       }
-
       inline void DoubleStore(GridBase *GaugeGrid,DoubledGaugeField &Uds,const GaugeField &Umu)
       {
 	
