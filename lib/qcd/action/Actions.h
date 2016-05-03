@@ -110,8 +110,9 @@ typedef SymanzikGaugeAction<ConjugateGimplD>        ConjugateSymanzikGaugeAction
 #define FermOpTemplateInstantiate(A) \
   template class A<WilsonImplF>;		\
   template class A<WilsonImplD>;		\
-  template class A<GparityWilsonImplF>;		\
-  template class A<GparityWilsonImplD>;		
+
+  // template class A<GparityWilsonImplF>;		\
+  // template class A<GparityWilsonImplD>;		
 
 #define GparityFermOpTemplateInstantiate(A) 
 
@@ -203,19 +204,19 @@ typedef OverlapWilsonPartialFractionZolotarevFermion<WilsonImplF> OverlapWilsonP
 typedef OverlapWilsonPartialFractionZolotarevFermion<WilsonImplD> OverlapWilsonPartialFractionZolotarevFermionD;
 
 // Gparity cases; partial list until tested
-typedef WilsonFermion<GparityWilsonImplR>     GparityWilsonFermionR;
-typedef WilsonFermion<GparityWilsonImplF>     GparityWilsonFermionF;
-typedef WilsonFermion<GparityWilsonImplD>     GparityWilsonFermionD;
-typedef DomainWallFermion<GparityWilsonImplR> GparityDomainWallFermionR;
-typedef DomainWallFermion<GparityWilsonImplF> GparityDomainWallFermionF;
-typedef DomainWallFermion<GparityWilsonImplD> GparityDomainWallFermionD;
+// typedef WilsonFermion<GparityWilsonImplR>     GparityWilsonFermionR;
+// typedef WilsonFermion<GparityWilsonImplF>     GparityWilsonFermionF;
+// typedef WilsonFermion<GparityWilsonImplD>     GparityWilsonFermionD;
+/* typedef DomainWallFermion<GparityWilsonImplR> GparityDomainWallFermionR; */
+/* typedef DomainWallFermion<GparityWilsonImplF> GparityDomainWallFermionF; */
+/* typedef DomainWallFermion<GparityWilsonImplD> GparityDomainWallFermionD; */
 
-typedef WilsonTMFermion<GparityWilsonImplR> GparityWilsonTMFermionR;
-typedef WilsonTMFermion<GparityWilsonImplF> GparityWilsonTMFermionF;
-typedef WilsonTMFermion<GparityWilsonImplD> GparityWilsonTMFermionD;
-typedef MobiusFermion<GparityWilsonImplR> GparityMobiusFermionR;
-typedef MobiusFermion<GparityWilsonImplF> GparityMobiusFermionF;
-typedef MobiusFermion<GparityWilsonImplD> GparityMobiusFermionD;
+/* typedef WilsonTMFermion<GparityWilsonImplR> GparityWilsonTMFermionR; */
+/* typedef WilsonTMFermion<GparityWilsonImplF> GparityWilsonTMFermionF; */
+/* typedef WilsonTMFermion<GparityWilsonImplD> GparityWilsonTMFermionD; */
+/* typedef MobiusFermion<GparityWilsonImplR> GparityMobiusFermionR; */
+/* typedef MobiusFermion<GparityWilsonImplF> GparityMobiusFermionF; */
+/* typedef MobiusFermion<GparityWilsonImplD> GparityMobiusFermionD; */
 
 
   }}
