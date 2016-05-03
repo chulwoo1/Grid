@@ -40,16 +40,46 @@ namespace Grid {
     T* data;
     size_t len;
   public:
-    DumbVector(const size_t size = 0): len(0), data(NULL){
+    DumbVector(): len(0), data(NULL){
+    }
+
+    DumbVector(const size_t size): len(0), data(NULL){
       resize(size);
-    }    
+    }
+    DumbVector(const DumbVector<T> &r): len(0), data(NULL){
+      resize(r.size());
+      for(int i=0;i<len;i++) data[i] = r[i];
+    }
+    DumbVector(DumbVector<T>&&r): len(0), data(NULL){
+      if(data != NULL) delete[] data;
+      data = r.data;
+      len = r.len;
+      r.data = NULL;
+      r.len = 0;
+    }
+    DumbVector<T> & operator=(const DumbVector<T> &r){
+      resize(r.size());
+      for(int i=0;i<len;i++) data[i] = r.data[i];
+      return *this;
+    }
+    DumbVector<T> & operator=(DumbVector<T> &&r){
+      if(data != NULL) delete[] data;
+      data = r.data;
+      len = r.len;
+      r.data = NULL;
+      r.len = 0;
+      return *this;
+    }
+
     void resize(const size_t nlen){
       T* ndata = new T[nlen];
+
       if(data != NULL){
 	size_t cplen = nlen < len ? nlen : len;      
-	memcpy(ndata, data, cplen*sizeof(T));
+	for(int i=0;i<cplen;i++) ndata[i] = data[i];
 	delete[] data;
-      }
+	data = NULL;
+      }      
       data = ndata;     
       len = nlen;
     }
@@ -59,8 +89,14 @@ namespace Grid {
     size_t size() const{ return len; }
 
     ~DumbVector(){
-      if(data!=NULL) delete[] data;
+      if(data!=NULL){
+	delete[] data;
+	data = NULL;
+	len = 0;
+      }
     }
+
+    T const* ptr() const{ return data; }
   };
 
 
@@ -90,8 +126,8 @@ extern int GridCshiftPermuteMap[4][16];
 class LatticeBase {};
 class LatticeExpressionBase {};
 
-  //template<class T> using Vector = std::vector<T,alignedAllocator<T> >;               // Aligned allocator??
-  //template<class T> using Matrix = std::vector<std::vector<T,alignedAllocator<T> > >; // Aligned allocator??
+  // template<class T> using Vector = std::vector<T,alignedAllocator<T> >;               // Aligned allocator??
+  // template<class T> using Matrix = std::vector<std::vector<T,alignedAllocator<T> > >; // Aligned allocator??
 
   template<class T> using Vector = DumbVector<T,alignedAllocator<T> >;               // Aligned allocator??
   template<class T> using Matrix = DumbVector<DumbVector<T,alignedAllocator<T> > >; // Aligned allocator??
@@ -166,6 +202,7 @@ PARALLEL_FOR_LOOP
   }
   template <typename Op, typename T1,typename T2> strong_inline Lattice<vobj> & operator=(const LatticeBinaryExpression<Op,T1,T2> &expr)
   {
+    //printf("Lattice starting binary assignment, I am %p (data %p)\n",this,&this->_odata); fflush(stdout);
     GridBase *egrid(nullptr);
     GridFromExpression(egrid,expr);
     assert(egrid!=nullptr);
@@ -185,6 +222,7 @@ PARALLEL_FOR_LOOP
       _odata[ss]=eval(ss,expr);
 #endif
     }
+//printf("Lattice finished binary assignment, I am %p (data %p)\n",this,&this->_odata); fflush(stdout);
     return *this;
   }
   template <typename Op, typename T1,typename T2,typename T3> strong_inline Lattice<vobj> & operator=(const LatticeTrinaryExpression<Op,T1,T2,T3> &expr)
@@ -293,13 +331,28 @@ PARALLEL_FOR_LOOP
     template<class robj> strong_inline Lattice<vobj> & operator = (const Lattice<robj> & r){
       this->checkerboard = r.checkerboard;
       conformable(*this,r);
-      std::cout<<GridLogMessage<<"Lattice operator ="<<std::endl;
 PARALLEL_FOR_LOOP
         for(int ss=0;ss<_grid->oSites();ss++){
             this->_odata[ss]=r._odata[ss];
         }
         return *this;
     }
+
+//   //CK: This shouldn't be needed but is....
+//   Lattice<vobj> & operator = (const Lattice<vobj> & r){
+//     this->checkerboard = r.checkerboard;
+//     conformable(*this,r);
+//     assert(this->_odata.size() == r._odata.size());
+// PARALLEL_FOR_LOOP
+//         for(int ss=0;ss<_grid->oSites();ss++){
+//             this->_odata[ss]=r._odata[ss];
+//         }
+//         return *this;
+//   }  
+
+
+  
+
 
     // *=,+=,-= operators inherit behvour from correspond */+/- operation
     template<class T> strong_inline Lattice<vobj> &operator *=(const T &r) {
