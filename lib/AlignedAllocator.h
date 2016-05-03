@@ -53,6 +53,10 @@ namespace Grid {
 ////////////////////////////////////////////////////////////////////
 // A lattice of something, but assume the something is SIMDized.
 ////////////////////////////////////////////////////////////////////
+template<typename T> 
+using alignedAllocator = std::allocator<T>;
+
+#if 0
 template<typename _Tp>
 class alignedAllocator {
 public: 
@@ -145,6 +149,9 @@ operator==(const alignedAllocator<_Tp>&, const alignedAllocator<_Tp>&){ return t
 
 template<typename _Tp>  inline bool
 operator!=(const alignedAllocator<_Tp>&, const alignedAllocator<_Tp>&){ return false; }
+
+#endif
+
     
 }; // namespace Grid
 #endif
