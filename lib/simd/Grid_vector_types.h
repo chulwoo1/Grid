@@ -486,6 +486,27 @@ namespace Grid {
   // insert real into complex and zero imag;
   ////////////////////////////////////////////////////////////
 
+#ifdef STD_COMPLEX_SIMD
+  template <typename T> struct _uncomplexify{ typedef T type; };
+  template <typename T> struct _uncomplexify<std::complex<T> >{ typedef T type; };
+
+
+  template<class S,class V,IfReal<S>  = 0>	
+  inline Grid_simd<S,typename _uncomplexify<V>::type> toReal(const Grid_simd<std::complex<S>, V> &in){
+    Grid_simd<S,typename _uncomplexify<V>::type> ret;
+    ret.v = in.v.real();
+    return ret;
+  }
+  template<class S,class RV,IfReal<S> = 0 >	// must be a real arg
+  inline Grid_simd<std::complex<S>,std::complex<RV> > toComplex (const Grid_simd<S,RV> &in)
+  {
+    Grid_simd<std::complex<S>,std::complex<RV> > ret;
+    ret.v = std::complex<S>(in.v,0.0);
+    return ret;
+  }
+#else
+  //CK: These should really be handled within the SIMD wrappers
+
   //real = toReal( complex )
   template<class S,class V,IfReal<S>  = 0>	
   inline Grid_simd<S,V> toReal(const Grid_simd<std::complex<S>,V> &in)
@@ -519,12 +540,20 @@ namespace Grid {
     ret.v = conv.v;
     return ret;
   }
+#endif
+
+
 
   ///////////////////////////////
   // Define available types
   ///////////////////////////////
+#ifdef STD_COMPLEX_SIMD
+  typedef Grid_simd< float                 , SIMD_sFtype > vRealF;
+  typedef Grid_simd< double                , SIMD_sDtype > vRealD;
+#else
   typedef Grid_simd< float                 , SIMD_Ftype > vRealF;
   typedef Grid_simd< double                , SIMD_Dtype > vRealD;
+#endif
   typedef Grid_simd< std::complex< float > , SIMD_Ftype > vComplexF;
   typedef Grid_simd< std::complex< double >, SIMD_Dtype > vComplexD;
   typedef Grid_simd< Integer               , SIMD_Itype > vInteger;

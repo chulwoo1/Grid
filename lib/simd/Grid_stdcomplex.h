@@ -40,22 +40,25 @@ namespace Optimization {
   typedef std::complex<double> dtype;
   typedef std::complex<float> ftype;
 
+  typedef double rdtype;
+  typedef float rftype;
+
   struct Vsplat{
     //Complex float
     inline ftype operator()(float a, float b){
       return ftype(a,b);
     }
     // Real float
-    inline ftype operator()(float a){
-      return ftype(a,a);
+    inline rftype operator()(float a){
+      return a;
     }
     //Complex double
     inline dtype operator()(double a, double b){
       return dtype(a,b);
     }
     //Real double
-    inline dtype operator()(double a){
-      return dtype(a,a);
+    inline rdtype operator()(double a){
+      return a;
     }
     //Integer
     inline int operator()(Integer a){
@@ -68,9 +71,15 @@ namespace Optimization {
     inline void operator()(ftype a, float* F){
       memcpy(F,reinterpret_cast<float*>(&a),2*sizeof(float));
     }
+    inline void operator()(rftype a, float* F){
+      F[0] = a;
+    }
     //Double
     inline void operator()(dtype a, double* D){
       memcpy(D,reinterpret_cast<double*>(&a),2*sizeof(double));
+    }
+    inline void operator()(rdtype a, double* D){
+      D[0] = a;
     }
     //Integer
     inline void operator()(int a, Integer* I){
@@ -84,9 +93,15 @@ namespace Optimization {
     inline void operator()(float * a, ftype b){
       memcpy(a,reinterpret_cast<float*>(&b),2*sizeof(float));
     }
+    inline void operator()(float * a, rftype b){
+      a[0] = b;
+    }
     //Double
     inline void operator()(double * a, dtype b){
       memcpy(a,reinterpret_cast<double*>(&b),2*sizeof(double));
+    }
+    inline void operator()(double * a, rdtype b){
+      a[0] = b;
     }
   };
 
@@ -100,12 +115,12 @@ namespace Optimization {
       return dtype(a[0].real(),a[0].imag());
     }
     // Real float 
-    inline ftype operator()(float *a){
-      return ftype(a[0],a[1]);
+    inline rftype operator()(float *a){
+      return a[0];
     }
     // Real double
-    inline dtype operator()(double *a){
-      return dtype(a[0],a[1]);
+    inline rdtype operator()(double *a){
+      return a[0];
     }
     // Integer
     inline int operator()(Integer *a){
@@ -130,14 +145,25 @@ namespace Optimization {
   // Arithmetic operations
   /////////////////////////////////////////////////////
   struct Sum{
-    //Complex/Real float
+    //Complex float
     inline ftype operator()(ftype a, ftype b){
       return a+b;
     }
-    //Complex/Real double
+    //Real float    
+    inline rftype operator()(rftype a, rftype b){
+      return a+b;
+    }
+
+    //Complex double
     inline dtype operator()(dtype a, dtype b){
       return a+b;
     }
+
+    //Real double
+    inline rdtype operator()(rdtype a, rdtype b){
+      return a+b;
+    }
+
     //Integer
     inline int operator()(int a, int b){
       return a + b;
@@ -145,14 +171,24 @@ namespace Optimization {
   };
 
   struct Sub{
-    //Complex/Real float
+    //Complex float
     inline ftype operator()(ftype a, ftype b){
       return a-b;
     }
-    //Complex/Real double
+    //Real float    
+    inline rftype operator()(rftype a, rftype b){
+      return a-b;
+    }
+
+    //Complex double
     inline dtype operator()(dtype a, dtype b){
       return a-b;
     }
+    //Real double
+    inline rdtype operator()(rdtype a, rdtype b){
+      return a-b;
+    }
+
     //Integer
     inline int operator()(int a, int b){
       return a-b;
@@ -164,20 +200,28 @@ namespace Optimization {
     inline ftype operator()(ftype a, ftype b){
       return a*b;
     }
+    //Real float    
+    inline rftype operator()(rftype a, rftype b){
+      return a*b;
+    }
+
     // Complex double
     inline dtype operator()(dtype a, dtype b){
+      return a*b;
+    }
+    inline rdtype operator()(rdtype a, rdtype b){
       return a*b;
     }
   };
 
   struct Mult{
     // Real float
-    inline ftype operator()(ftype a, ftype b){
-      return ftype(a.real()*b.real(),a.imag()*b.imag());
+    inline rftype operator()(rftype a, rftype b){
+      return a*b;
     }
     // Real double
-    inline dtype operator()(dtype a, dtype b){
-      return dtype(a.real()*b.real(),a.imag()*b.imag());
+    inline rdtype operator()(rdtype a, rdtype b){
+      return a*b;
     }
     // Integer
     inline int operator()(int a, int b){
@@ -222,6 +266,10 @@ namespace Optimization {
   //////////////////////////////////////////////
   // Some Template specialization
   struct Permute{
+    static inline rftype Permute0(rftype in){ 
+      return in;
+    };
+
     static inline ftype Permute0(ftype in){ //AB -> BA
       return ftype(in.imag(),in.real());
     };
@@ -232,6 +280,10 @@ namespace Optimization {
       return in;
     };
     static inline ftype Permute3(ftype in){
+      return in;
+    };
+
+    static inline rdtype Permute0(rdtype in){ 
       return in;
     };
 
@@ -261,8 +313,8 @@ namespace Optimization {
   }
   //Real float Reduce
   template<>
-  inline Grid::RealF Reduce<Grid::RealF, ftype>::operator()(ftype in){ //2 floats
-    return in.real() + in.imag();
+  inline Grid::RealF Reduce<Grid::RealF, rftype>::operator()(rftype in){ //1 floats
+    return in;
   }
   
   
@@ -274,8 +326,8 @@ namespace Optimization {
   
   //Real double Reduce
   template<>
-  inline Grid::RealD Reduce<Grid::RealD, dtype>::operator()(dtype in){ //2 doubles
-    return in.real() + in.imag();
+  inline Grid::RealD Reduce<Grid::RealD, rdtype>::operator()(rdtype in){ //1 double
+    return in;
   }
 
   //Integer Reduce
@@ -292,6 +344,11 @@ namespace Optimization {
 
   typedef Optimization::ftype SIMD_Ftype;  // Single precision type
   typedef Optimization::dtype SIMD_Dtype; // Double precision type
+
+  typedef Optimization::rftype SIMD_sFtype;  // Single precision type
+  typedef Optimization::rdtype SIMD_sDtype; // Double precision type
+
+
   typedef int SIMD_Itype; // Integer type
 
   // prefetch utilities
