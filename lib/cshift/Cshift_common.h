@@ -44,7 +44,7 @@ public:
 // Gather for when there is no need to SIMD split with compression
 ///////////////////////////////////////////////////////////////////
 template<class vobj,class cobj,class compressor> void 
-Gather_plane_simple (const Lattice<vobj> &rhs,std::vector<cobj,alignedAllocator<cobj> > &buffer,int dimension,int plane,int cbmask,compressor &compress, int off=0)
+Gather_plane_simple (const Lattice<vobj> &rhs,Vector<cobj> &buffer,int dimension,int plane,int cbmask,compressor &compress, int off=0)
 {
   int rd = rhs._grid->_rdimensions[dimension];
 

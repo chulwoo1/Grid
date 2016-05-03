@@ -34,6 +34,38 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 
 namespace Grid {
 
+  template<typename T, typename ignore = std::allocator<T> >
+  class DumbVector{
+  private:
+    T* data;
+    size_t len;
+  public:
+    DumbVector(const size_t size = 0): len(0), data(NULL){
+      resize(size);
+    }    
+    void resize(const size_t nlen){
+      T* ndata = new T[nlen];
+      if(data != NULL){
+	size_t cplen = nlen < len ? nlen : len;      
+	memcpy(ndata, data, cplen*sizeof(T));
+	delete[] data;
+      }
+      data = ndata;     
+      len = nlen;
+    }
+    T& operator[](const size_t i){ return data[i]; }
+    const T& operator[](const size_t i) const{ return data[i]; }
+
+    size_t size() const{ return len; }
+
+    ~DumbVector(){
+      if(data!=NULL) delete[] data;
+    }
+  };
+
+
+
+
 // TODO: 
 //       mac,real,imag
 
@@ -58,8 +90,11 @@ extern int GridCshiftPermuteMap[4][16];
 class LatticeBase {};
 class LatticeExpressionBase {};
 
-template<class T> using Vector = std::vector<T,alignedAllocator<T> >;               // Aligned allocator??
-template<class T> using Matrix = std::vector<std::vector<T,alignedAllocator<T> > >; // Aligned allocator??
+  //template<class T> using Vector = std::vector<T,alignedAllocator<T> >;               // Aligned allocator??
+  //template<class T> using Matrix = std::vector<std::vector<T,alignedAllocator<T> > >; // Aligned allocator??
+
+  template<class T> using Vector = DumbVector<T,alignedAllocator<T> >;               // Aligned allocator??
+  template<class T> using Matrix = DumbVector<DumbVector<T,alignedAllocator<T> > >; // Aligned allocator??
 
 template <typename Op, typename T1>                           
 class LatticeUnaryExpression  : public std::pair<Op,std::tuple<T1> > , public LatticeExpressionBase {

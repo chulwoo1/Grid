@@ -47,27 +47,27 @@ namespace Grid {
      
     public:
      void DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
-			   std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+			   Vector<SiteHalfSpinor>  &buf,
 			   int sF,int sU,const FermionField &in, FermionField &out);
       
      void DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField &U,
-			      std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+			      Vector<SiteHalfSpinor>  &buf,
 			      int sF,int sU,const FermionField &in,FermionField &out);
 #pragma acc routine seq
      void DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
-			  std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+			  Vector<SiteHalfSpinor>  &buf,
 			  int sF,int sU,const FermionField &in, FermionField &out,int dirdisp,int gamma);
 
      void DiracOptAsmDhopSite(StencilImpl &st,DoubledGaugeField &U,
-			      std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+			      Vector<SiteHalfSpinor>  &buf,
 			      int sF,int sU,const FermionField &in, FermionField &out);
 
      int DiracOptHandDhopSite(StencilImpl &st,DoubledGaugeField &U,
-			      std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+			      Vector<SiteHalfSpinor>  &buf,
 			      int sF,int sU,const FermionField &in, FermionField &out);
      
      int DiracOptHandDhopSiteDag(StencilImpl &st,DoubledGaugeField &U,
-				 std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+				 Vector<SiteHalfSpinor>  &buf,
 				 int sF,int sU,const FermionField &in, FermionField &out);
 
      WilsonKernels(const ImplParams &p= ImplParams());

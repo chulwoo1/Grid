@@ -37,7 +37,7 @@ WilsonKernels<Impl>::WilsonKernels(const ImplParams &p): Base(p) {};
   // Need controls to do interior, exterior, or both
 template<class Impl> 
 void WilsonKernels<Impl>::DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField &U,
-					   std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+					   Vector<SiteHalfSpinor>  &buf,
 					   int sF,int sU,const FermionField &in, FermionField &out)
 {
   SiteHalfSpinor  tmp;    
@@ -215,7 +215,7 @@ void WilsonKernels<Impl>::DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField 
   // Need controls to do interior, exterior, or both
 template<class Impl> 
 void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
-					   std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+					   Vector<SiteHalfSpinor>  &buf,
 					   int sF,int sU,const FermionField &in, FermionField &out)
 {
   SiteHalfSpinor  tmp;    
@@ -392,7 +392,7 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
 #pragma acc routine seq
 template<class Impl> 
 void WilsonKernels<Impl>::DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
-					  std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+					  Vector<SiteHalfSpinor>  &buf,
 					  int sF,int sU,const FermionField &in, FermionField &out,int dir,int gamma)
 {
   SiteHalfSpinor  tmp;    
@@ -522,7 +522,7 @@ void WilsonKernels<Impl>::DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
 #if ( ! defined(IMCI) && ! defined(AVX512) )
 template<class Impl> 
 void WilsonKernels<Impl>::DiracOptAsmDhopSite(StencilImpl &st,DoubledGaugeField &U,
-					      std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
+					      Vector<SiteHalfSpinor>  &buf,
 					      int sF,int sU,const FermionField &in, FermionField &out)
 {
   DiracOptDhopSite(st,U,buf,sF,sU,in,out); // will template override for Wilson Nc=3
