@@ -40,6 +40,7 @@ void WilsonKernels<Impl>::DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField 
 					   Vector<SiteHalfSpinor>  &buf,
 					   int sF,int sU,const FermionField &in, FermionField &out)
 {
+
   SiteHalfSpinor  tmp;    
   SiteHalfSpinor  chi;    
   SiteHalfSpinor *chi_p;
@@ -66,6 +67,7 @@ void WilsonKernels<Impl>::DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField 
   }
   
   Impl::multLink(Uchi,U._odata[sU],*chi_p,Xp,SE,st);
+
   spReconXp(result,Uchi);
     
   ///////////////////////////
@@ -209,6 +211,8 @@ void WilsonKernels<Impl>::DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField 
   accumReconTm(result,Uchi);
 
   vstream(out._odata[sF],result);
+  #if 0
+#endif
 };
 
 
@@ -387,7 +391,10 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   accumReconTm(result,Uchi);
 
   vstream(out._odata[sF],result);
+#if 0
+#endif
 };
+
 
 #pragma acc routine seq
 template<class Impl> 
@@ -402,7 +409,9 @@ void WilsonKernels<Impl>::DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
   StencilEntry *SE;
   int ptype;
 
-  SE=st.GetEntry(ptype,dir,sF);
+#if 0
+  SE=st.GetEntry(ptype,dir,sF); //THIS LINE!
+
 
   // Xp
   if(gamma==Xp){
@@ -517,6 +526,7 @@ void WilsonKernels<Impl>::DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
   }
 
   vstream(out._odata[sF],result);
+#endif
 }
 
 #if ( ! defined(IMCI) && ! defined(AVX512) )

@@ -246,7 +246,10 @@ PARALLEL_FOR_LOOP
 
       // npoints x Osites() of these
       std::vector<std::vector<StencilEntry> > _entries;
-      inline StencilEntry * GetEntry(int &ptype,int point,int osite) { ptype = _permute_type[point]; return & _entries[point][osite]; }
+      inline StencilEntry * GetEntry(int &ptype,int point,int osite) { 
+	ptype = _permute_type[point]; 
+	return & _entries[point][osite]; 
+      }
 
       // Comms buffers
       std::vector<Vector<scalar_object> > u_simd_send_buf;
