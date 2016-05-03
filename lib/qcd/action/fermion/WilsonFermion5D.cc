@@ -407,7 +407,8 @@ PARALLEL_FOR_LOOP
 	}
       }
     } else { 
-PARALLEL_FOR_LOOP
+      //PARALLEL_FOR_LOOP
+#pragma acc kernels
       for(int ss=0;ss<U._grid->oSites();ss++){
 	int sU=ss;
 	for(int s=0;s<Ls;s++){
