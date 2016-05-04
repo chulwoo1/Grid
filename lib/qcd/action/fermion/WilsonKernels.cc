@@ -223,7 +223,6 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
 					   Vector<SiteHalfSpinor>  &buf,
 					   int sF,int sU,const FermionField &in, FermionField &out)
 {
-#if 0
   SiteHalfSpinor  tmp;    
   SiteHalfSpinor  chi;    
   SiteHalfSpinor *chi_p;    
@@ -251,6 +250,7 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   Impl::multLink(Uchi,U._odata[sU],*chi_p,Xm,SE,st);
   spReconXp(result,Uchi);
     
+#if 0
   ///////////////////////////
   // Yp
   ///////////////////////////
