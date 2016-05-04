@@ -133,11 +133,12 @@ void WilsonFermion5D<Impl>::DhopDir(const FermionField &in, FermionField &out,in
 
   assert(dirdisp<=7);
   assert(dirdisp>=0);
+  //printf("DhopDir\n");
 int maxiters = Umu._grid->oSites();
-#pragma acc kernels default(present)
 PARALLEL_FOR_LOOP
 
 //  for(int ss=0;ss<Umu._grid->oSites();ss++){
+//#pragma acc kernels 
 for(int ss=0;ss<maxiters;ss++){
     for(int s=0;s<Ls;s++){
       int sU=ss;
@@ -180,7 +181,7 @@ void WilsonFermion5D<Impl>::DerivInternal(StencilImpl & st,
     ////////////////////////
     // Call the single hop
     ////////////////////////
-
+//printf("DhopDir\n");
 PARALLEL_FOR_LOOP
     for(int sss=0;sss<U._grid->oSites();sss++){
       for(int s=0;s<Ls;s++){
@@ -311,6 +312,7 @@ void WilsonFermion5D<Impl>::DhopInternalCommsThenCompute(StencilImpl & st, Lebes
   jointime -=usecond();
   jointime +=usecond();
   
+//printf("DhopSite\n");
   // Dhop takes the 4d grid from U, and makes a 5d index for fermion
   // Not loop ordering and data layout.
   // Designed to create 
@@ -329,7 +331,10 @@ PARALLEL_FOR_LOOP
       }
     } else { 
 PARALLEL_FOR_LOOP
-      for(int ss=0;ss<U._grid->oSites();ss++){
+ int maxiters = U._grid->oSites();
+//#pragma acc kernels 
+for(int ss=0;ss<maxiters;ss++){
+//      for(int ss=0;ss<U._grid->oSites();ss++){
 	{
 	  int sd;
 	  for(sd=0;sd<Ls;sd++){
@@ -409,7 +414,7 @@ PARALLEL_FOR_LOOP
     } else { 
 PARALLEL_FOR_LOOP
   int maxiters = U._grid->oSites();    
-//#pragma acc kernels default(present)
+#pragma acc kernels 
 for(int ss=0;ss<maxiters;ss++){
 //      for(int ss=0;ss<U._grid->oSites();ss++){
 	int sU=ss;
