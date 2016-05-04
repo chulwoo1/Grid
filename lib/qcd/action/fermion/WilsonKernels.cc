@@ -235,6 +235,7 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   ///////////////////////////
   SE=st.GetEntry(ptype,Xm,sF);
 
+#if 0
   if ( SE->_is_local ) { 
     chi_p = &chi;
     if ( SE->_permute ) {
@@ -246,11 +247,10 @@ void WilsonKernels<Impl>::DiracOptDhopSite(StencilImpl &st,DoubledGaugeField &U,
   } else { 
     chi_p=&buf[SE->_offset];
   }
-  
+
   Impl::multLink(Uchi,U._odata[sU],*chi_p,Xm,SE,st);
   spReconXp(result,Uchi);
     
-#if 0
   ///////////////////////////
   // Yp
   ///////////////////////////
