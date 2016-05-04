@@ -92,15 +92,26 @@ int main (int argc, char ** argv)
   LatticeGaugeField Umu(&Fine);
 
   std::vector<LatticeColourMatrix> U(4,&Fine);
-  
-  NerscField header;
-  
+
+#define RANDOM_GAUGE
+#ifdef RANDOM_GAUGE  
+  GridParallelRNG pRNG(&Fine);
+  pRNG.SeedRandomDevice();
+  Umu=zero;
+  for(int nn=0;nn<Nd;nn++){
+    random(pRNG,U[nn]);
+    std::cout<<GridLogMessage<<"U[nn]"<<norm2(U[nn])<<std::endl;
+    PokeIndex<LorentzIndex>(Umu,U[nn],nn);
+    std::cout<<GridLogMessage<<"Umu"<<norm2(Umu)<<std::endl;
+  }
+#else
+  NerscField header;  
   std::string file("./ckpoint_lat.4000");
   NerscIO::readConfiguration(Umu,header,file);
-
   for(int mu=0;mu<Nd;mu++){
     U[mu] = PeekIndex<LorentzIndex>(Umu,mu);
   }
+#endif
 
   // Painful ; fix syntactical niceness : to check reader
   LatticeComplex LinkTrace(&Fine);
