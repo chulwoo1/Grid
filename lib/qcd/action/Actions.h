@@ -108,8 +108,8 @@ typedef SymanzikGaugeAction<ConjugateGimplD>        ConjugateSymanzikGaugeAction
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #define FermOpTemplateInstantiate(A) \
-  template class A<WilsonImplF>;		\
-  template class A<WilsonImplD>;		\
+  template class A<WilsonImplF>;		
+  //template class A<WilsonImplD>;		\
 
   // template class A<GparityWilsonImplF>;		\
   // template class A<GparityWilsonImplD>;		
