@@ -96,7 +96,9 @@ int main (int argc, char ** argv)
 #define RANDOM_GAUGE
 #ifdef RANDOM_GAUGE  
   GridParallelRNG pRNG(&Fine);
-  pRNG.SeedRandomDevice();
+  std::vector<int> seeds({1,2,3,4});
+  pRNG.SeedFixedIntegers(seeds);
+  //  pRNG.SeedRandomDevice();
   Umu=zero;
   for(int nn=0;nn<Nd;nn++){
     random(pRNG,U[nn]);
