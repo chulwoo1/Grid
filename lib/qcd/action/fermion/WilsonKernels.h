@@ -53,7 +53,6 @@ namespace Grid {
      void DiracOptDhopSiteDag(StencilImpl &st,DoubledGaugeField &U,
 			      std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
 			      int sF,int sU,const FermionField &in,FermionField &out);
-#pragma acc routine seq
      void DiracOptDhopDir(StencilImpl &st,DoubledGaugeField &U,
 			  std::vector<SiteHalfSpinor,alignedAllocator<SiteHalfSpinor> >  &buf,
 			  int sF,int sU,const FermionField &in, FermionField &out,int dirdisp,int gamma);
