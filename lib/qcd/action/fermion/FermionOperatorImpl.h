@@ -185,204 +185,204 @@ PARALLEL_FOR_LOOP
     // Flavour doubled spinors; is Gparity the only? what about C*?
     ////////////////////////////////////////////////////////////////////////////////////////
 
- //    template<class S,int Nrepresentation>
-//     class GparityWilsonImpl : public ConjugateGaugeImpl< GaugeImplTypes<S,Nrepresentation> >{ 
-//     public:
+    template<class S,int Nrepresentation>
+    class GparityWilsonImpl : public ConjugateGaugeImpl< GaugeImplTypes<S,Nrepresentation> >{ 
+    public:
 
-//       typedef ConjugateGaugeImpl< GaugeImplTypes<S,Nrepresentation> > Gimpl;
+      typedef ConjugateGaugeImpl< GaugeImplTypes<S,Nrepresentation> > Gimpl;
 
-//       INHERIT_GIMPL_TYPES(Gimpl);
+      INHERIT_GIMPL_TYPES(Gimpl);
 
-//       template<typename vtype> using iImplSpinor             = iVector<iVector<iVector<vtype, Nrepresentation>, Ns>, Ngp >;
-//       template<typename vtype> using iImplHalfSpinor         = iVector<iVector<iVector<vtype, Nrepresentation>, Nhs>, Ngp >;
-//       template<typename vtype> using iImplDoubledGaugeField  = iVector<iVector<iScalar<iMatrix<vtype, Nrepresentation> >, Nds >, Ngp >;
+      template<typename vtype> using iImplSpinor             = iVector<iVector<iVector<vtype, Nrepresentation>, Ns>, Ngp >;
+      template<typename vtype> using iImplHalfSpinor         = iVector<iVector<iVector<vtype, Nrepresentation>, Nhs>, Ngp >;
+      template<typename vtype> using iImplDoubledGaugeField  = iVector<iVector<iScalar<iMatrix<vtype, Nrepresentation> >, Nds >, Ngp >;
     
-//       typedef iImplSpinor    <Simd>           SiteSpinor;
-//       typedef iImplHalfSpinor<Simd>           SiteHalfSpinor;
-//       typedef iImplDoubledGaugeField<Simd>    SiteDoubledGaugeField;
+      typedef iImplSpinor    <Simd>           SiteSpinor;
+      typedef iImplHalfSpinor<Simd>           SiteHalfSpinor;
+      typedef iImplDoubledGaugeField<Simd>    SiteDoubledGaugeField;
 
-//       typedef Lattice<SiteSpinor>                 FermionField;
-//       typedef Lattice<SiteDoubledGaugeField> DoubledGaugeField;
+      typedef Lattice<SiteSpinor>                 FermionField;
+      typedef Lattice<SiteDoubledGaugeField> DoubledGaugeField;
 
-//       typedef WilsonCompressor<SiteHalfSpinor,SiteSpinor> Compressor;
-//       typedef WilsonStencil<SiteSpinor,SiteHalfSpinor> StencilImpl;
+      typedef WilsonCompressor<SiteHalfSpinor,SiteSpinor> Compressor;
+      typedef WilsonStencil<SiteSpinor,SiteHalfSpinor> StencilImpl;
 
-//       typedef GparityWilsonImplParams ImplParams;
+      typedef GparityWilsonImplParams ImplParams;
 
-//       ImplParams Params;
+      ImplParams Params;
 
-//       GparityWilsonImpl(const ImplParams &p= ImplParams()) : Params(p) {}; 
+      GparityWilsonImpl(const ImplParams &p= ImplParams()) : Params(p) {}; 
       
-//       bool overlapCommsCompute(void) { return Params.overlapCommsCompute; };
+      bool overlapCommsCompute(void) { return Params.overlapCommsCompute; };
 
-//       // provide the multiply by link that is differentiated between Gparity (with flavour index) and non-Gparity
-//       inline void multLink(SiteHalfSpinor &phi,const SiteDoubledGaugeField &U,const SiteHalfSpinor &chi,int mu,StencilEntry *SE,StencilImpl &St){
+      // provide the multiply by link that is differentiated between Gparity (with flavour index) and non-Gparity
+      inline void multLink(SiteHalfSpinor &phi,const SiteDoubledGaugeField &U,const SiteHalfSpinor &chi,int mu,StencilEntry *SE,StencilImpl &St){
 
-// #if 0
-// 	typedef SiteHalfSpinor vobj;
-// 	typedef typename SiteHalfSpinor::scalar_object sobj;
+#if 0
+	typedef SiteHalfSpinor vobj;
+	typedef typename SiteHalfSpinor::scalar_object sobj;
 
-// 	vobj vtmp;
-// 	sobj stmp;
+	vobj vtmp;
+	sobj stmp;
 	
-// 	GridBase *grid = St._grid;
+	GridBase *grid = St._grid;
       
-// 	const int Nsimd = grid->Nsimd();
+	const int Nsimd = grid->Nsimd();
 	
-// 	int direction    = St._directions[mu];
-// 	int distance     = St._distances[mu];
-// 	int ptype        = St._permute_type[mu]; 
-// 	int sl           = St._grid->_simd_layout[direction];
+	int direction    = St._directions[mu];
+	int distance     = St._distances[mu];
+	int ptype        = St._permute_type[mu]; 
+	int sl           = St._grid->_simd_layout[direction];
 
-// 	// Fixme X.Y.Z.T hardcode in stencil
-// 	int mmu          = mu % Nd;
+	// Fixme X.Y.Z.T hardcode in stencil
+	int mmu          = mu % Nd;
 
-// 	// assert our assumptions
-// 	assert((distance==1)||(distance==-1)); // nearest neighbour stencil hard code
-// 	assert((sl==1)||(sl==2));
+	// assert our assumptions
+	assert((distance==1)||(distance==-1)); // nearest neighbour stencil hard code
+	assert((sl==1)||(sl==2));
 	
-// 	std::vector<int> icoor;
+	std::vector<int> icoor;
       
-// 	if ( SE->_around_the_world && Params.twists[mmu] ) {
+	if ( SE->_around_the_world && Params.twists[mmu] ) {
 
-// 	  if ( sl == 2 ) {
+	  if ( sl == 2 ) {
 
-// 	    std::vector<sobj> vals(Nsimd);
+	    std::vector<sobj> vals(Nsimd);
 
-// 	    extract(chi,vals);
-// 	    for(int s=0;s<Nsimd;s++){
+	    extract(chi,vals);
+	    for(int s=0;s<Nsimd;s++){
 
-// 	      grid->iCoorFromIindex(icoor,s);
+	      grid->iCoorFromIindex(icoor,s);
 	      
-// 	      assert((icoor[direction]==0)||(icoor[direction]==1));
+	      assert((icoor[direction]==0)||(icoor[direction]==1));
 	      
-// 	      int permute_lane;
-// 	      if ( distance == 1) {
-// 		permute_lane = icoor[direction]?1:0;
-// 	      } else {
-// 		permute_lane = icoor[direction]?0:1;
-// 	      }
+	      int permute_lane;
+	      if ( distance == 1) {
+		permute_lane = icoor[direction]?1:0;
+	      } else {
+		permute_lane = icoor[direction]?0:1;
+	      }
 	      
-// 	      if ( permute_lane ) { 
-// 		stmp(0) = vals[s](1);
-// 		stmp(1) = vals[s](0);
-// 		vals[s] = stmp;
-// 	      }
-// 	    }
-// 	    merge(vtmp,vals);
+	      if ( permute_lane ) { 
+		stmp(0) = vals[s](1);
+		stmp(1) = vals[s](0);
+		vals[s] = stmp;
+	      }
+	    }
+	    merge(vtmp,vals);
 
-// 	  } else { 
-// 	    vtmp(0) = chi(1);
-// 	    vtmp(1) = chi(0);
-// 	  }
-// 	  mult(&phi(0),&U(0)(mu),&vtmp(0));
-// 	  mult(&phi(1),&U(1)(mu),&vtmp(1));
+	  } else { 
+	    vtmp(0) = chi(1);
+	    vtmp(1) = chi(0);
+	  }
+	  mult(&phi(0),&U(0)(mu),&vtmp(0));
+	  mult(&phi(1),&U(1)(mu),&vtmp(1));
 	  
-// 	} else { 
-// 	  mult(&phi(0),&U(0)(mu),&chi(0));
-// 	  mult(&phi(1),&U(1)(mu),&chi(1));
-// 	}
+	} else { 
+	  mult(&phi(0),&U(0)(mu),&chi(0));
+	  mult(&phi(1),&U(1)(mu),&chi(1));
+	}
 	
-// #endif
-//       }
-//       inline void DoubleStore(GridBase *GaugeGrid,DoubledGaugeField &Uds,const GaugeField &Umu)
-//       {
+#endif
+      }
+      inline void DoubleStore(GridBase *GaugeGrid,DoubledGaugeField &Uds,const GaugeField &Umu)
+      {
 	
-// 	conformable(Uds._grid,GaugeGrid);
-// 	conformable(Umu._grid,GaugeGrid);
+	conformable(Uds._grid,GaugeGrid);
+	conformable(Umu._grid,GaugeGrid);
 	
-// 	GaugeLinkField Utmp(GaugeGrid);
-// 	GaugeLinkField U(GaugeGrid);
-// 	GaugeLinkField Uconj(GaugeGrid);
+	GaugeLinkField Utmp(GaugeGrid);
+	GaugeLinkField U(GaugeGrid);
+	GaugeLinkField Uconj(GaugeGrid);
 	
-// 	Lattice<iScalar<vInteger> > coor(GaugeGrid);
+	Lattice<iScalar<vInteger> > coor(GaugeGrid);
 
 	
-// 	for(int mu=0;mu<Nd;mu++){
+	for(int mu=0;mu<Nd;mu++){
 	  
-// 	  LatticeCoordinate(coor,mu);
+	  LatticeCoordinate(coor,mu);
 	  
-// 	  U     = PeekIndex<LorentzIndex>(Umu,mu);
-// 	  Uconj = conjugate(U);
+	  U     = PeekIndex<LorentzIndex>(Umu,mu);
+	  Uconj = conjugate(U);
 
-// 	  // This phase could come from a simple bc 1,1,-1,1 ..
-// 	  int neglink = GaugeGrid->GlobalDimensions()[mu]-1;
-// 	  if ( Params.twists[mu] ) { 
-// 	    Uconj = where(coor==neglink,-Uconj,Uconj);
-// 	  }
+	  // This phase could come from a simple bc 1,1,-1,1 ..
+	  int neglink = GaugeGrid->GlobalDimensions()[mu]-1;
+	  if ( Params.twists[mu] ) { 
+	    Uconj = where(coor==neglink,-Uconj,Uconj);
+	  }
 
 	  
-// PARALLEL_FOR_LOOP
-// 	  for(auto ss=U.begin();ss<U.end();ss++){
-// 	    Uds[ss](0)(mu) = U[ss]();
-// 	    Uds[ss](1)(mu) = Uconj[ss]();
-// 	  }
+PARALLEL_FOR_LOOP
+	  for(auto ss=U.begin();ss<U.end();ss++){
+	    Uds[ss](0)(mu) = U[ss]();
+	    Uds[ss](1)(mu) = Uconj[ss]();
+	  }
 	  
-// 	  U     = adj(Cshift(U    ,mu,-1));      // correct except for spanning the boundary
-// 	  Uconj = adj(Cshift(Uconj,mu,-1));
+	  U     = adj(Cshift(U    ,mu,-1));      // correct except for spanning the boundary
+	  Uconj = adj(Cshift(Uconj,mu,-1));
 	  
-// 	  Utmp = U;
-// 	  if ( Params.twists[mu] ) { 
-// 	    Utmp = where(coor==0,Uconj,Utmp);
-// 	  }
+	  Utmp = U;
+	  if ( Params.twists[mu] ) { 
+	    Utmp = where(coor==0,Uconj,Utmp);
+	  }
 	  
-// PARALLEL_FOR_LOOP
-// 	  for(auto ss=U.begin();ss<U.end();ss++){
-// 	    Uds[ss](0)(mu+4) = Utmp[ss]();
-// 	  }
+PARALLEL_FOR_LOOP
+	  for(auto ss=U.begin();ss<U.end();ss++){
+	    Uds[ss](0)(mu+4) = Utmp[ss]();
+	  }
 	  
-// 	  Utmp = Uconj;
-// 	  if ( Params.twists[mu] ) { 
-// 	    Utmp = where(coor==0,U,Utmp);
-// 	  }
+	  Utmp = Uconj;
+	  if ( Params.twists[mu] ) { 
+	    Utmp = where(coor==0,U,Utmp);
+	  }
 	  
-// PARALLEL_FOR_LOOP
-// 	  for(auto ss=U.begin();ss<U.end();ss++){
-// 	    Uds[ss](1)(mu+4) = Utmp[ss]();
-// 	  }
+PARALLEL_FOR_LOOP
+	  for(auto ss=U.begin();ss<U.end();ss++){
+	    Uds[ss](1)(mu+4) = Utmp[ss]();
+	  }
 	  
-// 	}
-//       }
+	}
+      }
 
-//       inline void InsertForce4D(GaugeField &mat, FermionField &Btilde, FermionField &A,int mu){
+      inline void InsertForce4D(GaugeField &mat, FermionField &Btilde, FermionField &A,int mu){
 	
-// 	// DhopDir provides U or Uconj depending on coor/flavour.
-// 	GaugeLinkField link(mat._grid);
-// 	// use lorentz for flavour as hack.
-// 	auto tmp = TraceIndex<SpinIndex>(outerProduct(Btilde,A));  
-// PARALLEL_FOR_LOOP
-//         for(auto ss=tmp.begin();ss<tmp.end();ss++){
-// 	  link[ss]() = tmp[ss](0,0) - conjugate(tmp[ss](1,1)) ;
-// 	}
-// 	PokeIndex<LorentzIndex>(mat,link,mu);
-// 	return;
-//       }
-//       inline void InsertForce5D(GaugeField &mat, FermionField &Btilde, FermionField &Atilde,int mu){
+	// DhopDir provides U or Uconj depending on coor/flavour.
+	GaugeLinkField link(mat._grid);
+	// use lorentz for flavour as hack.
+	auto tmp = TraceIndex<SpinIndex>(outerProduct(Btilde,A));  
+PARALLEL_FOR_LOOP
+        for(auto ss=tmp.begin();ss<tmp.end();ss++){
+	  link[ss]() = tmp[ss](0,0) - conjugate(tmp[ss](1,1)) ;
+	}
+	PokeIndex<LorentzIndex>(mat,link,mu);
+	return;
+      }
+      inline void InsertForce5D(GaugeField &mat, FermionField &Btilde, FermionField &Atilde,int mu){
 
-// 	int Ls=Btilde._grid->_fdimensions[0];
+	int Ls=Btilde._grid->_fdimensions[0];
 
-// 	GaugeLinkField tmp(mat._grid);
-// 	tmp = zero;
-// PARALLEL_FOR_LOOP
-// 	for(int ss=0;ss<tmp._grid->oSites();ss++){
-// 	  for(int s=0;s<Ls;s++){
-// 	    int sF = s+Ls*ss;
-// 	    auto ttmp = traceIndex<SpinIndex>(outerProduct(Btilde[sF],Atilde[sF]));
-// 	    tmp[ss]() = tmp[ss]()+ ttmp(0,0) + conjugate(ttmp(1,1));
-// 	  }
-// 	}
-// 	PokeIndex<LorentzIndex>(mat,tmp,mu);
-// 	return;
-//       }
-//     };
+	GaugeLinkField tmp(mat._grid);
+	tmp = zero;
+PARALLEL_FOR_LOOP
+	for(int ss=0;ss<tmp._grid->oSites();ss++){
+	  for(int s=0;s<Ls;s++){
+	    int sF = s+Ls*ss;
+	    auto ttmp = traceIndex<SpinIndex>(outerProduct(Btilde[sF],Atilde[sF]));
+	    tmp[ss]() = tmp[ss]()+ ttmp(0,0) + conjugate(ttmp(1,1));
+	  }
+	}
+	PokeIndex<LorentzIndex>(mat,tmp,mu);
+	return;
+      }
+    };
 
     typedef WilsonImpl<vComplex ,Nc> WilsonImplR; // Real.. whichever prec
     typedef WilsonImpl<vComplexF,Nc> WilsonImplF; // Float
     typedef WilsonImpl<vComplexD,Nc> WilsonImplD; // Double
 
-    //  typedef GparityWilsonImpl<vComplex ,Nc> GparityWilsonImplR; // Real.. whichever prec
-    // typedef GparityWilsonImpl<vComplexF,Nc> GparityWilsonImplF; // Float
-    // typedef GparityWilsonImpl<vComplexD,Nc> GparityWilsonImplD; // Double
+    typedef GparityWilsonImpl<vComplex ,Nc> GparityWilsonImplR; // Real.. whichever prec
+    typedef GparityWilsonImpl<vComplexF,Nc> GparityWilsonImplF; // Float
+    typedef GparityWilsonImpl<vComplexD,Nc> GparityWilsonImplD; // Double
 
   }
 }
