@@ -30,7 +30,7 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 #ifndef GRID_LATTICE_BASE_H
 #define GRID_LATTICE_BASE_H
 
-#define STREAMING_STORES
+//#define STREAMING_STORES
 
 namespace Grid {
 

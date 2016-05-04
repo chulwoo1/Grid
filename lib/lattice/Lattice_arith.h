@@ -39,8 +39,15 @@ namespace Grid {
     ret.checkerboard = lhs.checkerboard;
     conformable(ret,rhs);
     conformable(lhs,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+      //    for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+    #pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
+
+    //PARALLEL_FOR_LOOP
+    //  for(int ss=0;ss<lhs._grid->oSites();ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       mult(&tmp,&lhs._odata[ss],&rhs._odata[ss]);
@@ -56,8 +63,12 @@ PARALLEL_FOR_LOOP
     ret.checkerboard = lhs.checkerboard;
     conformable(ret,rhs);
     conformable(lhs,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+  //    for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       mac(&tmp,&lhs._odata[ss],&rhs._odata[ss]);
@@ -73,8 +84,12 @@ PARALLEL_FOR_LOOP
     ret.checkerboard = lhs.checkerboard;
     conformable(ret,rhs);
     conformable(lhs,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //    for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       sub(&tmp,&lhs._odata[ss],&rhs._odata[ss]);
@@ -89,8 +104,14 @@ PARALLEL_FOR_LOOP
     ret.checkerboard = lhs.checkerboard;
     conformable(ret,rhs);
     conformable(lhs,rhs);
+
+    int sites = lhs._grid->oSites();
+
 PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+  //    for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+#pragma acc kernels
+  for(int ss =0 ; ss  < sites; ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       add(&tmp,&lhs._odata[ss],&rhs._odata[ss]);
@@ -108,8 +129,12 @@ PARALLEL_FOR_LOOP
     void mult(Lattice<obj1> &ret,const Lattice<obj2> &lhs,const obj3 &rhs){
     ret.checkerboard = lhs.checkerboard;
     conformable(lhs,ret);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
       obj1 tmp;
       mult(&tmp,&lhs._odata[ss],&rhs);
       vstream(ret._odata[ss],tmp);
@@ -120,8 +145,12 @@ PARALLEL_FOR_LOOP
     void mac(Lattice<obj1> &ret,const Lattice<obj2> &lhs,const obj3 &rhs){
     ret.checkerboard = lhs.checkerboard;
     conformable(ret,lhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
       obj1 tmp;
       mac(&tmp,&lhs._odata[ss],&rhs);
       vstream(ret._odata[ss],tmp);
@@ -132,8 +161,12 @@ PARALLEL_FOR_LOOP
     void sub(Lattice<obj1> &ret,const Lattice<obj2> &lhs,const obj3 &rhs){
     ret.checkerboard = lhs.checkerboard;
     conformable(ret,lhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       sub(&tmp,&lhs._odata[ss],&rhs);
@@ -147,8 +180,12 @@ PARALLEL_FOR_LOOP
     void add(Lattice<obj1> &ret,const Lattice<obj2> &lhs,const obj3 &rhs){
     ret.checkerboard = lhs.checkerboard;
     conformable(lhs,ret);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<lhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<lhs._grid->oSites();ss++){
+
+    int sites = lhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       add(&tmp,&lhs._odata[ss],&rhs);
@@ -166,8 +203,12 @@ PARALLEL_FOR_LOOP
     void mult(Lattice<obj1> &ret,const obj2 &lhs,const Lattice<obj3> &rhs){
     ret.checkerboard = rhs.checkerboard;
     conformable(ret,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<rhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<rhs._grid->oSites();ss++){
+
+    int sites = rhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       mult(&tmp,&lhs,&rhs._odata[ss]);
@@ -182,8 +223,12 @@ PARALLEL_FOR_LOOP
     void mac(Lattice<obj1> &ret,const obj2 &lhs,const Lattice<obj3> &rhs){
     ret.checkerboard = rhs.checkerboard;
     conformable(ret,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<rhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<rhs._grid->oSites();ss++){
+
+    int sites = rhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       mac(&tmp,&lhs,&rhs._odata[ss]);
@@ -198,8 +243,12 @@ PARALLEL_FOR_LOOP
     void sub(Lattice<obj1> &ret,const obj2 &lhs,const Lattice<obj3> &rhs){
     ret.checkerboard = rhs.checkerboard;
     conformable(ret,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<rhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<rhs._grid->oSites();ss++){
+
+    int sites = rhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       sub(&tmp,&lhs,&rhs._odata[ss]);
@@ -213,8 +262,12 @@ PARALLEL_FOR_LOOP
     void add(Lattice<obj1> &ret,const obj2 &lhs,const Lattice<obj3> &rhs){
     ret.checkerboard = rhs.checkerboard;
     conformable(ret,rhs);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<rhs._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<rhs._grid->oSites();ss++){
+
+    int sites = rhs._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       obj1 tmp;
       add(&tmp,&lhs,&rhs._odata[ss]);
@@ -230,8 +283,12 @@ PARALLEL_FOR_LOOP
     ret.checkerboard = x.checkerboard;
     conformable(ret,x);
     conformable(x,y);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<x._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<x._grid->oSites();ss++){
+
+    int sites = x._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       vobj tmp = a*x._odata[ss]+y._odata[ss];
       vstream(ret._odata[ss],tmp);
@@ -245,8 +302,12 @@ PARALLEL_FOR_LOOP
     ret.checkerboard = x.checkerboard;
     conformable(ret,x);
     conformable(x,y);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<x._grid->oSites();ss++){
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<x._grid->oSites();ss++){
+
+    int sites = x._grid->oSites();
+#pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
 #ifdef STREAMING_STORES
       vobj tmp = a*x._odata[ss]+b*y._odata[ss];
       vstream(ret._odata[ss],tmp);
