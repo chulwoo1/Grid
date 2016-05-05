@@ -51,11 +51,11 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 #include<complex_quda.h>
 
 template<typename T>
-T real(const quda::complex<T> &c){
+inline T real(const quda::complex<T> &c){
   return c.real();
 }
 template<typename T>
-T imag(const quda::complex<T> &c){
+inline T imag(const quda::complex<T> &c){
   return c.imag();
 }
 
