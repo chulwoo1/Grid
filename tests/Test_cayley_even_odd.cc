@@ -78,7 +78,7 @@ int main (int argc, char ** argv)
   std::cout<<GridLogMessage <<"DomainWallFermion test"<<std::endl;
   DomainWallFermionR Ddwf(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5);
   TestWhat<DomainWallFermionR>(Ddwf,FGrid,FrbGrid,UGrid,UrbGrid,mass,M5,&RNG4,&RNG5);
-
+/*
   RealD b=1.5;// Scale factor b+c=2, b-c=1
   RealD c=0.5;
   std::cout<<GridLogMessage <<"MobiusFermion test"<<std::endl;
@@ -105,7 +105,7 @@ int main (int argc, char ** argv)
   std::cout<<GridLogMessage <<"OverlapWilsonCayleyZolotarevFermion test"<<std::endl;
   OverlapWilsonCayleyZolotarevFermionR Dovz(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5,0.1,2.0);
   TestWhat<OverlapWilsonCayleyZolotarevFermionR>(Dovz,FGrid,FrbGrid,UGrid,UrbGrid,mass,M5,&RNG4,&RNG5);
-
+*/
   Grid_finalize();
 }
 

@@ -488,20 +488,20 @@ namespace Grid {
 
 #ifdef STD_COMPLEX_SIMD
   template <typename T> struct _uncomplexify{ typedef T type; };
-  template <typename T> struct _uncomplexify<std::complex<T> >{ typedef T type; };
+  template <typename T> struct _uncomplexify<quda::complex<T> >{ typedef T type; };
 
 
   template<class S,class V,IfReal<S>  = 0>	
-  inline Grid_simd<S,typename _uncomplexify<V>::type> toReal(const Grid_simd<std::complex<S>, V> &in){
+  inline Grid_simd<S,typename _uncomplexify<V>::type> toReal(const Grid_simd<quda::complex<S>, V> &in){
     Grid_simd<S,typename _uncomplexify<V>::type> ret;
     ret.v = in.v.real();
     return ret;
   }
   template<class S,class RV,IfReal<S> = 0 >	// must be a real arg
-  inline Grid_simd<std::complex<S>,std::complex<RV> > toComplex (const Grid_simd<S,RV> &in)
+  inline Grid_simd<quda::complex<S>,quda::complex<RV> > toComplex (const Grid_simd<S,RV> &in)
   {
-    Grid_simd<std::complex<S>,std::complex<RV> > ret;
-    ret.v = std::complex<S>(in.v,0.0);
+    Grid_simd<quda::complex<S>,quda::complex<RV> > ret;
+    ret.v = quda::complex<S>(in.v,0.0);
     return ret;
   }
 #else
@@ -509,7 +509,7 @@ namespace Grid {
 
   //real = toReal( complex )
   template<class S,class V,IfReal<S>  = 0>	
-  inline Grid_simd<S,V> toReal(const Grid_simd<std::complex<S>,V> &in)
+  inline Grid_simd<S,V> toReal(const Grid_simd<quda::complex<S>,V> &in)
   {
     typedef Grid_simd<S,V> simd;
     simd ret;
@@ -524,10 +524,10 @@ namespace Grid {
   
   //complex = toComplex( real )
   template<class R,class V,IfReal<R> = 0 >	// must be a real arg
-  inline Grid_simd<std::complex<R>,V> toComplex (const Grid_simd<R,V> &in)
+  inline Grid_simd<quda::complex<R>,V> toComplex (const Grid_simd<R,V> &in)
   {
     typedef Grid_simd<R,V> Rsimd;
-    typedef Grid_simd<std::complex<R>,V> Csimd;
+    typedef Grid_simd<quda::complex<R>,V> Csimd;
     typename Rsimd::conv_t conv;// address as real
     
     conv.v = in.v;
