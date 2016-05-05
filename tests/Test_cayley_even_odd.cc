@@ -75,6 +75,7 @@ int main (int argc, char ** argv)
 
   RealD mass=0.1;
   RealD M5  =1.8;
+  std::cout<<GridLogMessage <<"Lattic Size"<<GridDefaultLatt()<<std::endl;
   std::cout<<GridLogMessage <<"DomainWallFermion test"<<std::endl;
   DomainWallFermionR Ddwf(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5);
   TestWhat<DomainWallFermionR>(Ddwf,FGrid,FrbGrid,UGrid,UrbGrid,mass,M5,&RNG4,&RNG5);
