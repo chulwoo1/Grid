@@ -47,6 +47,19 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 #define _MM_SELECT_FOUR_TWO (A,B,C,D) _MM_SELECT_EIGHT_TWO(0,0,0,0,A,B,C,D)
 #define _MM_SELECT_TWO_TWO  (A,B)     _MM_SELECT_FOUR_TWO(0,0,A,B)
 
+
+#include<complex_quda.h>
+
+template<typename T>
+T real(const quda::complex<T> &c){
+  return c.real();
+}
+template<typename T>
+T imag(const quda::complex<T> &c){
+  return c.imag();
+}
+
+
 namespace Grid {
 
   typedef uint32_t Integer;
@@ -59,9 +72,87 @@ namespace Grid {
   typedef RealF  Real;
 #endif
 
-  typedef std::complex<RealF> ComplexF;
-  typedef std::complex<RealD> ComplexD;
-  typedef std::complex<Real>  Complex;
+#if 0
+  template<typename T>
+  class SimpleComplex{
+    T re;
+    T im;
+  public:
+    SimpleComplex(const T _re, const T _im): re(_re), im(_im){
+    }
+    SimpleComplex<T> operator*(const SimpleComplex<T> &a, const SimpleComplex<T> &b){
+      return SimpleComplex<T>( a.re*b.re - a.im*b.im, a.re*b.im + a.im+b.re);
+    }
+    SimpleComplex<T>& operator*=(const SimpleComplex<T> &r){
+      T _re = re;
+      re = re*r.re - im*r.im;
+      im = _re*r.im + im*r.re;
+      return *this;
+    }
+    SimpleComplex<T> operator+(const SimpleComplex<T> &a, const SimpleComplex<T> &b){
+      return SimpleComplex<T>( a.re+b.re, a.im + b.im);
+    }
+    SimpleComplex<T>& operator+=(const SimpleComplex<T> &r){
+      re += r.re;
+      im += r.im;
+      return *this;
+    }
+    SimpleComplex<T> operator-(const SimpleComplex<T> &a, const SimpleComplex<T> &b){
+      return SimpleComplex<T>( a.re+b.re, a.im + b.im);
+    }
+    SimpleComplex<T>& operator-=(const SimpleComplex<T> &r){
+      re -= r.re;
+      im -= r.im;
+      return *this;
+    }
+    
+    inline const T & real() const{ return re; }
+    inline const T & imag() const{ return im; }    
+  };
+
+    SimpleComplex<T> operator*(const SimpleComplex<T> &a, const SimpleComplex<T> &b){
+      return SimpleComplex<T>( a.re*b.re - a.im*b.im, a.re*b.im + a.im+b.re);
+    }
+    SimpleComplex<T>& operator*=(const SimpleComplex<T> &r){
+      T _re = re;
+      re = re*r.re - im*r.im;
+      im = _re*r.im + im*r.re;
+      return *this;
+    }
+    SimpleComplex<T> operator+(const SimpleComplex<T> &a, const SimpleComplex<T> &b){
+      return SimpleComplex<T>( a.re+b.re, a.im + b.im);
+    }
+    SimpleComplex<T>& operator+=(const SimpleComplex<T> &r){
+      re += r.re;
+      im += r.im;
+      return *this;
+    }
+    SimpleComplex<T> operator-(const SimpleComplex<T> &a, const SimpleComplex<T> &b){
+      return SimpleComplex<T>( a.re+b.re, a.im + b.im);
+    }
+    SimpleComplex<T>& operator-=(const SimpleComplex<T> &r){
+      re -= r.re;
+      im -= r.im;
+      return *this;
+    }
+
+
+
+  template<typename T>
+  inline SimpleComplex<T> conj(const SimpleComplex<T> &c){
+    return SimpleComplex<T>(c.real(),c.imag());
+  }
+#endif
+
+
+  //typedef std::complex<RealF> ComplexF;
+  //typedef std::complex<RealD> ComplexD;
+  //typedef std::complex<Real>  Complex;
+
+  //UGLY HACK
+  typedef quda::complex<RealF> ComplexF;
+  typedef quda::complex<RealD> ComplexD;
+  typedef quda::complex<Real>  Complex;
 
   inline RealF adj(const RealF  & r){ return r; }
   inline RealF conjugate(const RealF  & r){ return r; }

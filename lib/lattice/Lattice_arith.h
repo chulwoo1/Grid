@@ -230,8 +230,13 @@ PARALLEL_FOR_LOOP
     ret.checkerboard = x.checkerboard;
     conformable(ret,x);
     conformable(x,y);
-PARALLEL_FOR_LOOP
-    for(int ss=0;ss<x._grid->oSites();ss++){
+
+    int sites = x._grid->oSites();
+    #pragma acc kernels
+    for(int ss=0;ss<sites;ss++){
+
+    //PARALLEL_FOR_LOOP
+    //for(int ss=0;ss<x._grid->oSites();ss++){
 #ifdef STREAMING_STORES
       vobj tmp = a*x._odata[ss]+y._odata[ss];
       vstream(ret._odata[ss],tmp);

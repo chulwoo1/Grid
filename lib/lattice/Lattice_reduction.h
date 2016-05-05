@@ -43,8 +43,10 @@ namespace Grid {
     return real(nrm); 
   }
 
-    template<class vobj>
-    inline ComplexD innerProduct(const Lattice<vobj> &left,const Lattice<vobj> &right) 
+  ///    template<class vobj>
+  //  inline ComplexD innerProduct(const Lattice<vobj> &left,const Lattice<vobj> &right) 
+  template<class vobj>
+    inline typename vobj::scalar_type innerProduct(const Lattice<vobj> &left,const Lattice<vobj> &right) 
     {
       typedef typename vobj::scalar_type scalar_type;
       typedef typename vobj::vector_type vector_type;

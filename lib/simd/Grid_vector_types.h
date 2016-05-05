@@ -70,7 +70,7 @@ namespace Grid {
   template <typename T> struct RealPart {
     typedef T type;
   };
-  template <typename T> struct RealPart< std::complex<T> >{
+  template <typename T> struct RealPart< quda::complex<T> >{
     typedef T type;
   };
   
@@ -87,8 +87,8 @@ namespace Grid {
   ////////////////////////////////////////////////////////
   // Check for complexity with type traits
   template <typename T>   struct is_complex : public std::false_type {};
-  template <> struct is_complex<std::complex<double> >: public std::true_type {};
-  template <> struct is_complex<std::complex<float> > : public std::true_type {};
+  template <> struct is_complex<quda::complex<double> >: public std::true_type {};
+  template <> struct is_complex<quda::complex<float> > : public std::true_type {};
 
   template <typename T> using IfReal    = Invoke<std::enable_if<std::is_floating_point<T>::value,int> > ;
   template <typename T> using IfComplex = Invoke<std::enable_if<is_complex<T>::value,int> > ;
@@ -554,8 +554,8 @@ namespace Grid {
   typedef Grid_simd< float                 , SIMD_Ftype > vRealF;
   typedef Grid_simd< double                , SIMD_Dtype > vRealD;
 #endif
-  typedef Grid_simd< std::complex< float > , SIMD_Ftype > vComplexF;
-  typedef Grid_simd< std::complex< double >, SIMD_Dtype > vComplexD;
+  typedef Grid_simd< quda::complex< float > , SIMD_Ftype > vComplexF;
+  typedef Grid_simd< quda::complex< double >, SIMD_Dtype > vComplexD;
   typedef Grid_simd< Integer               , SIMD_Itype > vInteger;
 
   /////////////////////////////////////////
