@@ -28,6 +28,8 @@ Author: Peter Boyle <paboyle@ph.ed.ac.uk>
 #ifndef GRID_LATTICE_ARITH_H
 #define GRID_LATTICE_ARITH_H
 
+#include <accel.h>
+
 namespace Grid {
 
 
@@ -237,10 +239,13 @@ PARALLEL_FOR_LOOP
     int size = x._odata.size();
     int sites = x._grid->oSites();
     assert(sites == size);
-    std::cout << "axpy with ptrs " << xdata << " " << ydata << " " << retdata << std::endl;
+    std::cout << "axpy with host ptrs " << xdata << " " << ydata << " " << retdata << std::endl;
 #pragma acc enter data create(retdata[0:size]) 
 #pragma acc enter data create(xdata[0:size]) 
 #pragma acc enter data create(ydata[0:size]) 
+
+    acc_present_dump();
+    std::cout << "axpy with device ptrs " << acc_deviceptr((void*)xdata) << " " << acc_deviceptr((void*)ydata) << " " << acc_deviceptr((void*)retdata) << std::endl;
 
 #pragma acc update device(xdata[0:size])
 #pragma acc update device(ydata[0:size])
