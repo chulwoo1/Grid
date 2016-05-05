@@ -404,8 +404,11 @@ PARALLEL_FOR_LOOP
 	}
       }
     } else { 
+int sites=U._grid->oSites();
 PARALLEL_FOR_LOOP
-      for(int ss=0;ss<U._grid->oSites();ss++){
+#pragma acc kernels default(present)
+	for(int ss=0;ss<sites;ss++){
+//      for(int ss=0;ss<U._grid->oSites();ss++){
 	int sU=ss;
 	for(int s=0;s<Ls;s++){
 	  int sF = s+Ls*sU; 
