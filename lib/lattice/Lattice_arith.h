@@ -236,25 +236,37 @@ PARALLEL_FOR_LOOP
     vobj *retdata = ret._odata.data();
     int size = x._odata.size();
     int sites = x._grid->oSites();
-	#pragma acc data create(retdata[0:size]) 
-	#pragma acc data copyin(xdata[0:size],ydata[0:size]) 
-   {
-    #pragma acc parallel loop independent default(present)
-    for(int ss=0;ss<sites;ss++){
+    assert(sites == size);
+    std::cout << "axpy with ptrs " << xdata << " " << ydata << " " << retdata << std::endl;
+#pragma acc enter data create(retdata[0:size]) 
+#pragma acc enter data create(xdata[0:size]) 
+#pragma acc enter data create(ydata[0:size]) 
 
-    //PARALLEL_FOR_LOOP
-    //for(int ss=0;ss<x._grid->oSites();ss++){
-//#ifdef STREAMING_STORES
-//      vobj tmp = a*x._odata[ss]+y._odata[ss];
-//      vstream(ret._odata[ss],tmp);
-//#else
-//      ret._odata[ss]=a*x._odata[ss]+y._odata[ss];
-      retdata[ss] = a*xdata[ss]+ydata[ss];  
-//#endif
-    }
-  #pragma acc update host(retdata[0:size])
-}
-  //#pragma acc data delete(retdata)
+#pragma acc update device(xdata[0:size])
+#pragma acc update device(ydata[0:size])
+
+#pragma acc data copyin(a)
+    //{
+#pragma acc parallel loop independent default(present)
+	for(int ss=0;ss<sites;ss++){
+	  
+	  //PARALLEL_FOR_LOOP
+	  //for(int ss=0;ss<x._grid->oSites();ss++){
+	  //#ifdef STREAMING_STORES
+	  //      vobj tmp = a*x._odata[ss]+y._odata[ss];
+	  //      vstream(ret._odata[ss],tmp);
+	  //#else
+	  //      ret._odata[ss]=a*x._odata[ss]+y._odata[ss];
+	  retdata[ss] = a*xdata[ss]+ydata[ss];  
+	  //#endif
+	}
+#pragma acc update host(retdata[0:size])
+#pragma acc exit data delete(retdata)
+	//}
+#pragma acc exit data delete(xdata)
+#pragma acc exit data delete(ydata)
+
+      //#pragma acc data delete(retdata)
   }
   template<class sobj,class vobj> strong_inline
   void axpby(Lattice<vobj> &ret,sobj a,sobj b,const Lattice<vobj> &x,const Lattice<vobj> &y){
