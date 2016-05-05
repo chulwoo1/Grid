@@ -86,11 +86,15 @@ namespace Optimization {
   struct Vstore{
     //Float 
     inline void operator()(u128f a, float* F){
-      memcpy(F,a.f,4*sizeof(float));
+      F[0] = a.f[0];
+      F[1] = a.f[1];
+      F[2] = a.f[2];
+      F[3] = a.f[3];
     }
     //Double
     inline void operator()(u128d a, double* D){
-      memcpy(D,a.f,2*sizeof(double));
+      D[0] = a.f[0];
+      D[1] = a.f[1];
     }
     //Integer
     inline void operator()(int a, Integer* I){
@@ -102,11 +106,15 @@ namespace Optimization {
   struct Vstream{
     //Float
     inline void operator()(float * a, u128f b){
-      memcpy(a,b.f,4*sizeof(float));
+      a[0] = b.f[0];
+      a[1] = b.f[1];
+      a[2] = b.f[2];
+      a[3] = b.f[3];
     }
     //Double
     inline void operator()(double * a, u128d b){
-      memcpy(a,b.f,2*sizeof(double));
+      a[0] = b.f[0];
+      a[1] = b.f[1];
     }
 
 

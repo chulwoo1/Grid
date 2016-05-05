@@ -569,6 +569,12 @@ public:
     : cuDoubleComplex(z) {}
 
   __host__ __device__
+  inline complex<double>(const complex<float> & z){
+    real(z.real());
+    imag(z.imag());
+  }
+
+  __host__ __device__
     inline complex<double>(cuDoubleComplex z)
     : cuDoubleComplex(z) {}
 

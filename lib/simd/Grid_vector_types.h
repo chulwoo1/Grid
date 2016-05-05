@@ -104,12 +104,12 @@ namespace Grid {
   // need explicit declaration of types when used since
   // clang cannot automatically determine the output type sometimes
   template < class Out, class Input1, class Input2, class Operation > 
-    Out binary(Input1 src_1, Input2 src_2, Operation op){
+    inline Out binary(Input1 src_1, Input2 src_2, Operation op){
     return op(src_1, src_2);
   } 
 
   template < class Out, class Input, class Operation > 
-    Out unary(Input src, Operation op){
+    inline Out unary(Input src, Operation op){
     return op(src);
   } 
   ///////////////////////////////////////////////
