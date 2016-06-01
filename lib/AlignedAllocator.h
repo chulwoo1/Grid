@@ -49,12 +49,12 @@ extern void  shmem_free(void *);
 #endif
 
 namespace Grid {
-
 ////////////////////////////////////////////////////////////////////
 // A lattice of something, but assume the something is SIMDized.
 ////////////////////////////////////////////////////////////////////
 template<typename _Tp>
-class alignedAllocator {
+using alignedAllocator = std::allocator<_Tp>;
+#if 0
 public: 
   typedef std::size_t     size_type;
   typedef std::ptrdiff_t  difference_type;
@@ -139,6 +139,7 @@ public:
 
   void destroy(pointer __p) { };
 };
+#endif
 
 template<typename _Tp>  inline bool
 operator==(const alignedAllocator<_Tp>&, const alignedAllocator<_Tp>&){ return true; }
