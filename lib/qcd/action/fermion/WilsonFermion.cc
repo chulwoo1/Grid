@@ -324,7 +324,6 @@ PARALLEL_FOR_LOOP
       } else { 
 PARALLEL_FOR_LOOP
 int sites=in._grid->oSites();
-#pragma acc kernels default(present)
         for(int sss=0;sss<sites;sss++){
 	  Kernels::DiracOptDhopSite(st,U,st.comm_buf,sss,sss,in,out);
 	}
