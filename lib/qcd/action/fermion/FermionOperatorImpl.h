@@ -281,7 +281,7 @@ PARALLEL_FOR_LOOP
 	  mult(&phi(0),&U(0)(mu),&chi(0));
 	  mult(&phi(1),&U(1)(mu),&chi(1));
 	}
-	
+#endif	
       }
 
       inline void DoubleStore(GridBase *GaugeGrid,DoubledGaugeField &Uds,const GaugeField &Umu)
@@ -341,7 +341,6 @@ PARALLEL_FOR_LOOP
 	  }
 	  
 	}
-#endif
       }
 
       inline void InsertForce4D(GaugeField &mat, FermionField &Btilde, FermionField &A,int mu){
