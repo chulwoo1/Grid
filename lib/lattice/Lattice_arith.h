@@ -236,15 +236,22 @@ PARALLEL_FOR_LOOP
     vobj *retdata = ret._odata.data();
     int size = x._odata.size();
     int sites = x._grid->oSites();
+//    Lattice<vobj> result(sites);
     std::cout<<"a  = "<<a<<std::endl;
-    std::cout<<"xdata[0]"<<xdata[0]<<std::endl;
-    std::cout<<"ydata[0]"<<ydata[0]<<std::endl;
-    std::cout<<"retdata[0]"<<retdata[0]<<std::endl;
 
+    std::cout<<"sites = "<<sites<<std::endl;
+    std::cout<<"size = "<<size<<std::endl;
+    std::cout<<"xdata[size-1]"<<xdata[size-1]<<std::endl;
+    std::cout<<"ydata[size-1]"<<ydata[size-1]<<std::endl;
+    std::cout<<"retdata[size-1]"<<retdata[size-1]<<std::endl;
+
+    vobj tmp;
 //	#pragma acc data create(retdata[0:size]) 
-	#pragma acc data copyin(a,xdata[0:size],ydata[0:size]) copyout(retdata[0:size])
+	#pragma acc data \
+	copyin(a,xdata[0:size],ydata[0:size]) \
+	copyout(retdata[0:size])
    {
-    #pragma acc parallel loop independent
+    #pragma acc parallel loop independent private(tmp)
 PARALLEL_FOR_LOOP
     for(int ss=0;ss<sites;ss++){
     //for(int ss=0;ss<x._grid->oSites();ss++){
@@ -252,14 +259,16 @@ PARALLEL_FOR_LOOP
       vobj tmp = a*x._odata[ss]+y._odata[ss];
       vstream(ret._odata[ss],tmp);
 #else
-      vobj tmp = a*xdata[ss]+ydata[ss];
+      tmp = a*xdata[ss]+ydata[ss];
 //      retdata[ss] = a*xdata[ss]+ydata[ss];
 //      ret._odata[ss]=a*x._odata[ss]+y._odata[ss];
-      retdata[ss]=tmp;  
+//      result._odata[ss]=tmp;  
+      retdata[ss]=tmp;
 #endif
     }
     std::cout<<"--------------------"<<std::endl;
-    std::cout<<"retdata[0]"<<retdata[0]<<std::endl;
+//    std::cout<<"result[size-1]"<<result._odata[size-1]<<std::endl;
+    std::cout<<"retdata[size-1]"<<retdata[size-1]<<std::endl;
 //  #pragma acc update host(retdata[0:size])
 }
   //#pragma acc data delete(retdata)
