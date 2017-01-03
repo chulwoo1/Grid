@@ -55,6 +55,9 @@ namespace Grid {
     }
   
     void operator() (const FieldD &src_d_in, FieldD &sol_d){
+	(*this)(src_d_in,sol_d,NULL);
+    }
+    void operator() (const FieldD &src_d_in, FieldD &sol_d, RealD *shift){
       GridStopWatch TotalTimer;
       TotalTimer.Start();
     
@@ -82,7 +85,7 @@ namespace Grid {
       FieldF sol_f(SinglePrecGrid);
       sol_f.checkerboard = cb;
     
-      ConjugateGradient<FieldF> CG_f(inner_tol, MaxInnerIterations);
+      ConjugateGradientShifted<FieldF> CG_f(inner_tol, MaxInnerIterations);
       CG_f.ErrorOnNoConverge = false;
 
       GridStopWatch InnerCGtimer;
@@ -92,6 +95,7 @@ namespace Grid {
       for(Integer outer_iter = 0; outer_iter < MaxOuterIterations; outer_iter++){
 	//Compute double precision rsd and also new RHS vector.
 	Linop_d.HermOp(sol_d, tmp_d);
+	if(shift) axpy(tmp_d,*shift,sol_d,tmp_d);
 	RealD norm = axpy_norm(src_d, -1., tmp_d, src_d_in); //src_d is residual vector
       
 	std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Outer iteration " <<outer_iter<<" residual "<< norm<< " target "<< stop<<std::endl;
@@ -115,7 +119,7 @@ namespace Grid {
 	//Inner CG
 	CG_f.Tolerance = inner_tol;
 	InnerCGtimer.Start();
-	CG_f(Linop_f, src_f, sol_f);
+	CG_f(Linop_f, src_f, sol_f,*shift);
 	InnerCGtimer.Stop();
       
 	//Convert sol back to double and add to double prec solution
@@ -129,8 +133,8 @@ namespace Grid {
       //Final trial CG
       std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Starting final patch-up double-precision solve"<<std::endl;
     
-      ConjugateGradient<FieldD> CG_d(Tolerance, MaxInnerIterations);
-      CG_d(Linop_d, src_d_in, sol_d);
+      ConjugateGradientShifted<FieldD> CG_d(Tolerance, MaxInnerIterations);
+      CG_d(Linop_d, src_d_in, sol_d,*shift);
 
       TotalTimer.Stop();
       std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Total " << TotalTimer.Elapsed() << " Precision change " << PrecChangeTimer.Elapsed() << " Inner CG total " << InnerCGtimer.Elapsed() << std::endl;
