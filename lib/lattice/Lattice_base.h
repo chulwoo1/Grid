@@ -86,6 +86,11 @@ class LatticeTrinaryExpression :public std::pair<Op,std::tuple<T1,T2,T3> >, publ
 void inline conformable(GridBase *lhs,GridBase *rhs)
 {
   assert(lhs == rhs);
+#if 0
+   if (lhs != rhs){
+   printf("conformable: lhs(%p) != rhs(%p)!\n",lhs,rhs); exit(-43);
+   }
+#endif
 }
 
 template<class vobj>

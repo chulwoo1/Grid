@@ -57,10 +57,11 @@ void CayleyFermion5D<Impl>::Dminus(const FermionField &psi, FermionField &chi)
 {
   int Ls=this->Ls;
 
-  this->DW(psi,this->tmp(),DaggerNo);
+  FermionField tmp_f(this->FermionGrid());
+  this->DW(psi,tmp_f,DaggerNo);
 
   for(int s=0;s<Ls;s++){
-    axpby_ssp(chi,Coeff_t(1.0),psi,-cs[s],this->tmp(),s,s);// chi = (1-c[s] D_W) psi
+    axpby_ssp(chi,Coeff_t(1.0),psi,-cs[s],tmp_f,s,s);// chi = (1-c[s] D_W) psi
   }
 }
 
