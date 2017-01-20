@@ -395,6 +395,7 @@ void CayleyFermion5D<Impl>::SetCoefficientsInternal(RealD zolo_hi,std::vector<Co
     omega[i] = gamma[i]*zolo_hi; //NB reciprocal relative to Chroma NEF code
     bs[i] = 0.5*(bpc/omega[i] + bmc);
     cs[i] = 0.5*(bpc/omega[i] - bmc);
+    std::cout << GridLogMessage << "SetCoefficientsInternal     : " << i << "bs= "<<bs[i]<<" cs= "<<cs[i]   << std::endl;
   }
   
   ////////////////////////////////////////////////////////
