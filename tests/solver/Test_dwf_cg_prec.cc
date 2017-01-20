@@ -79,7 +79,13 @@ int main(int argc, char** argv) {
 
   RealD mass = 0.01;
   RealD M5 = 1.8;
-  DomainWallFermionR Ddwf(Umu, *FGrid, *FrbGrid, *UGrid, *UrbGrid, mass, M5);
+  std::vector < std::complex<double>  > omegas;
+  for(int i=0;i<Ls;i++){
+  	std::complex<double> temp (0.25, 0.01*i);
+ 	 omegas.push_back(temp);
+  }
+//  DomainWallFermionR Ddwf(Umu, *FGrid, *FrbGrid, *UGrid, *UrbGrid, mass, M5);
+  ZMobiusFermionR Ddwf(Umu, *FGrid, *FrbGrid, *UGrid, *UrbGrid, mass, M5, omegas,1.,0.);
 
   LatticeFermion src_o(FrbGrid);
   LatticeFermion result_o(FrbGrid);
@@ -88,7 +94,7 @@ int main(int argc, char** argv) {
 
   GridStopWatch CGTimer;
 
-  SchurDiagMooeeOperator<DomainWallFermionR, LatticeFermion> HermOpEO(Ddwf);
+  SchurDiagMooeeOperator<ZMobiusFermionR, LatticeFermion> HermOpEO(Ddwf);
   ConjugateGradient<LatticeFermion> CG(1.0e-8, 10000, 0);// switch off the assert
 
   CGTimer.Start();
