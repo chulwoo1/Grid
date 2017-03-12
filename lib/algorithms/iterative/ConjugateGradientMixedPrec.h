@@ -119,7 +119,7 @@ namespace Grid {
 	//Inner CG
 	CG_f.Tolerance = inner_tol;
 	InnerCGtimer.Start();
-	CG_f(Linop_f, src_f, sol_f,*shift);
+	CG_f(Linop_f, src_f, sol_f,shift);
 	InnerCGtimer.Stop();
       
 	//Convert sol back to double and add to double prec solution
@@ -134,7 +134,7 @@ namespace Grid {
       std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Starting final patch-up double-precision solve"<<std::endl;
     
       ConjugateGradientShifted<FieldD> CG_d(Tolerance, MaxInnerIterations);
-      CG_d(Linop_d, src_d_in, sol_d,*shift);
+      CG_d(Linop_d, src_d_in, sol_d,shift);
 
       TotalTimer.Stop();
       std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Total " << TotalTimer.Elapsed() << " Precision change " << PrecChangeTimer.Elapsed() << " Inner CG total " << InnerCGtimer.Elapsed() << std::endl;

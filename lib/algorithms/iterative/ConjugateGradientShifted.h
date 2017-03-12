@@ -47,10 +47,10 @@ public:
     };
 
     void operator() (LinearOperatorBase<Field> &Linop,const Field &src, Field &psi ){
-	(*this)(Linop,src,psi,0.);
+	(*this)(Linop,src,psi,NULL);
     }
 
-    void operator() (LinearOperatorBase<Field> &Linop,const Field &src, Field &psi, RealD shift){
+    void operator() (LinearOperatorBase<Field> &Linop,const Field &src, Field &psi, RealD *shift){
 
       psi.checkerboard = src.checkerboard;
       conformable(psi,src);
@@ -66,9 +66,9 @@ public:
       assert(std::isnan(guess)==0);
 
       Linop.HermOpAndNorm(psi,mmp,d,b);
-	axpy(mmp,shift,psi,mmp);
+	if(shift) axpy(mmp,*shift,psi,mmp);
 	RealD rn = norm2(psi);
-	d += rn*shift;
+	if(shift) d += rn*(*shift);
 	RealD d2 = real(innerProduct(psi,mmp));
 	b= norm2(mmp);
       RealD src_norm=norm2(src);
@@ -109,9 +109,9 @@ public:
 	Linop.HermOpAndNorm(p,mmp,d,qq);
 	MatrixTimer.Stop();
 	LinalgTimer.Start();
-	axpy(mmp,shift,p,mmp);
+	if(shift) axpy(mmp,*shift,p,mmp);
 	RealD rn = norm2(p);
-	d += rn*shift;
+	if(shift) d += rn*(*shift);
 	RealD d2 = real(innerProduct(p,mmp));
 	qq = norm2(mmp);
       if (k%10==1) std::cout<< std::setprecision(4)<< "d:  "<<d<<" d2= "<<d2<<std::endl;
@@ -138,7 +138,7 @@ public:
 	  
 	  SolverTimer.Stop();
 	  Linop.HermOpAndNorm(psi,mmp,d,qq);
-	  mmp = mmp + shift * psi;
+	  if(shift) mmp = mmp + (*shift) * psi;
 	  p=mmp-src;
 	  
 	  RealD mmpnorm = sqrt(norm2(mmp));
