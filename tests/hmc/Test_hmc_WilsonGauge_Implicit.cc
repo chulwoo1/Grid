@@ -30,126 +30,87 @@ directory
 /*  END LEGAL */
 #include <Grid/Grid.h>
 
-namespace Grid{
-struct RMHMCActionParameters: Serializable {
-  GRID_SERIALIZABLE_CLASS_MEMBERS(RMHMCActionParameters,
-				  double, gauge_beta)
-
-  template <class ReaderClass >
-  RMHMCActionParameters(Reader<ReaderClass>& Reader){
-    read(Reader, "Action", *this);
-  }
-};
-}
-
-int main(int argc, char **argv) {
+int main(int argc, char **argv) 
+{
   using namespace Grid;
-//  using namespace Grid::QCD;
 
   Grid_init(&argc, &argv);
-  GridLogIntegrator.Active(1);
-  int threads = GridThread::GetThreads();
-  // here make a routine to print all the relevant information on the run
-  std::cout << GridLogMessage << "Grid is setup to use " << threads << " threads" << std::endl;
+  GridLogLayout();
 
    // Typedefs to simplify notation
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
-   // Serialiser
-//  typedef Grid::JSONReader       Serialiser;
-  typedef Grid::XmlReader       Serialiser;
 
+  IntegratorParameters MD;
+  MD.name    = std::string("ImplicitMinimumNorm2");
+  MD.MDsteps = 20;
+  MD.trajL   = 1.0;
 
-  HMCWrapper TheHMC;
-  TheHMC.ReadCommandLine(argc, argv); // these can be parameters from file
-  
-  // Reader, file should come from command line
-  if (TheHMC.ParameterFile.empty()){
-    std::cout << "Input file not specified."
-              << "Use --ParameterFile option in the command line.\nAborting" 
-              << std::endl;
-    exit(1);
-  }
-  Serialiser Reader(TheHMC.ParameterFile);
+  HMCparameters HMCparams;
+  HMCparams.StartTrajectory  = 0;
+  HMCparams.Trajectories     = 200;
+  HMCparams.NoMetropolisUntil=  20;
+  // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
+  HMCparams.StartingType     =std::string("ColdStart");
+  HMCparams.Kappa=0.7;
+  HMCparams.MD = MD;
 
-  RMHMCActionParameters ActionParams(Reader);  
+  // Possibile to create the module by hand 
+  // hardcoding parameters or using a Reader
 
-  // Grid from the command line
-  TheHMC.Resources.AddFourDimGrid("gauge");
- 
 
   // Checkpointer definition
-  CheckpointerParameters CPparams(Reader);
-//  TheHMC.Resources.LoadBinaryCheckpointer(CPparams);
+  CheckpointerParameters CPparams;  
+  CPparams.config_prefix = "ckpoint_lat";
+  CPparams.rng_prefix = "ckpoint_rng";
+  CPparams.saveInterval = 1;
+  CPparams.format = "IEEE64BIG";
+  
+  HMCWrapper TheHMC(HMCparams);
+  // Grid from the command line
+  TheHMC.Resources.AddFourDimGrid("gauge");
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
 
-  RNGModuleParameters RNGpar(Reader);
+  RNGModuleParameters RNGpar;
+  RNGpar.serial_seeds = "1 2 3 4 5";
+  RNGpar.parallel_seeds = "6 7 8 9 10";
   TheHMC.Resources.SetRNGSeeds(RNGpar);
 
   // Construct observables
+  // here there is too much indirection 
   typedef PlaquetteMod<HMCWrapper::ImplPolicy> PlaqObs;
   typedef TopologicalChargeMod<HMCWrapper::ImplPolicy> QObs;
   TheHMC.Resources.AddObservable<PlaqObs>();
-  TopologyObsParameters TopParams(Reader);
+  TopologyObsParameters TopParams;
+  TopParams.interval = 5;
+  TopParams.do_smearing = true;
+  TopParams.Smearing.steps = 200;
+  TopParams.Smearing.step_size = 0.01;
+  TopParams.Smearing.meas_interval = 50;
+  TopParams.Smearing.maxTau = 2.0; 
   TheHMC.Resources.AddObservable<QObs>(TopParams);
-  /////////////////////////////////////////////////////////////
-  // Collect actions
-  WilsonGaugeActionR Waction(ActionParams.gauge_beta);
+  //////////////////////////////////////////////
 
+  /////////////////////////////////////////////////////////////
+  // Collect actions, here use more encapsulation
+  // need wrappers of the fermionic classes 
+  // that have a complex construction
+  // standard
+  RealD beta = 5.6 ;
+  WilsonGaugeActionR Waction(beta);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);
+  //Level1.push_back(WGMod.getPtr());
   TheHMC.TheAction.push_back(Level1);
   /////////////////////////////////////////////////////////////
-  TheHMC.Parameters.initialize(Reader);
-  TheHMC.Run(); 
+
+  // HMC parameters are serialisable 
+  TheHMC.Parameters.MD.MDsteps = 20;
+  TheHMC.Parameters.MD.trajL   = 1.0;
+
+  TheHMC.ReadCommandLine(argc, argv); // these can be parameters from file
+  TheHMC.Run();  // no smearing
 
   Grid_finalize();
 
 } // main
-
-/* Examples for input files
-
-JSON
-
-{
-    "Checkpointer": {
-	"config_prefix": "ckpoint_json_lat",
-	"rng_prefix": "ckpoint_json_rng",
-	"saveInterval": 10,
-	"format": "IEEE64BIG"
-    },
-    "RandomNumberGenerator": {
-	"serial_seeds": "1 2 3 4 6",
-	"parallel_seeds": "55 7 8 9 11"
-    },
-    "Action":{
-	"gauge_beta": 5.8
-    },
-    "TopologyMeasurement":{
-	"interval": 1,
-	"do_smearing": true,
-	"Smearing":{
-	    "steps": 200,
-	    "step_size": 0.01,
-	    "meas_interval": 50,
-	    "maxTau": 2.0
-	}
-    },
-    "HMC":{
-	"StartTrajectory": 0,
-	"Trajectories": 10,
-	"MetropolisTest": true,
-	"NoMetropolisUntil": 10,
-	"StartingType": "HotStart",
-	"MD":{
-	    "name": "MinimumNorm2",
-	    "MDsteps": 40,
-	    "trajL": 1.0
-	}
-    }
-}
-
-
-XML example not provided yet
-
-*/
