@@ -181,7 +181,7 @@ protected:
 
     MomentaField NewMom = P.Mom;
     MomentaField OldMom = P.Mom;
-    double threshold = 1e-8;
+    double threshold = 1e-7;
     P.M.ImportGauge(U);
     MomentaField MomDer(P.Mom.Grid());
     MomentaField MomDer1(P.Mom.Grid());
@@ -257,7 +257,7 @@ protected:
     MomentaField Mom2(P.Mom.Grid());
     RealD RelativeError;
     Field diff(U.Grid());
-    Real threshold = 1e-8;
+    Real threshold = 1e-7;
     int counter = 1;
     int MaxCounter = 100;
 

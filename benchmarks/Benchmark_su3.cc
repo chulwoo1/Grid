@@ -249,7 +249,8 @@ int main (int argc, char ** argv)
 	  tmp = Cshift(y,mu,-1);
 	  tshift+=usecond();
 	  tmult-=usecond();
-	  z   = x*tmp;
+//	  z   = x*tmp;
+          mult(z,x,tmp);
 	  tmult+=usecond();
 	}
 	double stop=usecond();

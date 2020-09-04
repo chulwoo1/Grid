@@ -42,8 +42,8 @@ int main(int argc, char **argv)
 
   IntegratorParameters MD;
   MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.MDsteps = 20;
-  MD.trajL   = 1.0;
+  MD.MDsteps = 5;
+  MD.trajL   = 0.05;
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-  RealD beta = 5.6 ;
+  RealD beta = 6.4 ;
   WilsonGaugeActionR Waction(beta);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
