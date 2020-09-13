@@ -326,10 +326,9 @@ class ImplicitLeapFrog : public Integrator<FieldImplementation, SmearingPolicy,
 
       //int mm = last_step ? 1 : 2;
       if (last_step){
-        this->update_P(U, level, eps / 2.0);
+        this->update_P2(U, level, eps / 2.0);
       } else {
       this->implicit_update_P(U, level, eps, true);// works intermediate step
-      //  this->update_P(U, level, eps); // looks not reversible
       }
     }
   }
@@ -396,7 +395,7 @@ class ImplicitMinimumNorm2 : public Integrator<FieldImplementation, SmearingPoli
       //this->update_P(U, level, lambda * eps * mm);
 
       if (last_step) {
-        this->update_P(U, level, eps * lambda);
+        this->update_P2(U, level, eps * lambda);
       } else {
         this->implicit_update_P(U, level, lambda * eps*2.0, true);
       }

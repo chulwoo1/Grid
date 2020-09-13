@@ -81,7 +81,7 @@ int main(int argc, char **argv)
   typedef TopologicalChargeMod<HMCWrapper::ImplPolicy> QObs;
   TheHMC.Resources.AddObservable<PlaqObs>();
   TopologyObsParameters TopParams;
-  TopParams.interval = 5;
+  TopParams.interval = 1;
   TopParams.do_smearing = true;
   TopParams.Smearing.steps = 200;
   TopParams.Smearing.step_size = 0.01;

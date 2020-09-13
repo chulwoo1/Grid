@@ -111,6 +111,7 @@ public:
   void GlobalSum(RealF &);
   void GlobalSumVector(RealF *,int N);
   void GlobalSum(RealD &);
+  void GlobalMax(RealD &);
   void GlobalSumVector(RealD *,int N);
   void GlobalSum(uint32_t &);
   void GlobalSum(uint64_t &);

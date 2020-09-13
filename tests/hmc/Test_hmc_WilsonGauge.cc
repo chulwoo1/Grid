@@ -40,6 +40,7 @@ int main(int argc, char **argv)
    // Typedefs to simplify notation
   typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;  // Uses the default minimum norm
   HMCWrapper TheHMC;
+    
 
   // Grid from the command line
   TheHMC.Resources.AddFourDimGrid("gauge");
@@ -91,6 +92,12 @@ int main(int argc, char **argv)
   /////////////////////////////////////////////////////////////
 
   // HMC parameters are serialisable 
+    // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
+//    HMCparams.StartingType     =std::string("ColdStart");
+//    HMCparams.Kappa=0.0;
+//    HMCparams.MD = MD;
+  TheHMC.Parameters.StartingType     =std::string("ColdStart");
+  TheHMC.Parameters.Kappa=0.0;
   TheHMC.Parameters.MD.MDsteps = 20;
   TheHMC.Parameters.MD.trajL   = 1.0;
 

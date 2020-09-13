@@ -91,6 +91,14 @@ protected:
     std::cout << GridLogIntegrator << "[" << level << "] P " << " dt " << ep << " : t_P " << t_P[level] << std::endl;
   }
 
+  void update_P2(Field& U, int level, double ep) 
+  {
+    t_P[level] += ep;
+    update_P2(P.Mom, U, level, ep);
+
+    std::cout << GridLogIntegrator << "[" << level << "] P " << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+  }
+
   // to be used by the actionlevel class to iterate
   // over the representations
   struct _updateP 
@@ -111,6 +119,36 @@ protected:
   } update_P_hireps{};
 
   void update_P(MomentaField& Mom, Field& U, int level, double ep) {
+    // input U actually not used in the fundamental case
+    // Fundamental updates, include smearing
+
+    for (int a = 0; a < as[level].actions.size(); ++a) {
+      double start_full = usecond();
+      Field force(U.Grid());
+      conformable(U.Grid(), Mom.Grid());
+
+      Field& Us = Smearer.get_U(as[level].actions.at(a)->is_smeared);
+      double start_force = usecond();
+      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
+
+      std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
+      if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
+      force = FieldImplementation::projectForce(force); // Ta for gauge fields
+      double end_force = usecond();
+      Real force_abs = std::sqrt(norm2(force)/U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "["<<level<<"]["<<a<<"] Force average: " << force_abs << std::endl;
+      Mom -= force * ep* HMC_MOMENTUM_DENOMINATOR;; 
+      double end_full = usecond();
+      double time_full  = (end_full - start_full) / 1e3;
+      double time_force = (end_force - start_force) / 1e3;
+      std::cout << GridLogMessage << "["<<level<<"]["<<a<<"] P update elapsed time: " << time_full << " ms (force: " << time_force << " ms)"  << std::endl;
+    }
+
+    // Force from the other representations
+    as[level].apply(update_P_hireps, Representations, Mom, U, ep);
+  }
+
+  void update_P2(MomentaField& Mom, Field& U, int level, double ep) {
     // input U actually not used in the fundamental case
     // Fundamental updates, include smearing
 
@@ -418,9 +456,10 @@ public:
 
     std::cout << GridLogIntegrator << "Integrator action\n";
 
-//    RealD H = - FieldImplementation::FieldSquareNorm(P)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
+    RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
+    std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
     P.M.ImportGauge(U);
-    RealD H = - P.MomentaAction();
+    H = - P.MomentaAction();
     RealD Hterm;
     std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
 

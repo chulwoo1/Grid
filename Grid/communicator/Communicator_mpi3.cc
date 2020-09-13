@@ -289,6 +289,11 @@ void CartesianCommunicator::GlobalSum(double &d)
   int ierr = MPI_Allreduce(MPI_IN_PLACE,&d,1,MPI_DOUBLE,MPI_SUM,communicator);
   assert(ierr==0);
 }
+void CartesianCommunicator::GlobalMax(double &d)
+{
+  int ierr = MPI_Allreduce(MPI_IN_PLACE,&d,1,MPI_DOUBLE,MPI_MAX,communicator);
+  assert(ierr==0);
+}
 void CartesianCommunicator::GlobalSumVector(double *d,int N)
 {
   int ierr = MPI_Allreduce(MPI_IN_PLACE,d,N,MPI_DOUBLE,MPI_SUM,communicator);
