@@ -7,6 +7,7 @@ Source file: ./lib/qcd/hmc/integrators/Integrator.h
 Copyright (C) 2015
 
 Author: Guido Cossu <guido.cossu@ed.ac.uk>
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,7 +34,10 @@ NAMESPACE_BEGIN(Grid);
 
 template <typename Field> 
 class Metric{
+protected:
+  int triv;
 public:
+  int Trivial(){printf("Trivial=%d\n",triv); exit(-42);return triv;}
   virtual void ImportGauge(const Field&)   = 0;
   virtual void M(const Field&, Field&)     = 0;
   virtual void Minv(const Field&, Field&)  = 0;
@@ -48,23 +52,31 @@ public:
 template <typename Field>
 class TrivialMetric : public Metric<Field>{
 public:
+  TrivialMetric(){printf("triv=%d\n",this->Trivial());exit(-42);}
   virtual void ImportGauge(const Field&){};
   virtual void M(const Field& in, Field& out){
+    printf("M:norm=%e\n",norm2(in));
     out = in;
   }
   virtual void Minv(const Field& in, Field& out){
+    printf("Minv:norm=%e\n",norm2(in));
     out = in;
   }
   virtual void MSquareRoot(Field& P){
+    printf("MSquareRoot:norm=%e\n",norm2(in));
     // do nothing
   }
   virtual void MInvSquareRoot(Field& P){
+    printf("MInvSquareRoot:=%e\n",norm2(in));
     // do nothing
   }
   virtual void MDeriv(const Field& in, Field& out){
+    printf("MDeriv:norm=%e\n",norm2(in));
+//    printf("HERE!\n");exit(-42);
     out = Zero();
   }
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
+    printf("MDeriv:norm=%e %e \n",norm2(left),norm2(right));
     out = Zero();
   }
 
@@ -101,6 +113,7 @@ public:
     // Generate gaussian momenta
     Implementation::generate_momenta(Mom, pRNG);
     // Modify the distribution with the metric
+    if(M.Trivial()) return;
     M.MSquareRoot(Mom);
 
     if (1) {
@@ -130,7 +143,7 @@ public:
       Hloc += trace(Mom_mu * inv_mu);
     }
 
-    if (1) {
+    if(!M.Trivial()) {
       // Auxiliary Fields
       // hide in the metric
       M.M(AuxMom, inv);
@@ -165,7 +178,7 @@ public:
 
   void AuxiliaryFieldsDerivative(MomentaField& der){
     der = Zero();
-    if (1){
+    if(!M.Trivial()) {
       // Auxiliary fields
       MomentaField der_temp(der.Grid());
       MomentaField X(der.Grid());
@@ -192,13 +205,13 @@ public:
   }
 
   void update_auxiliary_momenta(RealD ep){
-    if(1){
+    if(!M.Trivial()) {
       AuxMom -= ep * AuxField;
     }
   }
 
   void update_auxiliary_fields(RealD ep){
-    if (1) {
+    if(!M.Trivial()) {
       MomentaField tmp(AuxMom.Grid());
       MomentaField tmp2(AuxMom.Grid());
       M.M(AuxMom, tmp);

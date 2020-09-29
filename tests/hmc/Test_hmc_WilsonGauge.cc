@@ -83,7 +83,7 @@ int main(int argc, char **argv)
   // that have a complex construction
   // standard
   RealD beta = 5.6 ;
-  WilsonGaugeActionR Waction(beta);
+  WilsonGaugeActionD Waction(beta);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);
