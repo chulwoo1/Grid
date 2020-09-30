@@ -33,8 +33,6 @@ directory
 #define INTEGRATOR_INCLUDED
 
 #include <memory>
-// Needs to be pulled out for tuning!
-static const double THRESHOLD=1e-7;
 
 NAMESPACE_BEGIN(Grid);
 
@@ -221,7 +219,7 @@ protected:
 
     MomentaField NewMom = P.Mom;
     MomentaField OldMom = P.Mom;
-    double threshold = THRESHOLD;
+    double threshold = 1e-8;
     P.M.ImportGauge(U);
     MomentaField MomDer(P.Mom.Grid());
     MomentaField MomDer1(P.Mom.Grid());
@@ -297,7 +295,7 @@ protected:
     MomentaField Mom2(P.Mom.Grid());
     RealD RelativeError;
     Field diff(U.Grid());
-    double threshold = THRESHOLD;
+    Real threshold = 1e-8;
     int counter = 1;
     int MaxCounter = 100;
 
@@ -488,9 +486,9 @@ public:
       t_P[level] = 0;
     }
 
-    for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
-      int first_step = (stp == 0);
-      int last_step = (stp == Params.MDsteps - 1);
+    for (int step = 0; step < Params.MDsteps; ++step) {  // MD step
+      int first_step = (step == 0);
+      int last_step = (step == Params.MDsteps - 1);
       this->step(U, 0, first_step, last_step);
     }
 
