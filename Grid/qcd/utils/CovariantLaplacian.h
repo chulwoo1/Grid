@@ -87,10 +87,11 @@ public:
     remez.generateApprox(param.degree,1,2);
     PowerHalf.Init(remez,param.tolerance,false);
     PowerInvHalf.Init(remez,param.tolerance,true);
+    this->triv=0;
         
 
   };
-
+  LaplacianAdjointField(){this->triv=0; printf("triv=%d\n",this->Trivial());}
   void Mdir(const GaugeField&, GaugeField&, int, int){ assert(0);}
   void MdirAll(const GaugeField&, std::vector<GaugeField> &){ assert(0);}
   void Mdiag(const GaugeField&, GaugeField&){ assert(0);}
