@@ -37,7 +37,8 @@ class Metric{
 protected:
   int triv;
 public:
-  int Trivial(){printf("Trivial=%d\n",triv); exit(-42);return triv;}
+  Metric(){this->triv=1;}
+  int Trivial(){printf("Metric::Trivial=%d\n",triv); ;return triv;}
   virtual void ImportGauge(const Field&)   = 0;
   virtual void M(const Field&, Field&)     = 0;
   virtual void Minv(const Field&, Field&)  = 0;
@@ -52,7 +53,7 @@ public:
 template <typename Field>
 class TrivialMetric : public Metric<Field>{
 public:
-  TrivialMetric(){printf("triv=%d\n",this->Trivial());exit(-42);}
+  TrivialMetric(){this->triv=1;printf("TrivialMetric::triv=%d\n",this->Trivial());}
   virtual void ImportGauge(const Field&){};
   virtual void M(const Field& in, Field& out){
     printf("M:norm=%e\n",norm2(in));
@@ -63,11 +64,11 @@ public:
     out = in;
   }
   virtual void MSquareRoot(Field& P){
-    printf("MSquareRoot:norm=%e\n",norm2(in));
+    printf("MSquareRoot:norm=%e\n",norm2(P));
     // do nothing
   }
   virtual void MInvSquareRoot(Field& P){
-    printf("MInvSquareRoot:=%e\n",norm2(in));
+    printf("MInvSquareRoot:=%e\n",norm2(P));
     // do nothing
   }
   virtual void MDeriv(const Field& in, Field& out){
