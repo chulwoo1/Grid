@@ -453,6 +453,7 @@ public:
   RealD S(Field& U) 
   {  // here also U not used
 
+    std::cout.precision(15);
     std::cout << GridLogIntegrator << "Integrator action\n";
 
     RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom

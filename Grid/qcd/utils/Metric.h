@@ -56,28 +56,28 @@ public:
   TrivialMetric(){this->triv=1;printf("TrivialMetric::triv=%d\n",this->Trivial());}
   virtual void ImportGauge(const Field&){};
   virtual void M(const Field& in, Field& out){
-    printf("M:norm=%e\n",norm2(in));
+    printf("M:norm=%0.15e\n",norm2(in));
     out = in;
   }
   virtual void Minv(const Field& in, Field& out){
-    printf("Minv:norm=%e\n",norm2(in));
+    printf("Minv:norm=%0.15e\n",norm2(in));
     out = in;
   }
   virtual void MSquareRoot(Field& P){
-    printf("MSquareRoot:norm=%e\n",norm2(P));
+    printf("MSquareRoot:norm=%0.15e\n",norm2(P));
     // do nothing
   }
   virtual void MInvSquareRoot(Field& P){
-    printf("MInvSquareRoot:=%e\n",norm2(P));
+    printf("MInvSquareRoot:=%0.15e\n",norm2(P));
     // do nothing
   }
   virtual void MDeriv(const Field& in, Field& out){
-    printf("MDeriv:norm=%e\n",norm2(in));
+    printf("MDeriv:norm=%0.15e\n",norm2(in));
 //    printf("HERE!\n");exit(-42);
     out = Zero();
   }
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
-    printf("MDeriv:norm=%e %e \n",norm2(left),norm2(right));
+    printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
     out = Zero();
   }
 

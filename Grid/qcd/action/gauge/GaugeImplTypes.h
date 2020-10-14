@@ -123,6 +123,7 @@ public:
       Pmu = Pmu*scale;
       PokeIndex<LorentzIndex>(P, Pmu, mu);
     }
+    printf("generate_momenta norm=%0.15e\n",norm2(P));
   }
 
   static inline Field projectForce(Field &P) { return Ta(P); }
