@@ -797,6 +797,9 @@ public:
       xn = xn * x;             // x2, x3,x4....
       ex = ex + xn * nfac;     // x2/2!, x3/3!....
     }
+    xn=ex*conjugate(xn);
+    xn -=1.;
+    printf("norm(ex)=%e norm(ex*conj(ex)-1)=%e\n",norm2(ex),norm2(xn));
   }
 };
 

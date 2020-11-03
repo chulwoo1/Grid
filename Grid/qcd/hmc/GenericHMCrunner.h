@@ -141,7 +141,7 @@ private:
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
-#if 1
+#if 0
     TrivialMetric<typename Implementation::Field> Mtr;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
 #else
