@@ -99,7 +99,9 @@ accelerator_inline iMatrix<vtype,N> ProjectOnGroup(const iMatrix<vtype,N> &arg)
     for(int c2=0;c2<N;c2++)
       inner += innerProduct(ret._internal[c1][c2],ret._internal[c1][c2]);
 
-    nrm = rsqrt(inner);
+//    nrm = rsqrt(inner);
+    nrm = sqrt(inner);
+    nrm = 1.0/nrm;
     for(int c2=0;c2<N;c2++)
       ret._internal[c1][c2]*= nrm;
       
