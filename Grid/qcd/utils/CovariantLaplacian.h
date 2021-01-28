@@ -167,6 +167,13 @@ public:
     Solver(HermOp, in, inverted);
   }
 
+
+  void MinvDeriv(const GaugeField& in, GaugeField& der) {
+    GaugeField X(in.Grid());
+    Minv(in,X);
+    MDeriv(X,der);
+  }
+
   void MSquareRoot(GaugeField& P){
     GaugeField Gp(P.Grid());
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(*this);

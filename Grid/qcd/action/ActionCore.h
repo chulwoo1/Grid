@@ -62,6 +62,8 @@ NAMESPACE_CHECK(Scalar);
 NAMESPACE_CHECK(Metric);
 #include <Grid/qcd/utils/CovariantLaplacian.h>
 NAMESPACE_CHECK(CovariantLaplacian);
+#include <Grid/qcd/utils/CovariantLaplacianRat.h>
+NAMESPACE_CHECK(CovariantLaplacianRat);
 
 
 

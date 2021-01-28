@@ -147,12 +147,20 @@ private:
 #else
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
-//    RealD Kappa = 1.2;
     RealD Kappa = Parameters.Kappa;
     std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
 
     // Better to pass the generalised momenta to the integrator
+#if 0
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
+#else
+    LaplacianRatParams gpar,mpar;
+    gpar.a0[0] = 1.;
+    gpar.b0[0] = 100.;
+    mpar.a0[0] = 1.;
+    mpar.b0[0] = 100.;
+    LaplacianAdjointRat<PeriodicGimplR> Laplacian(UGrid, CG, gpar, mpar);
+#endif
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 #endif
 

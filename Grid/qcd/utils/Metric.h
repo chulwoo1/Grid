@@ -46,6 +46,7 @@ public:
   virtual void MInvSquareRoot(Field&) = 0;
   virtual void MDeriv(const Field&, Field&) = 0;
   virtual void MDeriv(const Field&, const Field&, Field&) = 0;
+  virtual void MinvDeriv(const Field&, Field&) = 0;
 };
 
 
@@ -71,11 +72,19 @@ public:
     printf("MInvSquareRoot:=%0.15e\n",norm2(P));
     // do nothing
   }
+
   virtual void MDeriv(const Field& in, Field& out){
     printf("MDeriv:norm=%0.15e\n",norm2(in));
 //    printf("HERE!\n");exit(-42);
     out = Zero();
   }
+
+  virtual void MinvDeriv(const Field& in, Field& out){
+    printf("MDeriv:norm=%0.15e\n",norm2(in));
+//    printf("HERE!\n");exit(-42);
+    out = Zero();
+  }
+
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
     printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
     out = Zero();
@@ -171,8 +180,12 @@ public:
     MomentaField MDer(in.Grid());
     MomentaField X(in.Grid());
     X = Zero();
+#if 0
     M.Minv(in, X);  // X = G in
     M.MDeriv(X, MDer);  // MDer = U * dS/dU
+#else
+    M.MinvDeriv(in, MDer);  // MDer = U * dS/dU
+#endif
     der = Implementation::projectForce(MDer);  // Ta if gauge fields
     
   }
