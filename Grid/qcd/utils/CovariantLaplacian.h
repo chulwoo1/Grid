@@ -80,13 +80,15 @@ class LaplacianAdjointField: public Metric<typename Impl::Field> {
 public:
   INHERIT_GIMPL_TYPES(Impl);
 
-  LaplacianAdjointField(GridBase* grid, OperatorFunction<GaugeField>& S, LaplacianParams& p, const RealD k = 1.0)
+  LaplacianAdjointField(GridBase* grid, OperatorFunction<GaugeField>& S, LaplacianParams& p, const RealD k = 1.0, bool if_remez=true)
     : U(Nd, grid), Solver(S), param(p), kappa(k){
     AlgRemez remez(param.lo,param.hi,param.precision);
     std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
+    if(if_remez){
     remez.generateApprox(param.degree,1,2);
     PowerHalf.Init(remez,param.tolerance,false);
     PowerInvHalf.Init(remez,param.tolerance,true);
+    }
     this->triv=0;
         
 

@@ -140,6 +140,9 @@ public:
 
   // Correct
   RealD MomentaAction(){
+    static RealD lastM=0.;
+    static RealD lastA=0.;
+
     MomentaField inv(Mom.Grid());
     inv = Zero();
     M.Minv(Mom, inv);
@@ -152,6 +155,10 @@ public:
       auto inv_mu = PeekIndex<LorentzIndex>(inv, mu);
       Hloc += trace(Mom_mu * inv_mu);
     }
+    auto Msum = TensorRemove(sum(Hloc));
+    std::cout<<GridLogMessage << "dH(Mom)= "<< Msum.real()-lastM <<std::endl;
+    lastM = Msum.real();
+    
 
     if(!M.Trivial()) {
       // Auxiliary Fields
@@ -167,8 +174,11 @@ public:
         Hloc += trace(af_mu * af_mu);
       }
     }
-
     auto Hsum = TensorRemove(sum(Hloc));
+    RealD Asum = Hsum.real() - lastM;
+    std::cout<<GridLogMessage << "dH(Aux)= "<< Asum -lastA <<std::endl;
+    lastA = Asum;
+   
     return Hsum.real();
   }
 

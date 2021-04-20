@@ -41,9 +41,11 @@ int main(int argc, char **argv)
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
 
   IntegratorParameters MD;
-  MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.MDsteps = 2;
-  MD.trajL   = 0.1;
+//  MD.name    = std::string("ImplicitMinimumNorm2");
+  MD.name    = std::string("ImplicitLeapFrog");
+  MD.MDsteps = 1;
+  MD.trajL   = 0.001;
+  std::cout << GridLogMessage<< "MDsteps= "<<MD.MDsteps<< " dt= "<<MD.trajL /MD.MDsteps <<std::endl;
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;

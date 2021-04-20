@@ -147,22 +147,29 @@ private:
 #else
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
-    RealD Kappa = Parameters.Kappa;
-    std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
 
     // Better to pass the generalised momenta to the integrator
 #if 0
+    RealD Kappa = Parameters.Kappa;
+    std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
 #else
+    std::cout << GridLogMessage << "LaplacianRat " << std::endl;
     LaplacianRatParams gpar,mpar;
-    gpar.a0[0] = 1.;
-    gpar.b0[0] = 100.;
-    mpar.a0[0] = 1.;
-    mpar.b0[0] = 100.;
+    gpar.offset = 1.;
+    gpar.a0[0] = 1;
+    gpar.a1[0] = 0.;
+    gpar.b0[0] = 1.;
+    gpar.b1[0] = 0.;
+    mpar.offset = 1.;
+    mpar.a0[0] = -1.;
+    mpar.a1[0] = -0.;
+    mpar.b0[0] = 2.;
+    mpar.b1[0] = 0.;
     LaplacianAdjointRat<PeriodicGimplR> Laplacian(UGrid, CG, gpar, mpar);
 #endif
-    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 #endif
+    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 
     if (Parameters.StartingType == "HotStart") {
       // Hot start
