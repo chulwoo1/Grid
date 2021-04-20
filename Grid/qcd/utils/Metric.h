@@ -115,13 +115,13 @@ public:
   GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid){}
 
   // Correct
-  void MomentaDistribution(GridParallelRNG& pRNG){
+  void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG){
     // Generate a distribution for
     // P^dag G P
     // where G = M^-1
 
     // Generate gaussian momenta
-    Implementation::generate_momenta(Mom, pRNG);
+    Implementation::generate_momenta(Mom, sRNG, pRNG);
     // Modify the distribution with the metric
     if(M.Trivial()) return;
     M.MSquareRoot(Mom);
@@ -130,8 +130,8 @@ public:
       // Auxiliary momenta
       // do nothing if trivial, so hide in the metric
       MomentaField AuxMomTemp(Mom.Grid());
-      Implementation::generate_momenta(AuxMom, pRNG);
-      Implementation::generate_momenta(AuxField, pRNG);
+      Implementation::generate_momenta(AuxMom, sRNG, pRNG);
+      Implementation::generate_momenta(AuxField, sRNG, pRNG);
       // Modify the distribution with the metric
       // Aux^dag M Aux
       M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
