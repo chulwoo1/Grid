@@ -433,7 +433,7 @@ public:
 
 //    FieldImplementation::generate_momenta(P.Mom, pRNG);
     P.M.ImportGauge(U);
-    P.MomentaDistribution(pRNG);
+    P.MomentaDistribution(sRNG,pRNG);
 
     // Update the smeared fields, can be implemented as observer
     // necessary to keep the fields updated even after a reject
@@ -457,7 +457,7 @@ public:
       as[level].apply(refresh_hireps, Representations, sRNG, pRNG);
     }
 
-    MomFilter->applyFilter(P);
+ //   MomFilter->applyFilter(P);
   }
 
   // to be used by the actionlevel class to iterate

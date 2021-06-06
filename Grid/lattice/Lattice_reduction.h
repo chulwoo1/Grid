@@ -124,9 +124,9 @@ inline Double max(const Double *arg, Integer osites)
     if (maxarray[i]>tmax) tmax = maxarray[i];
   } 
   return tmax;
+>>>>>>> 980e721f6e25864cadfea3611a9c1a052d8d05c4
 }
 */
->>>>>>> 980e721f6e25864cadfea3611a9c1a052d8d05c4
 template<class vobj>
 inline typename vobj::scalar_object sum(const vobj *arg, Integer osites)
 {
@@ -233,6 +233,7 @@ inline ComplexD rankInnerProduct(const Lattice<vobj> &left,const Lattice<vobj> &
   return nrm;
 }
 
+#if 1
 template<class vobj>
 RealD rankInnerMax(const Lattice<vobj> &left,const Lattice<vobj> &right)
 {
@@ -276,6 +277,7 @@ RealD rankInnerMax(const Lattice<vobj> &left,const Lattice<vobj> &right)
 //  nrm = anrm;
   return nrm;
 }
+#endif
 
 template<class vobj>
 inline ComplexD innerProduct(const Lattice<vobj> &left,const Lattice<vobj> &right) {
