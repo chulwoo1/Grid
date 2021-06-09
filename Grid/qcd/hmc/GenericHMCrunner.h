@@ -112,9 +112,18 @@ public:
       GridCmdOptionIntVector(arg, ivec);
       Parameters.NoMetropolisUntil = ivec[0];
     }
+
     if (GridCmdOptionExists(argv, argv + argc, "--ParameterFile")) {
       arg = GridCmdOptionPayload(argv, argv + argc, "--ParameterFile");
       ParameterFile = arg;
+    }
+    if (GridCmdOptionExists(argv, argv + argc, "--MDsteps")) {
+      arg = GridCmdOptionPayload(argv, argv + argc, "--MDsteps");
+      std::vector<int> ivec(0);
+      GridCmdOptionIntVector(arg, ivec);
+//Parameters.MD.MDsteps = 20;
+      Parameters.MD.MDsteps = ivec[0];
+      Parameters.NoMetropolisUntil = ivec[0];
     }
   }
 

@@ -777,7 +777,6 @@ Unified virtual memory      : ${ac_UNIFIED}
 Communications type         : ${comms_type}
 Shared memory allocator     : ${ac_SHM}
 Shared memory mmap path     : ${ac_SHMPATH}
-Default precision           : ${ac_PRECISION}
 Software FP16 conversion    : ${ac_SFW_FP16}
 RNG choice                  : ${ac_RNG}
 GMP                         : `if test "x$have_gmp" = xtrue; then echo yes; else echo no; fi`

@@ -46,7 +46,6 @@ public:
   virtual void MInvSquareRoot(Field&) = 0;
   virtual void MDeriv(const Field&, Field&) = 0;
   virtual void MDeriv(const Field&, const Field&, Field&) = 0;
-  virtual void MinvDeriv(const Field&, Field&) = 0;
 };
 
 
@@ -72,19 +71,11 @@ public:
     printf("MInvSquareRoot:=%0.15e\n",norm2(P));
     // do nothing
   }
-
   virtual void MDeriv(const Field& in, Field& out){
     printf("MDeriv:norm=%0.15e\n",norm2(in));
 //    printf("HERE!\n");exit(-42);
     out = Zero();
   }
-
-  virtual void MinvDeriv(const Field& in, Field& out){
-    printf("MDeriv:norm=%0.15e\n",norm2(in));
-//    printf("HERE!\n");exit(-42);
-    out = Zero();
-  }
-
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
     printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
     out = Zero();
@@ -115,13 +106,13 @@ public:
   GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid){}
 
   // Correct
-  void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG){
+  void MomentaDistribution(GridParallelRNG& pRNG){
     // Generate a distribution for
     // P^dag G P
     // where G = M^-1
 
     // Generate gaussian momenta
-    Implementation::generate_momenta(Mom, sRNG, pRNG);
+    Implementation::generate_momenta(Mom, pRNG);
     // Modify the distribution with the metric
     if(M.Trivial()) return;
     M.MSquareRoot(Mom);
@@ -130,8 +121,8 @@ public:
       // Auxiliary momenta
       // do nothing if trivial, so hide in the metric
       MomentaField AuxMomTemp(Mom.Grid());
-      Implementation::generate_momenta(AuxMom, sRNG, pRNG);
-      Implementation::generate_momenta(AuxField, sRNG, pRNG);
+      Implementation::generate_momenta(AuxMom, pRNG);
+      Implementation::generate_momenta(AuxField, pRNG);
       // Modify the distribution with the metric
       // Aux^dag M Aux
       M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
@@ -140,9 +131,6 @@ public:
 
   // Correct
   RealD MomentaAction(){
-    static RealD lastM=0.;
-    static RealD lastA=0.;
-
     MomentaField inv(Mom.Grid());
     inv = Zero();
     M.Minv(Mom, inv);
@@ -155,10 +143,6 @@ public:
       auto inv_mu = PeekIndex<LorentzIndex>(inv, mu);
       Hloc += trace(Mom_mu * inv_mu);
     }
-    auto Msum = TensorRemove(sum(Hloc));
-    std::cout<<GridLogMessage << "dH(Mom)= "<< Msum.real()-lastM <<std::endl;
-    lastM = Msum.real();
-    
 
     if(!M.Trivial()) {
       // Auxiliary Fields
@@ -174,11 +158,8 @@ public:
         Hloc += trace(af_mu * af_mu);
       }
     }
+
     auto Hsum = TensorRemove(sum(Hloc));
-    RealD Asum = Hsum.real() - lastM;
-    std::cout<<GridLogMessage << "dH(Aux)= "<< Asum -lastA <<std::endl;
-    lastA = Asum;
-   
     return Hsum.real();
   }
 
@@ -190,12 +171,8 @@ public:
     MomentaField MDer(in.Grid());
     MomentaField X(in.Grid());
     X = Zero();
-#if 0
     M.Minv(in, X);  // X = G in
     M.MDeriv(X, MDer);  // MDer = U * dS/dU
-#else
-    M.MinvDeriv(in, MDer);  // MDer = U * dS/dU
-#endif
     der = Implementation::projectForce(MDer);  // Ta if gauge fields
     
   }

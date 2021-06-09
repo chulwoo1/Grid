@@ -34,7 +34,6 @@ directory
 #define INTEGRATOR_INCLUDED
 
 #include <memory>
-#include "MomentumFilter.h"
 
 NAMESPACE_BEGIN(Grid);
 
@@ -81,18 +80,7 @@ protected:
   RepresentationPolicy Representations;
   IntegratorParameters Params;
 
-  //Filters allow the user to manipulate the conjugate momentum, for example to freeze links in DDHMC
-  //It is applied whenever the momentum is updated / refreshed
-  //The default filter does nothing
-  MomentumFilterBase<MomentaField> const* MomFilter;
-
   const ActionSet<Field, RepresentationPolicy> as;
-
-  //Get a pointer to a shared static instance of the "do-nothing" momentum filter to serve as a default
-  static MomentumFilterBase<MomentaField> const* getDefaultMomFilter(){ 
-    static MomentumFilterNone<MomentaField> filter;
-    return &filter;
-  }
 
   void update_P(Field& U, int level, double ep) 
   {
@@ -157,8 +145,6 @@ protected:
 
     // Force from the other representations
     as[level].apply(update_P_hireps, Representations, Mom, U, ep);
-
-    MomFilter->applyFilter(Mom);
   }
 
   void update_P2(MomentaField& Mom, Field& U, int level, double ep) {
@@ -366,23 +352,11 @@ public:
     t_P.resize(levels, 0.0);
     t_U = 0.0;
     // initialization of smearer delegated outside of Integrator
-
-    //Default the momentum filter to "do-nothing"
-    MomFilter = getDefaultMomFilter();
   };
 
   virtual ~Integrator() {}
 
   virtual std::string integrator_name() = 0;
-  
-  //Set the momentum filter allowing for manipulation of the conjugate momentum
-  void setMomentumFilter(const MomentumFilterBase<MomentaField> &filter){
-    MomFilter = &filter;
-  }
-
-  //Access the conjugate momentum
-  const MomentaField & getMomentum() const{ return P; }
-  
 
   void print_parameters()
   {
@@ -416,9 +390,10 @@ public:
   // over the representations
   struct _refresh {
     template <class FieldType, class Repr>
-    void operator()(std::vector<Action<FieldType>*> repr_set, Repr& Rep, GridSerialRNG & sRNG, GridParallelRNG& pRNG) {
+    void operator()(std::vector<Action<FieldType>*> repr_set, Repr& Rep,
+                    GridParallelRNG& pRNG) {
       for (int a = 0; a < repr_set.size(); ++a){
-        repr_set.at(a)->refresh(Rep.U, sRNG, pRNG);
+        repr_set.at(a)->refresh(Rep.U, pRNG);
       
 	std::cout << GridLogDebug << "Hirep refreshing pseudofermions" << std::endl;
       }
@@ -426,14 +401,15 @@ public:
   } refresh_hireps{};
 
   // Initialization of momenta and actions
-  void refresh(Field& U,  GridSerialRNG & sRNG, GridParallelRNG& pRNG) 
+  void refresh(Field& U, GridParallelRNG& pRNG) 
   {
     assert(P.Mom.Grid() == U.Grid());
     std::cout << GridLogIntegrator << "Integrator refresh\n";
 
 //    FieldImplementation::generate_momenta(P.Mom, pRNG);
     P.M.ImportGauge(U);
-    P.MomentaDistribution(sRNG,pRNG);
+    P.MomentaDistribution(pRNG);
+
 
     // Update the smeared fields, can be implemented as observer
     // necessary to keep the fields updated even after a reject
@@ -450,14 +426,12 @@ public:
         // get gauge field from the SmearingPolicy and
         // based on the boolean is_smeared in actionID
         Field& Us = Smearer.get_U(as[level].actions.at(actionID)->is_smeared);
-        as[level].actions.at(actionID)->refresh(Us, sRNG, pRNG);
+        as[level].actions.at(actionID)->refresh(Us, pRNG);
       }
 
       // Refresh the higher representation actions
-      as[level].apply(refresh_hireps, Representations, sRNG, pRNG);
+      as[level].apply(refresh_hireps, Representations, pRNG);
     }
-
- //   MomFilter->applyFilter(P);
   }
 
   // to be used by the actionlevel class to iterate
@@ -481,6 +455,7 @@ public:
 
     std::cout.precision(15);
     std::cout << GridLogIntegrator << "Integrator action\n";
+    std::cout.precision(15);
 
     RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
     std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
@@ -514,9 +489,9 @@ public:
       t_P[level] = 0;
     }
 
-    for (int step = 0; step < Params.MDsteps; ++step) {  // MD step
-      int first_step = (step == 0);
-      int last_step = (step == Params.MDsteps - 1);
+    for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
+      int first_step = (stp == 0);
+      int last_step = (stp == Params.MDsteps - 1);
       this->step(U, 0, first_step, last_step);
     }
 
@@ -525,8 +500,6 @@ public:
       assert(fabs(t_U - t_P[level]) < 1.0e-6);  // must be the same
       std::cout << GridLogIntegrator << " times[" << level << "]= " << t_P[level] << " " << t_U << std::endl;
     }
-
-    FieldImplementation::Project(U);
 
     // and that we indeed got to the end of the trajectory
     assert(fabs(t_U - Params.trajL) < 1.0e-6);
