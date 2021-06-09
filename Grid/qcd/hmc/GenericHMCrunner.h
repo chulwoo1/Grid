@@ -150,7 +150,7 @@ private:
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
-#if 0
+#if 1
     TrivialMetric<typename Implementation::Field> Mtr;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
 #else
@@ -158,7 +158,7 @@ private:
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
     // Better to pass the generalised momenta to the integrator
-#if 0
+#if 1
     RealD Kappa = Parameters.Kappa;
     std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
@@ -177,8 +177,8 @@ private:
     mpar.b1[0] = 0.;
     LaplacianAdjointRat<PeriodicGimplR> Laplacian(UGrid, CG, gpar, mpar);
 #endif
-#endif
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
+#endif
 
     if (Parameters.StartingType == "HotStart") {
       // Hot start
