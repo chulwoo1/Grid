@@ -9,6 +9,7 @@ Copyright (C) 2015
 Author: Azusa Yamaguchi <ayamaguc@staffmail.ed.ac.uk>
 Author: Peter Boyle <paboyle@ph.ed.ac.uk>
 Author: Guido Cossu <cossu@post.kek.jp>
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -89,6 +90,14 @@ protected:
     std::cout << GridLogIntegrator << "[" << level << "] P " << " dt " << ep << " : t_P " << t_P[level] << std::endl;
   }
 
+  void update_P2(Field& U, int level, double ep) 
+  {
+    t_P[level] += ep;
+    update_P2(P.Mom, U, level, ep);
+
+    std::cout << GridLogIntegrator << "[" << level << "] P " << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+  }
+
   // to be used by the actionlevel class to iterate
   // over the representations
   struct _updateP 
@@ -109,6 +118,36 @@ protected:
   } update_P_hireps{};
 
   void update_P(MomentaField& Mom, Field& U, int level, double ep) {
+    // input U actually not used in the fundamental case
+    // Fundamental updates, include smearing
+
+    for (int a = 0; a < as[level].actions.size(); ++a) {
+      double start_full = usecond();
+      Field force(U.Grid());
+      conformable(U.Grid(), Mom.Grid());
+
+      Field& Us = Smearer.get_U(as[level].actions.at(a)->is_smeared);
+      double start_force = usecond();
+      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
+
+      std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
+      if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
+      force = FieldImplementation::projectForce(force); // Ta for gauge fields
+      double end_force = usecond();
+      Real force_abs = std::sqrt(norm2(force)/U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "["<<level<<"]["<<a<<"] Force average: " << force_abs << std::endl;
+      Mom -= force * ep* HMC_MOMENTUM_DENOMINATOR;; 
+      double end_full = usecond();
+      double time_full  = (end_full - start_full) / 1e3;
+      double time_force = (end_force - start_force) / 1e3;
+      std::cout << GridLogMessage << "["<<level<<"]["<<a<<"] P update elapsed time: " << time_full << " ms (force: " << time_force << " ms)"  << std::endl;
+    }
+
+    // Force from the other representations
+    as[level].apply(update_P_hireps, Representations, Mom, U, ep);
+  }
+
+  void update_P2(MomentaField& Mom, Field& U, int level, double ep) {
     // input U actually not used in the fundamental case
     // Fundamental updates, include smearing
 
@@ -351,10 +390,9 @@ public:
   // over the representations
   struct _refresh {
     template <class FieldType, class Repr>
-    void operator()(std::vector<Action<FieldType>*> repr_set, Repr& Rep,
-                    GridParallelRNG& pRNG) {
+    void operator()(std::vector<Action<FieldType>*> repr_set, Repr& Rep, GridSerialRNG & sRNG, GridParallelRNG& pRNG) {
       for (int a = 0; a < repr_set.size(); ++a){
-        repr_set.at(a)->refresh(Rep.U, pRNG);
+        repr_set.at(a)->refresh(Rep.U, sRNG, pRNG);
       
 	std::cout << GridLogDebug << "Hirep refreshing pseudofermions" << std::endl;
       }
@@ -362,14 +400,14 @@ public:
   } refresh_hireps{};
 
   // Initialization of momenta and actions
-  void refresh(Field& U, GridParallelRNG& pRNG) 
+  void refresh(Field& U, GridSerialRNG & sRNG, GridParallelRNG& pRNG) 
   {
     assert(P.Mom.Grid() == U.Grid());
     std::cout << GridLogIntegrator << "Integrator refresh\n";
 
 //    FieldImplementation::generate_momenta(P.Mom, pRNG);
     P.M.ImportGauge(U);
-    P.MomentaDistribution(pRNG);
+    P.MomentaDistribution(sRNG,pRNG);
 
 
     // Update the smeared fields, can be implemented as observer
@@ -387,7 +425,7 @@ public:
         // get gauge field from the SmearingPolicy and
         // based on the boolean is_smeared in actionID
         Field& Us = Smearer.get_U(as[level].actions.at(actionID)->is_smeared);
-        as[level].actions.at(actionID)->refresh(Us, pRNG);
+        as[level].actions.at(actionID)->refresh(Us, sRNG,pRNG);
       }
 
       // Refresh the higher representation actions
@@ -414,11 +452,14 @@ public:
   RealD S(Field& U) 
   {  // here also U not used
 
+    std::cout.precision(15);
     std::cout << GridLogIntegrator << "Integrator action\n";
+    std::cout.precision(15);
 
-//    RealD H = - FieldImplementation::FieldSquareNorm(P)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
+    RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
+    std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
     P.M.ImportGauge(U);
-    RealD H = - P.MomentaAction();
+    H = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
     RealD Hterm;
     std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
 

@@ -46,6 +46,7 @@ NAMESPACE_CHECK(SparseMatrix);
 NAMESPACE_CHECK(approx);
 #include <Grid/algorithms/iterative/Deflation.h>
 #include <Grid/algorithms/iterative/ConjugateGradient.h>
+#include <Grid/algorithms/iterative/ConjugateGradientQuad.h>
 NAMESPACE_CHECK(ConjGrad);
 #include <Grid/algorithms/iterative/BiCGSTAB.h>
 NAMESPACE_CHECK(BiCGSTAB);

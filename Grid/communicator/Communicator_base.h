@@ -1,4 +1,3 @@
-
 /*************************************************************************************
 
     Grid physics library, www.github.com/paboyle/Grid 
@@ -108,6 +107,8 @@ public:
   ////////////////////////////////////////////////////////////
   // Reduction
   ////////////////////////////////////////////////////////////
+  void GlobalMax(RealD &);
+  void GlobalMax(RealF &);
   void GlobalSum(RealF &);
   void GlobalSumVector(RealF *,int N);
   void GlobalSum(RealD &);
@@ -138,21 +139,6 @@ public:
 		      int recv_from_rank,
 		      int bytes);
   
-  void SendRecvPacket(void *xmit,
-		      void *recv,
-		      int xmit_to_rank,
-		      int recv_from_rank,
-		      int bytes);
-  
-  void SendToRecvFromBegin(std::vector<CommsRequest_t> &list,
-			   void *xmit,
-			   int xmit_to_rank,
-			   void *recv,
-			   int recv_from_rank,
-			   int bytes);
-  
-  void SendToRecvFromComplete(std::vector<CommsRequest_t> &waitall);
-
   double StencilSendToRecvFrom(void *xmit,
 			       int xmit_to_rank,
 			       void *recv,

@@ -7,6 +7,7 @@ Source file: ./lib/qcd/hmc/integrators/Integrator.h
 Copyright (C) 2015
 
 Author: Guido Cossu <guido.cossu@ed.ac.uk>
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,7 +34,11 @@ NAMESPACE_BEGIN(Grid);
 
 template <typename Field> 
 class Metric{
+protected:
+  int triv;
 public:
+  Metric(){this->triv=1;}
+  int Trivial(){printf("Metric::Trivial=%d\n",triv); ;return triv;}
   virtual void ImportGauge(const Field&)   = 0;
   virtual void M(const Field&, Field&)     = 0;
   virtual void Minv(const Field&, Field&)  = 0;
@@ -48,23 +53,31 @@ public:
 template <typename Field>
 class TrivialMetric : public Metric<Field>{
 public:
+  TrivialMetric(){this->triv=1;printf("TrivialMetric::triv=%d\n",this->Trivial());}
   virtual void ImportGauge(const Field&){};
   virtual void M(const Field& in, Field& out){
+    printf("M:norm=%0.15e\n",norm2(in));
     out = in;
   }
   virtual void Minv(const Field& in, Field& out){
+    printf("Minv:norm=%0.15e\n",norm2(in));
     out = in;
   }
   virtual void MSquareRoot(Field& P){
+    printf("MSquareRoot:norm=%0.15e\n",norm2(P));
     // do nothing
   }
   virtual void MInvSquareRoot(Field& P){
+    printf("MInvSquareRoot:=%0.15e\n",norm2(P));
     // do nothing
   }
   virtual void MDeriv(const Field& in, Field& out){
+    printf("MDeriv:norm=%0.15e\n",norm2(in));
+//    printf("HERE!\n");exit(-42);
     out = Zero();
   }
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
+    printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
     out = Zero();
   }
 
@@ -93,22 +106,23 @@ public:
   GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid){}
 
   // Correct
-  void MomentaDistribution(GridParallelRNG& pRNG){
+  void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG){
     // Generate a distribution for
     // P^dag G P
     // where G = M^-1
 
     // Generate gaussian momenta
-    Implementation::generate_momenta(Mom, pRNG);
+    Implementation::generate_momenta(Mom, sRNG, pRNG);
     // Modify the distribution with the metric
+    if(M.Trivial()) return;
     M.MSquareRoot(Mom);
 
     if (1) {
       // Auxiliary momenta
       // do nothing if trivial, so hide in the metric
       MomentaField AuxMomTemp(Mom.Grid());
-      Implementation::generate_momenta(AuxMom, pRNG);
-      Implementation::generate_momenta(AuxField, pRNG);
+      Implementation::generate_momenta(AuxMom, sRNG,pRNG);
+      Implementation::generate_momenta(AuxField, sRNG,pRNG);
       // Modify the distribution with the metric
       // Aux^dag M Aux
       M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
@@ -130,7 +144,7 @@ public:
       Hloc += trace(Mom_mu * inv_mu);
     }
 
-    if (1) {
+    if(!M.Trivial()) {
       // Auxiliary Fields
       // hide in the metric
       M.M(AuxMom, inv);
@@ -165,7 +179,7 @@ public:
 
   void AuxiliaryFieldsDerivative(MomentaField& der){
     der = Zero();
-    if (1){
+    if(!M.Trivial()) {
       // Auxiliary fields
       MomentaField der_temp(der.Grid());
       MomentaField X(der.Grid());
@@ -192,13 +206,13 @@ public:
   }
 
   void update_auxiliary_momenta(RealD ep){
-    if(1){
+    if(!M.Trivial()) {
       AuxMom -= ep * AuxField;
     }
   }
 
   void update_auxiliary_fields(RealD ep){
-    if (1) {
+    if(!M.Trivial()) {
       MomentaField tmp(AuxMom.Grid());
       MomentaField tmp2(AuxMom.Grid());
       M.M(AuxMom, tmp);

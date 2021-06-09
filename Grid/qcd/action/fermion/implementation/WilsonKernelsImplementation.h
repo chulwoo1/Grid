@@ -114,7 +114,7 @@ accelerator_inline void get_stencil(StencilEntry * mem, StencilEntry &chip)
   ////////////////////////////////////////////////////////////////////
   // All legs kernels ; comms then compute
   ////////////////////////////////////////////////////////////////////
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::GenericDhopSiteDag(StencilView &st, DoubledGaugeFieldView &U,
 					     SiteHalfSpinor *buf, int sF,
 					     int sU, const FermionFieldView &in, FermionFieldView &out)
@@ -140,7 +140,7 @@ void WilsonKernels<Impl>::GenericDhopSiteDag(StencilView &st, DoubledGaugeFieldV
   coalescedWrite(out[sF],result,lane);
 };
 
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::GenericDhopSite(StencilView &st, DoubledGaugeFieldView &U,
 					  SiteHalfSpinor *buf, int sF,
 					  int sU, const FermionFieldView &in, FermionFieldView &out)
@@ -169,7 +169,7 @@ void WilsonKernels<Impl>::GenericDhopSite(StencilView &st, DoubledGaugeFieldView
   ////////////////////////////////////////////////////////////////////
   // Interior kernels
   ////////////////////////////////////////////////////////////////////
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::GenericDhopSiteDagInt(StencilView &st,  DoubledGaugeFieldView &U,
 						SiteHalfSpinor *buf, int sF,
 						int sU, const FermionFieldView &in, FermionFieldView &out)
@@ -197,7 +197,7 @@ void WilsonKernels<Impl>::GenericDhopSiteDagInt(StencilView &st,  DoubledGaugeFi
   coalescedWrite(out[sF], result,lane);
 };
 
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::GenericDhopSiteInt(StencilView &st,  DoubledGaugeFieldView &U,
 							 SiteHalfSpinor *buf, int sF,
 							 int sU, const FermionFieldView &in, FermionFieldView &out)
@@ -227,7 +227,7 @@ void WilsonKernels<Impl>::GenericDhopSiteInt(StencilView &st,  DoubledGaugeField
 ////////////////////////////////////////////////////////////////////
 // Exterior kernels
 ////////////////////////////////////////////////////////////////////
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::GenericDhopSiteDagExt(StencilView &st,  DoubledGaugeFieldView &U,
 						SiteHalfSpinor *buf, int sF,
 						int sU, const FermionFieldView &in, FermionFieldView &out)
@@ -258,7 +258,7 @@ void WilsonKernels<Impl>::GenericDhopSiteDagExt(StencilView &st,  DoubledGaugeFi
   }
 };
 
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::GenericDhopSiteExt(StencilView &st,  DoubledGaugeFieldView &U,
 					     SiteHalfSpinor *buf, int sF,
 					     int sU, const FermionFieldView &in, FermionFieldView &out)
@@ -290,7 +290,7 @@ void WilsonKernels<Impl>::GenericDhopSiteExt(StencilView &st,  DoubledGaugeField
 };
 
 #define DhopDirMacro(Dir,spProj,spRecon)	\
-  template <class Impl>							\
+  template <class Impl> accelerator_inline				\
   void WilsonKernels<Impl>::DhopDir##Dir(StencilView &st, DoubledGaugeFieldView &U,SiteHalfSpinor *buf, int sF, \
 					 int sU, const FermionFieldView &in, FermionFieldView &out, int dir) \
   {									\
@@ -318,7 +318,7 @@ DhopDirMacro(Ym,spProjYm,spReconYm);
 DhopDirMacro(Zm,spProjZm,spReconZm);
 DhopDirMacro(Tm,spProjTm,spReconTm);
 
-template <class Impl>
+template <class Impl> accelerator_inline
 void WilsonKernels<Impl>::DhopDirK( StencilView &st, DoubledGaugeFieldView &U,SiteHalfSpinor *buf, int sF,
 				    int sU, const FermionFieldView &in, FermionFieldView &out, int dir, int gamma)
 {
@@ -416,7 +416,21 @@ void WilsonKernels<Impl>::DhopDirKernel( StencilImpl &st, DoubledGaugeField &U,S
 #undef LoopBody
 }
 
-#define KERNEL_CALLNB(A) \
+#define KERNEL_CALL_TMP(A) \
+  const uint64_t    NN = Nsite*Ls;					\
+  auto U_p = & U_v[0];							\
+  auto in_p = & in_v[0];						\
+  auto out_p = & out_v[0];						\
+  auto st_p = st_v._entries_p;						\
+  auto st_perm = st_v._permute_type;					\
+  accelerator_forNB( ss, NN, Simd::Nsimd(), {				\
+      int sF = ss;							\
+      int sU = ss/Ls;							\
+      WilsonKernels<Impl>::A(st_perm,st_p,U_p,buf,sF,sU,in_p,out_p);	\
+    });									\
+  accelerator_barrier();
+
+#define KERNEL_CALLNB(A)						\
   const uint64_t    NN = Nsite*Ls;					\
   accelerator_forNB( ss, NN, Simd::Nsimd(), {				\
       int sF = ss;							\
@@ -445,20 +459,24 @@ void WilsonKernels<Impl>::DhopKernel(int Opt,StencilImpl &st,  DoubledGaugeField
 
    if( interior && exterior ) {
      if (Opt == WilsonKernelsStatic::OptGeneric    ) { KERNEL_CALL(GenericDhopSite); return;}
-#ifndef GRID_CUDA
+#ifdef SYCL_HACK     
+     if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALL_TMP(HandDhopSiteSycl);    return; }
+#else
      if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALL(HandDhopSite);    return;}
+#endif     
+#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptInlineAsm  ) {  ASM_CALL(AsmDhopSite);    return;}
 #endif
    } else if( interior ) {
      if (Opt == WilsonKernelsStatic::OptGeneric    ) { KERNEL_CALLNB(GenericDhopSiteInt); return;}
-#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALLNB(HandDhopSiteInt);    return;}
+#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptInlineAsm  ) {  ASM_CALL(AsmDhopSiteInt);    return;}
 #endif
    } else if( exterior ) {
      if (Opt == WilsonKernelsStatic::OptGeneric    ) { KERNEL_CALL(GenericDhopSiteExt); return;}
-#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALL(HandDhopSiteExt);    return;}
+#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptInlineAsm  ) {  ASM_CALL(AsmDhopSiteExt);    return;}
 #endif
    }
@@ -476,20 +494,20 @@ void WilsonKernels<Impl>::DhopKernel(int Opt,StencilImpl &st,  DoubledGaugeField
 
    if( interior && exterior ) {
      if (Opt == WilsonKernelsStatic::OptGeneric    ) { KERNEL_CALL(GenericDhopSiteDag); return;}
-#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALL(HandDhopSiteDag);    return;}
+#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptInlineAsm  ) {  ASM_CALL(AsmDhopSiteDag);     return;}
 #endif
    } else if( interior ) {
      if (Opt == WilsonKernelsStatic::OptGeneric    ) { KERNEL_CALL(GenericDhopSiteDagInt); return;}
-#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALL(HandDhopSiteDagInt);    return;}
+#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptInlineAsm  ) {  ASM_CALL(AsmDhopSiteDagInt);     return;}
 #endif
    } else if( exterior ) {
      if (Opt == WilsonKernelsStatic::OptGeneric    ) { KERNEL_CALL(GenericDhopSiteDagExt); return;}
-#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptHandUnroll ) { KERNEL_CALL(HandDhopSiteDagExt);    return;}
+#ifndef GRID_CUDA
      if (Opt == WilsonKernelsStatic::OptInlineAsm  ) {  ASM_CALL(AsmDhopSiteDagExt);     return;}
 #endif
    }

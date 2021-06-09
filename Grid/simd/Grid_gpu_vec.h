@@ -38,8 +38,21 @@ Author: Peter Boyle <paboyle@ph.ed.ac.uk>
 #ifdef GRID_HIP
 #include <hip/hip_fp16.h>
 #endif
+#ifdef GRID_SYCL
+namespace Grid {
+  typedef struct { uint16_t x;} half;
+  typedef struct { half   x; half   y;} half2;
+  typedef struct { float  x; float  y;} float2;
+  typedef struct { double x; double y;} double2;
+}
+#endif
+
 
 namespace Grid {
+
+
+
+typedef struct Half2_t { half x; half y; } Half2;
 
 #define COALESCE_GRANULARITY ( GEN_SIMD_WIDTH )
 
@@ -47,11 +60,26 @@ template<class pair>
 class GpuComplex {
 public:
   pair z;
-  typedef decltype(z.x) real;
+  typedef decltype(z.x) Real;
 public: 
   accelerator_inline GpuComplex() = default;
-  accelerator_inline GpuComplex(real re,real im) { z.x=re; z.y=im; };
+  accelerator_inline GpuComplex(Real re,Real im) { z.x=re; z.y=im; };
   accelerator_inline GpuComplex(const GpuComplex &zz) { z = zz.z;};
+  accelerator_inline Real real(void) const { return z.x; };
+  accelerator_inline Real imag(void) const { return z.y; };
+  accelerator_inline GpuComplex &operator=(const Zero &zz) { z.x = 0; z.y=0; return *this; };
+  accelerator_inline GpuComplex &operator*=(const GpuComplex &r) {
+    *this = (*this) * r;
+    return *this;
+  }
+  accelerator_inline GpuComplex &operator+=(const GpuComplex &r) {
+    *this = (*this) + r;
+    return *this;
+  }
+  accelerator_inline GpuComplex &operator-=(const GpuComplex &r) {
+    *this = (*this) - r;
+    return *this;
+  }
   friend accelerator_inline  GpuComplex operator+(const GpuComplex &lhs,const GpuComplex &rhs) { 
     GpuComplex r ; 
     r.z.x = lhs.z.x + rhs.z.x; 
@@ -125,14 +153,14 @@ inline accelerator GpuVector<N,datum> operator/(const GpuVector<N,datum> l,const
 }
 
 constexpr int NSIMD_RealH    = COALESCE_GRANULARITY / sizeof(half);
-constexpr int NSIMD_ComplexH = COALESCE_GRANULARITY / sizeof(half2);
+constexpr int NSIMD_ComplexH = COALESCE_GRANULARITY / sizeof(Half2);
 constexpr int NSIMD_RealF    = COALESCE_GRANULARITY / sizeof(float);
 constexpr int NSIMD_ComplexF = COALESCE_GRANULARITY / sizeof(float2);
 constexpr int NSIMD_RealD    = COALESCE_GRANULARITY / sizeof(double);
 constexpr int NSIMD_ComplexD = COALESCE_GRANULARITY / sizeof(double2);
 constexpr int NSIMD_Integer  = COALESCE_GRANULARITY / sizeof(Integer);
 
-typedef GpuComplex<half2  > GpuComplexH;
+typedef GpuComplex<Half2  > GpuComplexH;
 typedef GpuComplex<float2 > GpuComplexF;
 typedef GpuComplex<double2> GpuComplexD;
 
@@ -144,16 +172,19 @@ typedef GpuVector<NSIMD_RealD,    double      > GpuVectorRD;
 typedef GpuVector<NSIMD_ComplexD, GpuComplexD > GpuVectorCD;
 typedef GpuVector<NSIMD_Integer,  Integer     > GpuVectorI;
 
+accelerator_inline GpuComplexF timesI(const GpuComplexF &r)     { return(GpuComplexF(-r.imag(),r.real()));}
+accelerator_inline GpuComplexD timesI(const GpuComplexD &r)     { return(GpuComplexD(-r.imag(),r.real()));}
+accelerator_inline GpuComplexF timesMinusI(const GpuComplexF &r){ return(GpuComplexF(r.imag(),-r.real()));}
+accelerator_inline GpuComplexD timesMinusI(const GpuComplexD &r){ return(GpuComplexD(r.imag(),-r.real()));}
+
 accelerator_inline float half2float(half h)
 {
   float f;
-#ifdef GRID_SIMT
+#if defined(GRID_CUDA) || defined(GRID_HIP)
   f = __half2float(h);
 #else 
-  //f = __half2float(h);
-  __half_raw hr(h);
   Grid_half hh; 
-  hh.x = hr.x;
+  hh.x = h.x;
   f=  sfw_half_to_float(hh);
 #endif
   return f;
@@ -161,13 +192,11 @@ accelerator_inline float half2float(half h)
 accelerator_inline half float2half(float f)
 {
   half h;
-#ifdef GRID_SIMT
+#if defined(GRID_CUDA) || defined(GRID_HIP)
   h = __float2half(f);
 #else
   Grid_half hh = sfw_float_to_half(f);
-  __half_raw hr;  
-  hr.x = hh.x;
-  h = __half(hr);
+  h.x = hh.x;
 #endif
   return h;
 }
@@ -523,7 +552,7 @@ namespace Optimization {
     ////////////////////////////////////////////////////////////////////////////////////
     // Single / Half
     ////////////////////////////////////////////////////////////////////////////////////
-    static accelerator_inline GpuVectorCH StoH (GpuVectorCF a,GpuVectorCF b) {
+     static accelerator_inline GpuVectorCH StoH (GpuVectorCF a,GpuVectorCF b) {
       int N = GpuVectorCF::N;
       GpuVectorCH h;
       for(int i=0;i<N;i++) {

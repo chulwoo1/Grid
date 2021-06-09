@@ -67,6 +67,8 @@ CartesianCommunicator::CartesianCommunicator(const Coordinate &processors)
 
 CartesianCommunicator::~CartesianCommunicator(){}
 
+void CartesianCommunicator::GlobalMax(float &){}
+void CartesianCommunicator::GlobalMax(double &){}
 void CartesianCommunicator::GlobalSum(float &){}
 void CartesianCommunicator::GlobalSumVector(float *,int N){}
 void CartesianCommunicator::GlobalSum(double &){}
@@ -77,15 +79,6 @@ void CartesianCommunicator::GlobalSumVector(uint64_t *,int N){}
 void CartesianCommunicator::GlobalXOR(uint32_t &){}
 void CartesianCommunicator::GlobalXOR(uint64_t &){}
 
-void CartesianCommunicator::SendRecvPacket(void *xmit,
-					   void *recv,
-					   int xmit_to_rank,
-					   int recv_from_rank,
-					   int bytes)
-{
-  assert(0);
-}
-
 
 // Basic Halo comms primitive -- should never call in single node
 void CartesianCommunicator::SendToRecvFrom(void *xmit,
@@ -93,20 +86,6 @@ void CartesianCommunicator::SendToRecvFrom(void *xmit,
 					   void *recv,
 					   int from,
 					   int bytes)
-{
-  assert(0);
-}
-void CartesianCommunicator::SendToRecvFromBegin(std::vector<CommsRequest_t> &list,
-						void *xmit,
-						int dest,
-						void *recv,
-						int from,
-						int bytes)
-{
-  assert(0);
-}
-
-void CartesianCommunicator::SendToRecvFromComplete(std::vector<CommsRequest_t> &list)
 {
   assert(0);
 }
@@ -137,10 +116,6 @@ double CartesianCommunicator::StencilSendToRecvFrom( void *xmit,
 						     int recv_from_rank,
 						     int bytes, int dir)
 {
-  std::vector<CommsRequest_t> list;
-  // Discard the "dir"
-  SendToRecvFromBegin   (list,xmit,xmit_to_rank,recv,recv_from_rank,bytes);
-  SendToRecvFromComplete(list);
   return 2.0*bytes;
 }
 double CartesianCommunicator::StencilSendToRecvFromBegin(std::vector<CommsRequest_t> &list,
@@ -150,13 +125,10 @@ double CartesianCommunicator::StencilSendToRecvFromBegin(std::vector<CommsReques
 							 int recv_from_rank,
 							 int bytes, int dir)
 {
-  // Discard the "dir"
-  SendToRecvFromBegin(list,xmit,xmit_to_rank,recv,recv_from_rank,bytes);
   return 2.0*bytes;
 }
 void CartesianCommunicator::StencilSendToRecvFromComplete(std::vector<CommsRequest_t> &waitall,int dir)
 {
-  SendToRecvFromComplete(waitall);
 }
 
 void CartesianCommunicator::StencilBarrier(void){};

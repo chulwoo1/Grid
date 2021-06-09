@@ -112,9 +112,18 @@ public:
       GridCmdOptionIntVector(arg, ivec);
       Parameters.NoMetropolisUntil = ivec[0];
     }
+
     if (GridCmdOptionExists(argv, argv + argc, "--ParameterFile")) {
       arg = GridCmdOptionPayload(argv, argv + argc, "--ParameterFile");
       ParameterFile = arg;
+    }
+    if (GridCmdOptionExists(argv, argv + argc, "--MDsteps")) {
+      arg = GridCmdOptionPayload(argv, argv + argc, "--MDsteps");
+      std::vector<int> ivec(0);
+      GridCmdOptionIntVector(arg, ivec);
+//Parameters.MD.MDsteps = 20;
+      Parameters.MD.MDsteps = ivec[0];
+      Parameters.NoMetropolisUntil = ivec[0];
     }
   }
 
@@ -141,16 +150,35 @@ private:
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
-    //TrivialMetric<typename Implementation::Field> Mtr;
+#if 1
+    TrivialMetric<typename Implementation::Field> Mtr;
+    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
+#else
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
-//    RealD Kappa = 1.2;
-    RealD Kappa = Parameters.Kappa;
-    std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
 
     // Better to pass the generalised momenta to the integrator
+#if 1
+    RealD Kappa = Parameters.Kappa;
+    std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
+#else
+    std::cout << GridLogMessage << "LaplacianRat " << std::endl;
+    LaplacianRatParams gpar,mpar;
+    gpar.offset = 1.;
+    gpar.a0[0] = 1;
+    gpar.a1[0] = 0.;
+    gpar.b0[0] = 1.;
+    gpar.b1[0] = 0.;
+    mpar.offset = 1.;
+    mpar.a0[0] = -1.;
+    mpar.a1[0] = -0.;
+    mpar.b0[0] = 2.;
+    mpar.b1[0] = 0.;
+    LaplacianAdjointRat<PeriodicGimplR> Laplacian(UGrid, CG, gpar, mpar);
+#endif
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
+#endif
 
     if (Parameters.StartingType == "HotStart") {
       // Hot start
@@ -169,6 +197,13 @@ private:
       Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U,
 						     Resources.GetSerialRNG(),
 						     Resources.GetParallelRNG());
+    } else {
+      // others
+      std::cout << GridLogError << "Unrecognized StartingType\n";
+      std::cout
+	<< GridLogError
+	<< "Valid [HotStart, ColdStart, TepidStart, CheckpointStart]\n";
+      exit(1);
     }
 
     Smearing.set_Field(U);

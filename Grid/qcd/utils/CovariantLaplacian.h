@@ -80,17 +80,20 @@ class LaplacianAdjointField: public Metric<typename Impl::Field> {
 public:
   INHERIT_GIMPL_TYPES(Impl);
 
-  LaplacianAdjointField(GridBase* grid, OperatorFunction<GaugeField>& S, LaplacianParams& p, const RealD k = 1.0)
+  LaplacianAdjointField(GridBase* grid, OperatorFunction<GaugeField>& S, LaplacianParams& p, const RealD k = 1.0, bool if_remez=true)
     : U(Nd, grid), Solver(S), param(p), kappa(k){
     AlgRemez remez(param.lo,param.hi,param.precision);
     std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
+    if(if_remez){
     remez.generateApprox(param.degree,1,2);
     PowerHalf.Init(remez,param.tolerance,false);
     PowerInvHalf.Init(remez,param.tolerance,true);
+    }
+    this->triv=0;
         
 
   };
-
+  LaplacianAdjointField(){this->triv=0; printf("triv=%d\n",this->Trivial());}
   void Mdir(const GaugeField&, GaugeField&, int, int){ assert(0);}
   void MdirAll(const GaugeField&, std::vector<GaugeField> &){ assert(0);}
   void Mdiag(const GaugeField&, GaugeField&){ assert(0);}
@@ -164,6 +167,13 @@ public:
   void Minv(const GaugeField& in, GaugeField& inverted){
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(*this);
     Solver(HermOp, in, inverted);
+  }
+
+
+  void MinvDeriv(const GaugeField& in, GaugeField& der) {
+    GaugeField X(in.Grid());
+    Minv(in,X);
+    MDeriv(X,der);
   }
 
   void MSquareRoot(GaugeField& P){

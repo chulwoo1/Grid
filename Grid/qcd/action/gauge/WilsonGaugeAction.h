@@ -54,13 +54,15 @@ public:
     return sstream.str();
   }
 
-  virtual void refresh(const GaugeField &U,
-                       GridParallelRNG &pRNG){};  // noop as no pseudoferms
+  virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG &pRNG){};  // noop as no pseudoferms
 
   virtual RealD S(const GaugeField &U) {
+    static RealD lastG=0.;
     RealD plaq = WilsonLoops<Gimpl>::avgPlaquette(U);
     RealD vol = U.Grid()->gSites();
     RealD action = beta * (1.0 - plaq) * (Nd * (Nd - 1.0)) * vol * 0.5;
+    std::cout << GridLogMessage << "[WilsonGaugeAction] dH: " << action-lastG << std::endl;
+    lastG=action;
     return action;
   };
 

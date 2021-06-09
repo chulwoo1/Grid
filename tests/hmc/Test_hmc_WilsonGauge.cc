@@ -40,6 +40,7 @@ int main(int argc, char **argv)
    // Typedefs to simplify notation
   typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;  // Uses the default minimum norm
   HMCWrapper TheHMC;
+    
 
   // Grid from the command line
   TheHMC.Resources.AddFourDimGrid("gauge");
@@ -82,7 +83,7 @@ int main(int argc, char **argv)
   // that have a complex construction
   // standard
   RealD beta = 5.6 ;
-  WilsonGaugeActionR Waction(beta);
+  WilsonGaugeActionD Waction(beta);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);
@@ -91,6 +92,12 @@ int main(int argc, char **argv)
   /////////////////////////////////////////////////////////////
 
   // HMC parameters are serialisable 
+    // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
+//    HMCparams.StartingType     =std::string("ColdStart");
+//    HMCparams.Kappa=0.0;
+//    HMCparams.MD = MD;
+  TheHMC.Parameters.StartingType     =std::string("ColdStart");
+  TheHMC.Parameters.Kappa=0.0;
   TheHMC.Parameters.MD.MDsteps = 20;
   TheHMC.Parameters.MD.trajL   = 1.0;
 
