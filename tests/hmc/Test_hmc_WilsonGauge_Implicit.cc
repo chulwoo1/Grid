@@ -41,11 +41,9 @@ int main(int argc, char **argv)
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
 
   IntegratorParameters MD;
-//  MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.name    = std::string("ImplicitLeapFrog");
-  MD.MDsteps = 1;
-  MD.trajL   = 0.001;
-  std::cout << GridLogMessage<< "MDsteps= "<<MD.MDsteps<< " dt= "<<MD.trajL /MD.MDsteps <<std::endl;
+  MD.name    = std::string("ImplicitMinimumNorm2");
+  MD.MDsteps = 2;
+  MD.trajL   = 0.1;
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;
@@ -97,7 +95,7 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-  RealD beta = 6.4 ;
+  RealD beta = 5.6 ;
   WilsonGaugeActionR Waction(beta);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
