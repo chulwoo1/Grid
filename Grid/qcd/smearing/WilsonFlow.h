@@ -42,7 +42,7 @@ class WilsonFlow: public Smear<Gimpl>{
 
   void evolve_step(typename Gimpl::GaugeField&) const;
   void evolve_step_adaptive(typename Gimpl::GaugeField&, RealD);
-  RealD tau(unsigned int t)const {return epsilon*(t+1.0); }
+  RealD tau(unsigned int t)const {return epsilon*(t); }
 
 public:
   INHERIT_GIMPL_TYPES(Gimpl)
@@ -206,7 +206,7 @@ void WilsonFlow<Gimpl>::smear(GaugeField& out, const GaugeField& in) const {
 template <class Gimpl>
 void WilsonFlow<Gimpl>::smear_adaptive(GaugeField& out, const GaugeField& in, RealD maxTau){
   out = in;
-  taus = epsilon;
+  taus = 0;
   unsigned int step = 0;
   do{
     step++;

@@ -38,7 +38,8 @@ protected:
   int triv;
 public:
   Metric(){this->triv=1;}
-  int Trivial(){printf("Metric::Trivial=%d\n",triv); ;return triv;}
+  int Trivial(){ return triv;}
+//printf("Metric::Trivial=%d\n",triv); ;
   virtual void ImportGauge(const Field&)   = 0;
   virtual void M(const Field&, Field&)     = 0;
   virtual void Minv(const Field&, Field&)  = 0;
@@ -53,31 +54,38 @@ public:
 template <typename Field>
 class TrivialMetric : public Metric<Field>{
 public:
-  TrivialMetric(){this->triv=1;printf("TrivialMetric::triv=%d\n",this->Trivial());}
+//  TrivialMetric(){this->triv=1;printf("TrivialMetric::triv=%d\n",this->Trivial());}
   virtual void ImportGauge(const Field&){};
   virtual void M(const Field& in, Field& out){
-    printf("M:norm=%0.15e\n",norm2(in));
+//    printf("M:norm=%0.15e\n",norm2(in));
+    std::cout << GridLogIntegrator << " M:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     out = in;
   }
   virtual void Minv(const Field& in, Field& out){
-    printf("Minv:norm=%0.15e\n",norm2(in));
+//    printf("Minv:norm=%0.15e\n",norm2(in));
+    std::cout << GridLogIntegrator << " Minv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     out = in;
   }
   virtual void MSquareRoot(Field& P){
-    printf("MSquareRoot:norm=%0.15e\n",norm2(P));
+//    printf("MSquareRoot:norm=%0.15e\n",norm2(P));
+    std::cout << GridLogIntegrator << " MSquareRoot:norm(P)= " << std::sqrt(norm2(P)) << std::endl;
     // do nothing
   }
   virtual void MInvSquareRoot(Field& P){
-    printf("MInvSquareRoot:=%0.15e\n",norm2(P));
+//    printf("MInvSquareRoot:=%0.15e\n",norm2(P));
+    std::cout << GridLogIntegrator << " MInvSquareRoot:norm(P)= " << std::sqrt(norm2(P)) << std::endl;
     // do nothing
   }
   virtual void MDeriv(const Field& in, Field& out){
-    printf("MDeriv:norm=%0.15e\n",norm2(in));
+//    printf("MDeriv:norm=%0.15e\n",norm2(in));
+    std::cout << GridLogIntegrator << " MDeriv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
 //    printf("HERE!\n");exit(-42);
     out = Zero();
   }
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
-    printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
+//    printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
+    std::cout << GridLogIntegrator << " MDeriv:norm(left)= " << std::sqrt(norm2(left)) << std::endl;
+    std::cout << GridLogIntegrator << " MDeriv:norm(right)= " << std::sqrt(norm2(right)) << std::endl;
     out = Zero();
   }
 
@@ -160,6 +168,7 @@ public:
     }
 
     auto Hsum = TensorRemove(sum(Hloc));
+    std::cout << GridLogIntegrator << "MomentaAction: " <<  Hsum.real() << std::endl;
     return Hsum.real();
   }
 
@@ -174,6 +183,8 @@ public:
     M.Minv(in, X);  // X = G in
     M.MDeriv(X, MDer);  // MDer = U * dS/dU
     der = Implementation::projectForce(MDer);  // Ta if gauge fields
+    std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
+    std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
     
   }
 
@@ -187,6 +198,7 @@ public:
       //M.M(AuxMom, X); // X = M Aux
       // Two derivative terms
       // the Mderiv need separation of left and right terms
+    std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(AuxMom)= " << std::sqrt(norm2(AuxMom)) << std::endl;
       M.MDeriv(AuxMom, der); 
 
 
@@ -195,6 +207,7 @@ public:
 
       der = -1.0*Implementation::projectForce(der);
     }
+    std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
   }
 
   void DerivativeP(MomentaField& der){
@@ -203,12 +216,14 @@ public:
     // is the projection necessary here?
     // no for fields in the algebra
     der = Implementation::projectForce(der); 
+    std::cout << GridLogIntegrator << " DerivativeP:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
   }
 
   void update_auxiliary_momenta(RealD ep){
     if(!M.Trivial()) {
       AuxMom -= ep * AuxField;
     }
+    std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
   }
 
   void update_auxiliary_fields(RealD ep){
@@ -220,6 +235,7 @@ public:
       AuxField += ep * tmp;  // M^2 AuxMom
       // factor of 2?
     }
+    std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
   }
 
 };

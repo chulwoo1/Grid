@@ -151,6 +151,7 @@ protected:
     // input U actually not used in the fundamental case
     // Fundamental updates, include smearing
 
+    std::cout << GridLogIntegrator << "U before update_P2: " << std::sqrt(norm2(U)) << std::endl;
     // Generalised momenta  
     // Derivative of the kinetic term must be computed before
     // Mom is the momenta and gets updated by the 
@@ -158,13 +159,18 @@ protected:
     MomentaField MomDer(P.Mom.Grid());
     P.M.ImportGauge(U);
     P.DerivativeU(P.Mom, MomDer);
-    Mom -= MomDer * ep;
+    std::cout << GridLogIntegrator << "MomDer update_P2: " << std::sqrt(norm2(MomDer)) << std::endl;
+//    Mom -= MomDer * ep;
+    Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
+    std::cout << GridLogIntegrator << "Mom update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
 
     // Auxiliary fields
-    P.update_auxiliary_momenta(ep*0.5);
+    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
     P.AuxiliaryFieldsDerivative(MomDer);
-    Mom -= MomDer * ep;
-    P.update_auxiliary_momenta(ep*0.5);
+    std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
+//    Mom -= MomDer * ep;
+    Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
+    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
 
     for (int a = 0; a < as[level].actions.size(); ++a) {
       double start_full = usecond();
@@ -197,6 +203,7 @@ protected:
 
     std::cout << GridLogIntegrator << "[" << level << "] P "
               << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+    std::cout << GridLogIntegrator << "U before implicit_update_P: " << std::sqrt(norm2(U)) << std::endl;
     // Fundamental updates, include smearing
     MomentaField Msum(P.Mom.Grid());
     Msum = Zero();
@@ -232,9 +239,10 @@ protected:
       P.DerivativeU(P.Mom, MomDer1);
       factor = 1.0;
     }
+    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
 
     // Auxiliary fields
-    P.update_auxiliary_momenta(ep*0.5);
+    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
     P.AuxiliaryFieldsDerivative(AuxDer);
     Msum += AuxDer;
     
@@ -252,7 +260,7 @@ protected:
       std::cout << GridLogIntegrator << "|Force| laplacian site average: " << force_abs
                 << std::endl;
 
-      NewMom = P.Mom - ep* 0.5 * (2.0*Msum + factor*MomDer + MomDer1);// simplify
+      NewMom = P.Mom - ep* 0.5 * HMC_MOMENTUM_DENOMINATOR * (2.0*Msum + factor*MomDer + MomDer1);// simplify
       diff = NewMom - OldMom;
       counter++;
       RelativeError = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
@@ -261,9 +269,10 @@ protected:
     } while (RelativeError > threshold);
 
     P.Mom = NewMom;
+    std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
 
     // update the auxiliary fields momenta    
-    P.update_auxiliary_momenta(ep*0.5);
+    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
   }
 
   void update_U(Field& U, double ep) 
@@ -291,6 +300,7 @@ protected:
     t_U += ep;
     int fl = levels - 1;
     std::cout << GridLogIntegrator << "   " << "[" << fl << "] U " << " dt " << ep << " : t_U " << t_U << std::endl;
+    std::cout << GridLogIntegrator << "U before implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
 
     MomentaField Mom1(P.Mom.Grid());
     MomentaField Mom2(P.Mom.Grid());
@@ -333,6 +343,7 @@ protected:
     } while (RelativeError > threshold && counter < MaxCounter);
 
     U = NewU;
+    std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
     P.update_auxiliary_fields(ep*0.5);
   }
 

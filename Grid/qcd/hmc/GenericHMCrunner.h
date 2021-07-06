@@ -151,6 +151,7 @@ private:
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
 #if 0
+    std::cout << GridLogMessage << "Trivial metric" << std::endl;
     TrivialMetric<typename Implementation::Field> Mtr;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
 #else
@@ -158,23 +159,52 @@ private:
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
     // Better to pass the generalised momenta to the integrator
-#if 1
+#if 0
     RealD Kappa = Parameters.Kappa;
     std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
 #else
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
-    LaplacianRatParams gpar,mpar;
+    LaplacianRatParams gpar(1),mpar(1);
+#if 0
+//works
     gpar.offset = 1.;
+    gpar.a0[0] = 0;
+    gpar.a1[0] = 0.;
+    gpar.b0[0] = 1.;
+    gpar.b1[0] = 0.;
+    gpar.b2=0.;
+    mpar.offset = 1.;
+    mpar.a0[0] = 0.;
+    mpar.a1[0] = -0.;
+    mpar.b0[0] = 1.;
+    mpar.b1[0] = 0.;
+    mpar.b2=0.;
+#else
+    gpar.offset = 0.;
     gpar.a0[0] = 1;
     gpar.a1[0] = 0.;
     gpar.b0[0] = 1.;
     gpar.b1[0] = 0.;
-    mpar.offset = 1.;
-    mpar.a0[0] = -1.;
+    gpar.b2=0.;
+    mpar.offset = 0.;
+    mpar.a0[0] = 1.;
     mpar.a1[0] = -0.;
-    mpar.b0[0] = 2.;
+    mpar.b0[0] = 1.;
     mpar.b1[0] = 0.;
+    mpar.b2=0.;
+#endif
+    std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
+    std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
+    std::cout << GridLogMessage << " b0= " << gpar.b0 <<std::endl;
+    std::cout << GridLogMessage << " b1= " << gpar.b1 <<std::endl;
+    std::cout << GridLogMessage << " b2= " << gpar.b2 <<std::endl ;;
+
+    std::cout << GridLogMessage << "mpar a0= " << mpar.a0 <<std::endl;
+    std::cout << GridLogMessage << " a1= " << mpar.a1 <<std::endl;
+    std::cout << GridLogMessage << " b0= " << mpar.b0 <<std::endl;
+    std::cout << GridLogMessage << " b1= " << mpar.b1 <<std::endl;
+    std::cout << GridLogMessage << " b2= " << mpar.b2 <<std::endl;
     LaplacianAdjointRat<PeriodicGimplR> Laplacian(UGrid, CG, gpar, mpar);
 #endif
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
