@@ -44,8 +44,8 @@ int main(int argc, char **argv)
   IntegratorParameters MD;
   MD.name    = std::string("ImplicitLeapFrog");
 //  MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.MDsteps = 2;
-  MD.trajL   = 0.01;
+  MD.MDsteps = 1;
+  MD.trajL   = 0.002;
   std::cout << "trajL= " <<MD.trajL <<" steps= "<<MD.MDsteps<< " integrator= "<<MD.name<<std::endl;
 
   HMCparameters HMCparams;
@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   HMCparams.NoMetropolisUntil=  20;
   // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   HMCparams.StartingType     =std::string("ColdStart");
-  HMCparams.Kappa=0.0; //checking against trivial. Pathetic.
+  HMCparams.Kappa=0.01; //checking against trivial. Pathetic.
   HMCparams.MD = MD;
 
   // Possibile to create the module by hand 

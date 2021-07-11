@@ -315,6 +315,7 @@ protected:
 
     P.M.ImportGauge(U);
     P.DerivativeP(Mom1); // first term in the derivative 
+    std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
 
     P.update_auxiliary_fields(ep*0.5);
 
@@ -324,6 +325,7 @@ protected:
       std::cout << GridLogIntegrator << "UpdateU implicit step "<< counter << std::endl;
       
       P.DerivativeP(Mom2); // second term in the derivative, on the updated U
+      std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
       sum = (Mom1 + Mom2);
 
       for (int mu = 0; mu < Nd; mu++) {
@@ -466,13 +468,19 @@ public:
     std::cout.precision(15);
     std::cout << GridLogIntegrator << "Integrator action\n";
     std::cout.precision(15);
+    static RealD Saux=0.,Smom=0.,Sg=0.;
 
     RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
-    std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
+    std::cout << GridLogMessage << "S:FieldSquareNorm H_p = " << H << "\n";
+    std::cout << GridLogMessage << "S:dSmom = " << H-Smom << "\n";
+    Smom=H;
     P.M.ImportGauge(U);
-    H = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
-    RealD Hterm;
-    std::cout << GridLogMessage << "Momentum action H_p = " << H << "\n";
+    RealD Hterm = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
+//    H = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
+    std::cout << GridLogMessage << "S:Momentum action H_p = " << Hterm << "\n";
+    std::cout << GridLogMessage << "S:dSaux = " << Hterm-Saux << "\n";
+    Saux=Hterm;
+    H = + Hterm;
 
     // Actions
     for (int level = 0; level < as.size(); ++level) {
@@ -482,12 +490,15 @@ public:
         Field& Us = Smearer.get_U(as[level].actions.at(actionID)->is_smeared);
         std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] action eval " << std::endl;
         Hterm = as[level].actions.at(actionID)->S(Us);
-        std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] H = " << Hterm << std::endl;
+        std::cout << GridLogMessage << "S: action [" << level << "][" << actionID << "] H = " << Hterm << std::endl;
+        std::cout << GridLogMessage << "S:dSg = " << Hterm-Sg << "\n";
+        Sg=Hterm;
         H += Hterm;
       }
       as[level].apply(S_hireps, Representations, level, H);
     }
 
+    std::cout << GridLogMessage << "S:Total  H = " << H << "\n";
     return H;
   }
 

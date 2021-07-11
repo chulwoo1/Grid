@@ -123,7 +123,6 @@ public:
       GridCmdOptionIntVector(arg, ivec);
 //Parameters.MD.MDsteps = 20;
       Parameters.MD.MDsteps = ivec[0];
-      Parameters.NoMetropolisUntil = ivec[0];
     }
   }
 
@@ -159,8 +158,8 @@ private:
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
     // Better to pass the generalised momenta to the integrator
-#if 0
     RealD Kappa = Parameters.Kappa;
+#if 0
     std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
 #else
@@ -184,12 +183,12 @@ private:
     gpar.offset = 0.;
     gpar.a0[0] = 1;
     gpar.a1[0] = 0.;
-    gpar.b0[0] = 1.;
-    gpar.b1[0] = 0.;
+    gpar.b0[0] = 1.-0.5*Kappa;
+    gpar.b1[0] = 0.5*Kappa;
     gpar.b2=0.;
     mpar.offset = 0.;
-    mpar.a0[0] = 1.;
-    mpar.a1[0] = -0.;
+    mpar.a0[0] = 1.-0.5*Kappa;
+    mpar.a1[0] = 0.5*Kappa;
     mpar.b0[0] = 1.;
     mpar.b1[0] = 0.;
     mpar.b2=0.;
