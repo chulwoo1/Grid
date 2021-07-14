@@ -47,6 +47,8 @@ public:
   virtual void MInvSquareRoot(Field&) = 0;
   virtual void MDeriv(const Field&, Field&) = 0;
   virtual void MDeriv(const Field&, const Field&, Field&) = 0;
+  virtual void MinvDeriv(const Field&, Field&) = 0;
+//  virtual void MinvDeriv(const Field&, const Field&, Field&) = 0;
 };
 
 
@@ -180,8 +182,12 @@ public:
     MomentaField MDer(in.Grid());
     MomentaField X(in.Grid());
     X = Zero();
+#if 0
     M.Minv(in, X);  // X = G in
     M.MDeriv(X, MDer);  // MDer = U * dS/dU
+#else
+    M.MinvDeriv(X, MDer);  // MDer = U * dS/dU
+#endif
     der = Implementation::projectForce(MDer);  // Ta if gauge fields
     std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
@@ -206,8 +212,8 @@ public:
       //M.MDeriv(X, AuxMom, der_temp); der += der_temp;
 
       der = -1.0*Implementation::projectForce(der);
+      std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
     }
-    std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
   }
 
   void DerivativeP(MomentaField& der){
@@ -222,8 +228,8 @@ public:
   void update_auxiliary_momenta(RealD ep){
     if(!M.Trivial()) {
       AuxMom -= ep * AuxField;
+      std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
     }
-    std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
   }
 
   void update_auxiliary_fields(RealD ep){
@@ -234,8 +240,8 @@ public:
       // M.M(tmp, tmp2);
       AuxField += ep * tmp;  // M^2 AuxMom
       // factor of 2?
+      std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
     }
-    std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
   }
 
 };

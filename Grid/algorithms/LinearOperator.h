@@ -178,6 +178,53 @@ public:
   }
 };
 
+#if 0
+////////////////////////////////////////////////////////////////////
+// Wrap an already herm matrix
+////////////////////////////////////////////////////////////////////
+template<class Matrix,class Field>
+class QuadLinearOperator : public LinearOperatorBase<Field> {
+  Matrix &_Mat;
+public:
+  RealD a0,a1,a2;
+  QuadLinearOpeartor(Matrix &Mat): _Mat(Mat),a0(0.),a1(0.),a2(1.) {};
+//  HermitianLinearOperator(Matrix &Mat, RealD _a0,RealD _a1,RealD _a2): _Mat(Mat),a0(_a0),a1(_a1),a2(_a2) {};
+  // Support for coarsening to a multigrid
+  void OpDiag (const Field &in, Field &out) {
+    _Mat.Mdiag(in,out);
+  }
+  void OpDir  (const Field &in, Field &out,int dir,int disp) {
+    _Mat.Mdir(in,out,dir,disp);
+  }
+  void OpDirAll  (const Field &in, std::vector<Field> &out){
+    _Mat.MdirAll(in,out);
+  }
+  void HermOp (const Field &in, Field &out){
+//    _Mat.M(in,out);
+    Field tmp1(in.Grid());
+//    Linop.HermOpAndNorm(psi, mmp, d, b);
+    _Mat.Lap(in,tmp1);
+    _Mat.Lap(tmp1,out);
+    out *= a2;
+    axpy(out, a1, tmp1, out);
+    axpy(out, a0, in, out);
+//    d=real(innerProduct(psi,mmp));
+//    b=norm2(mmp);
+  }
+  void AdjOp     (const Field &in, Field &out){
+    _Mat.M(in,out);
+  }
+  void HermOpAndNorm(const Field &in, Field &out,RealD &n1,RealD &n2){
+    HermOp(in,out);
+    ComplexD dot= innerProduct(in,out); n1=real(dot);
+    n2=norm2(out);
+  }
+  void Op(const Field &in, Field &out){
+    _Mat.M(in,out);
+  }
+};
+#endif
+
 template<class Matrix,class Field>
 class NonHermitianLinearOperator : public LinearOperatorBase<Field> {
   Matrix &_Mat;

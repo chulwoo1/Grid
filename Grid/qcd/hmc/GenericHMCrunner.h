@@ -165,32 +165,34 @@ private:
 #else
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
     LaplacianRatParams gpar(1),mpar(1);
-#if 0
-//works
-    gpar.offset = 1.;
-    gpar.a0[0] = 0;
-    gpar.a1[0] = 0.;
-    gpar.b0[0] = 1.;
-    gpar.b1[0] = 0.;
-    gpar.b2=0.;
-    mpar.offset = 1.;
-    mpar.a0[0] = 0.;
-    mpar.a1[0] = -0.;
-    mpar.b0[0] = 1.;
-    mpar.b1[0] = 0.;
-    mpar.b2=0.;
-#else
+#if 1
+//working?
     gpar.offset = 0.;
     gpar.a0[0] = 1;
     gpar.a1[0] = 0.;
-    gpar.b0[0] = 1.-0.5*Kappa;
-    gpar.b1[0] = 0.5*Kappa;
+//    gpar.b0[0] = 1.-0.5*Kappa;
+//    gpar.b1[0] = 0.5*Kappa;
+    gpar.b0[0] = 1.;
+    gpar.b1[0] = 0.;
     gpar.b2=0.;
     mpar.offset = 0.;
     mpar.a0[0] = 1.-0.5*Kappa;
     mpar.a1[0] = 0.5*Kappa;
     mpar.b0[0] = 1.;
     mpar.b1[0] = 0.;
+    mpar.b2=0.;
+#else
+    gpar.offset = 0.;
+    gpar.a0[0] = 1.-0.5*Kappa;
+    gpar.a1[0] = 0.5*Kappa;
+    gpar.b0[0] = 1;
+    gpar.b1[0] = 0.;
+    gpar.b2=0.;
+    mpar.offset = 0.;
+    ›>41;295;0c= 1.;
+    mpar.a1[0] = 1.;
+    mpar.b0[0] = 1.-0.5*Kappa;
+    mpar.b1[0] = 0.5*Kappa;
     mpar.b2=0.;
 #endif
     std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;

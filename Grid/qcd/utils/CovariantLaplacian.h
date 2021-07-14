@@ -132,7 +132,7 @@ public:
 
   void MDeriv(const GaugeField& in, GaugeField& der) {
     // in is anti-hermitian
-    std::cout << "MDeriv:Kappa = "<<kappa<<std::endl;
+//    std::cout << "MDeriv:Kappa = "<<kappa<<std::endl;
     RealD factor = -kappa / (double(4 * Nd));
     
     for (int mu = 0; mu < Nd; mu++){
@@ -146,7 +146,7 @@ public:
       // adjoint in the last multiplication
       PokeIndex<LorentzIndex>(der,  -2.0 * factor * der_mu, mu);
     } 
-    std::cout << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout << "MDeriv: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   // separating this temporarily
@@ -166,7 +166,7 @@ public:
       }
       PokeIndex<LorentzIndex>(der, -factor * der_mu, mu);
     }
-    std::cout << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout << "MDeriv: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   void Minv(const GaugeField& in, GaugeField& inverted){
@@ -189,7 +189,7 @@ public:
     ConjugateGradientMultiShift<GaugeField> msCG(param.MaxIter,PowerHalf);
     msCG(HermOp,P,Gp);
     P = Gp; 
-    std::cout << "MSquareRoot:norm2(der) = "<<norm2(P)<<std::endl;
+    std::cout << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void MInvSquareRoot(GaugeField& P){
@@ -198,7 +198,7 @@ public:
     ConjugateGradientMultiShift<GaugeField> msCG(param.MaxIter,PowerInvHalf);
     msCG(HermOp,P,Gp);
     P = Gp; 
-    std::cout << "MInvSquareRoot:norm2(der) = "<<norm2(P)<<std::endl;
+    std::cout << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
 

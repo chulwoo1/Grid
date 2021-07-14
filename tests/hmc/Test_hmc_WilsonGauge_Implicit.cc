@@ -37,6 +37,15 @@ int main(int argc, char **argv)
   Grid_init(&argc, &argv);
   GridLogLayout();
 
+  
+  std::string arg;
+  std::vector<int> steps(0);
+  if( GridCmdOptionExists(argv,argv+argc,"--MDsteps") ){
+    arg= GridCmdOptionPayload(argv,argv+argc,"--MDsteps");
+    GridCmdOptionIntVector(arg,steps);
+    assert(steps.size()==1);
+  }
+
    // Typedefs to simplify notation
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
 //  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper;  // Uses the default minimum norm
@@ -44,8 +53,9 @@ int main(int argc, char **argv)
   IntegratorParameters MD;
   MD.name    = std::string("ImplicitLeapFrog");
 //  MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.MDsteps = 1;
   MD.trajL   = 0.002;
+  MD.MDsteps = 1;
+  if (steps.size()) MD.MDsteps = steps[0];
   std::cout << "trajL= " <<MD.trajL <<" steps= "<<MD.MDsteps<< " integrator= "<<MD.name<<std::endl;
 
   HMCparameters HMCparams;
