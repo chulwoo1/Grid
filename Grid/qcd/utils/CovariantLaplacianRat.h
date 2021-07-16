@@ -216,8 +216,8 @@ public:
     Laplacian.M(MinvAGMom,LMinvAGMom);
 
 
-//    RealD coef=0.5;
-    RealD coef=1;
+    RealD coef=0.5;
+//    RealD coef=1;
     std::cout<<GridLogMessage << "coef =  "<< coef <<std::endl;
     Laplacian.MDeriv(GMom,MinvMom[i],temp); der += coef*2*par.a1[i]*temp;
     Laplacian.MDeriv(left,MinvGMom,temp); der += coef*2*par.a1[i]*temp;
