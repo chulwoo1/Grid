@@ -182,11 +182,11 @@ public:
     MomentaField MDer(in.Grid());
     MomentaField X(in.Grid());
     X = Zero();
-#if 1
+#if 0
     M.Minv(in, X);  // X = G in
     M.MDeriv(X, MDer);  // MDer = U * dS/dU
 #else
-    M.MinvDeriv(X, MDer);  // MDer = U * dS/dU
+    M.MinvDeriv(in, MDer);  // MDer = U * dS/dU
 #endif
     der = Implementation::projectForce(MDer);  // Ta if gauge fields
     std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;

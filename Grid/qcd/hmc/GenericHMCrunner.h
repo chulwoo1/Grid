@@ -159,13 +159,13 @@ private:
 
     // Better to pass the generalised momenta to the integrator
     RealD Kappa = Parameters.Kappa;
-#if 1
+#if 0
     std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
 #else
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
     LaplacianRatParams gpar(1),mpar(1);
-#if 1
+#if 0
 //working? NO
     gpar.offset = 0.;
     gpar.a0[0] = 1;
@@ -180,15 +180,16 @@ private:
     mpar.b1[0] = 0.;
     mpar.b2=0.;
 #else
+//maybe working
     gpar.offset = 0.;
-    gpar.a0[0] = 1.;
-    gpar.a1[0] = 0.;
+    mpar.a0[0] = 1.;
+    mpar.a1[0] = 0;
     gpar.b0[0] = 1;
     gpar.b1[0] = 0.;
     gpar.b2=0.;
     mpar.offset = 0.;
-    mpar.a0[0] = 1.;
-    mpar.a1[0] = 0.;
+    mpar.a0[0] = 1.+0.5*Kappa;
+    mpar.a1[0] = -0.5*Kappa;
     mpar.b0[0] = 1.-0.5*Kappa;
     mpar.b1[0] = 0.5*Kappa;
     mpar.b2=0.;
