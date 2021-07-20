@@ -472,15 +472,16 @@ public:
 
     RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
     std::cout << GridLogMessage << "S:FieldSquareNorm H_p = " << H << "\n";
-    std::cout << GridLogMessage << "S:dSmom = " << H-Smom << "\n";
+    std::cout << GridLogMessage << "S:dSField = " << H-Smom << "\n";
     Smom=H;
     P.M.ImportGauge(U);
     RealD Hterm = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
 //    H = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
     std::cout << GridLogMessage << "S:Momentum action H_p = " << Hterm << "\n";
-    std::cout << GridLogMessage << "S:dSaux = " << Hterm-Saux << "\n";
+    std::cout << GridLogMessage << "S:dSMom = " << Hterm-Saux << "\n";
     Saux=Hterm;
-    H = + Hterm;
+// jky
+    H = Hterm;
 
     // Actions
     for (int level = 0; level < as.size(); ++level) {

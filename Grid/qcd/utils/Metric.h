@@ -124,7 +124,7 @@ public:
     // Generate gaussian momenta
     Implementation::generate_momenta(Mom, sRNG, pRNG);
     // Modify the distribution with the metric
-    if(M.Trivial()) return;
+//    if(M.Trivial()) return;
     M.MSquareRoot(Mom);
 
     if (1) {
@@ -141,6 +141,7 @@ public:
 
   // Correct
   RealD MomentaAction(){
+    static RealD Saux=0.,Smom=0.;
     MomentaField inv(Mom.Grid());
     inv = Zero();
     M.Minv(Mom, inv);
@@ -153,8 +154,15 @@ public:
       auto inv_mu = PeekIndex<LorentzIndex>(inv, mu);
       Hloc += trace(Mom_mu * inv_mu);
     }
+    auto Htmp1 = TensorRemove(sum(Hloc));
+    std::cout << GridLogMessage << "S:dSmom = " << Htmp1.real()-Smom << "\n";
+    Smom=Htmp1.real();
+    
 
-    if(!M.Trivial()) {
+    
+
+//    if(!M.Trivial()) 
+    {
       // Auxiliary Fields
       // hide in the metric
       M.M(AuxMom, inv);
@@ -168,6 +176,9 @@ public:
         Hloc += trace(af_mu * af_mu);
       }
     }
+    auto Htmp2 = TensorRemove(sum(Hloc))-Htmp1;
+    std::cout << GridLogMessage << "S:dSaux = " << Htmp2.real()-Saux << "\n";
+    Saux=Htmp2.real();
 
     auto Hsum = TensorRemove(sum(Hloc));
     std::cout << GridLogIntegrator << "MomentaAction: " <<  Hsum.real() << std::endl;
@@ -188,7 +199,7 @@ public:
 #else
     M.MinvDeriv(in, MDer);  // MDer = U * dS/dU
 #endif
-    der = Implementation::projectForce(MDer);  // Ta if gauge fields
+    der = -1.0* Implementation::projectForce(MDer);  // Ta if gauge fields
     std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
     
@@ -196,7 +207,8 @@ public:
 
   void AuxiliaryFieldsDerivative(MomentaField& der){
     der = Zero();
-    if(!M.Trivial()) {
+//    if(!M.Trivial()) 
+    {
       // Auxiliary fields
       MomentaField der_temp(der.Grid());
       MomentaField X(der.Grid());
@@ -226,14 +238,16 @@ public:
   }
 
   void update_auxiliary_momenta(RealD ep){
-    if(!M.Trivial()) {
+//    if(!M.Trivial()) 
+    {
       AuxMom -= ep * AuxField;
       std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
     }
   }
 
   void update_auxiliary_fields(RealD ep){
-    if(!M.Trivial()) {
+//    if(!M.Trivial()) 
+    {
       MomentaField tmp(AuxMom.Grid());
       MomentaField tmp2(AuxMom.Grid());
       M.M(AuxMom, tmp);

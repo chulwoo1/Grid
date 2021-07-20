@@ -98,10 +98,13 @@ public:
   void Mdiag(const GaugeField&, GaugeField&){ assert(0);}
 
   void ImportGauge(const GaugeField& _U) {
+    RealD total=0.;
     for (int mu = 0; mu < Nd; mu++) {
       U[mu] = PeekIndex<LorentzIndex>(_U, mu);
+      total += norm2(U[mu]);
     }
     Usav = _U;
+    std::cout << "ImportGauge:norm2(_U) = "<<" "<<total<<std::endl;
   }
 
   void Lap(const GaugeField& in, GaugeField& out) {

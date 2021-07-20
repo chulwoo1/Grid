@@ -99,9 +99,12 @@ public:
   void Mdiag(const GaugeField&, GaugeField&){ assert(0);}
 
   void ImportGauge(const GaugeField& _U) {
+    RealD total=0.;
     for (int mu = 0; mu < Nd; mu++) {
       U[mu] = PeekIndex<LorentzIndex>(_U, mu);
+      total += norm2(U[mu]);
     }
+    std::cout << "ImportGauge:norm2(U _U) = "<<total<<std::endl;
   }
 
   void M(const GaugeField& in, GaugeField& out) {
@@ -180,6 +183,7 @@ public:
     GaugeField X(in.Grid());
     Minv(in,X);
     MDeriv(X,der);
+    der *=-1.0;
     std::cout << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 

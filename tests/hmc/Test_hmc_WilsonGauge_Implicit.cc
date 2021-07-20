@@ -53,7 +53,7 @@ int main(int argc, char **argv)
   IntegratorParameters MD;
   MD.name    = std::string("ImplicitLeapFrog");
 //  MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.trajL   = 0.02;
+  MD.trajL   = 0.002;
   MD.MDsteps = 1;
   if (steps.size()) MD.MDsteps = steps[0];
   std::cout << "trajL= " <<MD.trajL <<" steps= "<<MD.MDsteps<< " integrator= "<<MD.name<<std::endl;
