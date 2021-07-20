@@ -164,21 +164,21 @@ private:
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
 #else
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
-    LaplacianRatParams gpar(1),mpar(1);
+    LaplacianRatParams gpar(2),mpar(2);
 #if 0
 //working?
-    gpar.offset = 0.;
+    gpar.offset = 1.;
     gpar.a0[0] = 1.+Kappa*0.5;
     gpar.a1[0] = -Kappa*0.5;
-    gpar.b0[0] = 1.;
-    gpar.b1[0] = 0.;
-    gpar.b2=0.;
-    mpar.offset = 0.;
+    gpar.b0[0] = 1.-Kappa*0.5;
+    gpar.b1[0] = +Kappa*0.5;
+    gpar.b2=1.;
+    mpar.offset = 1.;
     mpar.a0[0] = 1.-Kappa*0.5;
     mpar.a1[0] = +Kappa*0.5;
-    mpar.b0[0] = 1.;
-    mpar.b1[0] = 0.;
-    mpar.b2=0.;
+    mpar.b0[0] = 1.+Kappa*0.5;
+    mpar.b1[0] = -Kappa*0.5;
+    mpar.b2=1.;
 #else
 //NOT WORKING
     gpar.offset = 1.;
@@ -186,13 +186,13 @@ private:
     gpar.a1[0] = -Kappa*0.5;
     gpar.b0[0] = 1.-Kappa*0.5;
     gpar.b1[0] = +Kappa*0.5;
-    gpar.b2=0.;
+    gpar.b2=1.;
     mpar.offset = 1.;
     mpar.a0[0] = 1.-Kappa*0.5;
     mpar.a1[0] = +Kappa*0.5;
     mpar.b0[0] = 1.+Kappa*0.5;
     mpar.b1[0] = -Kappa*0.5;
-    mpar.b2=0.;
+    mpar.b2=1.;
 #endif
     std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
     std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
