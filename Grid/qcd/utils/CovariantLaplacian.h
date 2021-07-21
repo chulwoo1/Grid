@@ -104,7 +104,7 @@ public:
       U[mu] = PeekIndex<LorentzIndex>(_U, mu);
       total += norm2(U[mu]);
     }
-    std::cout << "ImportGauge:norm2(U _U) = "<<total<<std::endl;
+    std::cout << GridLogDebug <<"ImportGauge:norm2(U _U) = "<<total<<std::endl;
   }
 
   void M(const GaugeField& in, GaugeField& out) {
@@ -112,7 +112,7 @@ public:
     // test
     //GaugeField herm = in + adj(in);
     //std::cout << "AHermiticity: " << norm2(herm) << std::endl;
-    std::cout << "M:Kappa = "<<kappa<<std::endl;
+//    std::cout << GridLogDebug <<"M:Kappa = "<<kappa<<std::endl;
 
     GaugeLinkField tmp(in.Grid());
     GaugeLinkField tmp2(in.Grid());
@@ -130,12 +130,12 @@ public:
       out_nu = (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
       PokeIndex<LorentzIndex>(out, out_nu, nu);
     }
-    std::cout << "M:norm2(out) = "<<norm2(out)<<std::endl;
+//    std::cout << GridLogDebug <<"M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
   void MDeriv(const GaugeField& in, GaugeField& der) {
     // in is anti-hermitian
-//    std::cout << "MDeriv:Kappa = "<<kappa<<std::endl;
+//    std::cout << GridLogDebug <<"MDeriv:Kappa = "<<kappa<<std::endl;
     RealD factor = -kappa / (double(4 * Nd));
     
     for (int mu = 0; mu < Nd; mu++){
@@ -149,7 +149,7 @@ public:
       // adjoint in the last multiplication
       PokeIndex<LorentzIndex>(der,  -2.0 * factor * der_mu, mu);
     } 
-    std::cout << "MDeriv: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout << GridLogDebug <<"MDeriv: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   // separating this temporarily
@@ -169,13 +169,13 @@ public:
       }
       PokeIndex<LorentzIndex>(der, -factor * der_mu, mu);
     }
-    std::cout << "MDeriv: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout << GridLogDebug <<"MDeriv: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   void Minv(const GaugeField& in, GaugeField& inverted){
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(*this);
     Solver(HermOp, in, inverted);
-    std::cout << "Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
+    std::cout << GridLogDebug <<"Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
   }
 
 
@@ -184,7 +184,7 @@ public:
     Minv(in,X);
     MDeriv(X,der);
     der *=-1.0;
-    std::cout << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout << GridLogDebug <<"MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   void MSquareRoot(GaugeField& P){
@@ -193,7 +193,7 @@ public:
     ConjugateGradientMultiShift<GaugeField> msCG(param.MaxIter,PowerHalf);
     msCG(HermOp,P,Gp);
     P = Gp; 
-    std::cout << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
+    std::cout << GridLogDebug <<"MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void MInvSquareRoot(GaugeField& P){
@@ -202,7 +202,7 @@ public:
     ConjugateGradientMultiShift<GaugeField> msCG(param.MaxIter,PowerInvHalf);
     msCG(HermOp,P,Gp);
     P = Gp; 
-    std::cout << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
+    std::cout << GridLogDebug <<"MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
 

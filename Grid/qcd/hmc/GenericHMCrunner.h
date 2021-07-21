@@ -121,7 +121,6 @@ public:
       arg = GridCmdOptionPayload(argv, argv + argc, "--MDsteps");
       std::vector<int> ivec(0);
       GridCmdOptionIntVector(arg, ivec);
-//Parameters.MD.MDsteps = 20;
       Parameters.MD.MDsteps = ivec[0];
     }
   }
@@ -164,9 +163,9 @@ private:
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
 #else
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
-    LaplacianRatParams gpar(2),mpar(2);
 #if 0
 //working?
+    LaplacianRatParams gpar(1),mpar(1);
     gpar.offset = 1.;
     gpar.a0[0] = 1.+Kappa*0.5;
     gpar.a1[0] = -Kappa*0.5;
@@ -180,20 +179,54 @@ private:
     mpar.b1[0] = -Kappa*0.5;
     mpar.b2=1.;
 #else
-//NOT WORKING
-    gpar.offset = 1.;
-    gpar.a0[0] = 1.+Kappa*0.5;
-    gpar.a1[0] = -Kappa*0.5;
-    gpar.b0[0] = 1.-Kappa*0.5;
-    gpar.b1[0] = +Kappa*0.5;
+//g_x3_1
+    LaplacianRatParams gpar(4,10000),mpar(4,10000);
+    gpar. offset = -1.806640805644669e+02;
+    gpar. a0[0] = 3.828256737535615e+00;
+    gpar. a1[0] = -1.759884800801541e+00;
+    gpar. b0[0] = 3.720710594848511e+00;
+    gpar. b1[0] = -3.529025938486833e+00;
+    gpar. a0[1] = 1.385427197085892e+01;
+    gpar. a1[1] = -1.210145337093361e+04;
+    gpar. b0[1] = 5.230416808032104e+00;
+    gpar. b1[1] = 5.038496433918291e+01;
+    gpar. a0[2] = -2.615764258902624e-01;
+    gpar. a1[2] = 1.768889411282898e-01;
+    gpar. b0[2] = 2.659251295152384e+00;
+    gpar. b1[2] = -3.254117569635528e+00;
+    gpar. a0[3] = 1.523953680699539e+05;
+    gpar. a1[3] = 4.651204348978543e+04;
+    gpar. b0[3] = 3.615577944657219e+02;
+    gpar. b1[3] = 1.158681982729600e+02;
     gpar.b2=1.;
-    mpar.offset = 1.;
-    mpar.a0[0] = 1.-Kappa*0.5;
-    mpar.a1[0] = +Kappa*0.5;
-    mpar.b0[0] = 1.+Kappa*0.5;
-    mpar.b1[0] = -Kappa*0.5;
+
+    mpar. offset = -5.535134581681094e-03;
+    mpar. a0[0] = -6.897276105582431e+00;
+    mpar. a1[0] = -3.760976465900414e+00;
+    mpar. b0[0] = -3.792989299317706e+01;
+    mpar. b1[0] = -1.652205896546682e+01;
+    mpar. a0[1] = -1.049418884789610e+01;
+    mpar. a1[1] = 2.705292434239074e+00;
+    mpar. b0[1] = 6.255355656904058e+01;
+    mpar. b1[1] = -7.586738463469761e+00;
+    mpar. a0[2] = -2.027141884855678e-02;
+    mpar. a1[2] = 2.446143264550702e-03;
+    mpar. b0[2] = 4.042328199062386e+00;
+    mpar. b1[2] = -3.638856523270800e+00;
+    mpar. a0[3] = 1.482983537063678e-03;
+    mpar. a1[3] = -9.754596728239950e-04;
+    mpar. b0[3] = 2.639273996355545e+00;
+    mpar. b1[3] = -3.240812191556963e+00;
     mpar.b2=1.;
 #endif
+    for(int i=0;i<4;i++){
+       gpar.a1[i] *=16.;
+       gpar.b1[i] *=16.;
+       mpar.a1[i] *=16.;
+       mpar.b1[i] *=16.;
+    }
+    gpar.b2 *= 16.*16.;
+    mpar.b2 *= 16.*16.;
     std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
     std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
     std::cout << GridLogMessage << " b0= " << gpar.b0 <<std::endl;

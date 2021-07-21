@@ -39,29 +39,37 @@ int main(int argc, char **argv)
 
   
   std::string arg;
+
+#if 0
   std::vector<int> steps(0);
   if( GridCmdOptionExists(argv,argv+argc,"--MDsteps") ){
     arg= GridCmdOptionPayload(argv,argv+argc,"--MDsteps");
     GridCmdOptionIntVector(arg,steps);
     assert(steps.size()==1);
   }
+#endif
 
    // Typedefs to simplify notation
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
 //  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper;  // Uses the default minimum norm
 
   IntegratorParameters MD;
-  MD.name    = std::string("ImplicitLeapFrog");
-//  MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.trajL   = 0.002;
+//  MD.name    = std::string("ImplicitLeapFrog");
+  MD.name    = std::string("ImplicitMinimumNorm2");
+  MD.trajL   = 0.1*std::sqrt(2.);
   MD.MDsteps = 1;
-  if (steps.size()) MD.MDsteps = steps[0];
-  std::cout << "trajL= " <<MD.trajL <<" steps= "<<MD.MDsteps<< " integrator= "<<MD.name<<std::endl;
+  if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){
+    arg= GridCmdOptionPayload(argv,argv+argc,"--trajL");
+    std::vector<int> traj(0);
+    GridCmdOptionIntVector(arg,traj);
+    assert(traj.size()==1);
+    MD.trajL *= double(traj[0]);
+  }
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;
   HMCparams.Trajectories     = 200;
-  HMCparams.NoMetropolisUntil=  20;
+  HMCparams.NoMetropolisUntil=  0;
   // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   HMCparams.StartingType     =std::string("ColdStart");
   HMCparams.Kappa=0.01; //checking against trivial. Pathetic.
@@ -108,7 +116,7 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-  RealD beta = 5.6 ;
+  RealD beta = 6.4 ;
   WilsonGaugeActionR Waction(beta);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
@@ -122,6 +130,7 @@ int main(int argc, char **argv)
 //  TheHMC.Parameters.MD.trajL   = 1.0;
 
   TheHMC.ReadCommandLine(argc, argv); // these can be parameters from file
+  std::cout << "trajL= " <<TheHMC.Parameters.MD.trajL <<" steps= "<<TheHMC.Parameters.MD.MDsteps << " integrator= "<<TheHMC.Parameters.MD.name<<std::endl;
   TheHMC.Run();  // no smearing
 
   Grid_finalize();

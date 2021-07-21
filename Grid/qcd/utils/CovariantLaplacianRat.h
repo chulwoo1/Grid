@@ -104,7 +104,7 @@ public:
       total += norm2(U[mu]);
     }
     Usav = _U;
-    std::cout << "ImportGauge:norm2(_U) = "<<" "<<total<<std::endl;
+    std::cout <<GridLogDebug << "ImportGauge:norm2(_U) = "<<" "<<total<<std::endl;
   }
 
   void Lap(const GaugeField& in, GaugeField& out) {
@@ -151,7 +151,7 @@ public:
       }
       PokeIndex<LorentzIndex>(der, -factor * der_mu, mu);
     }
-    std::cout << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout <<GridLogDebug << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   // separating this temporarily
@@ -242,13 +242,13 @@ public:
               GaugeField& der) {
     der=Zero();
     MDerivInt(Mparam, left, right, der);
-    std::cout << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout <<GridLogDebug << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   void MinvDeriv(const GaugeField& in, GaugeField& der) {
     der=Zero();
     MDerivInt(Gparam, in, in, der);
-    std::cout << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout <<GridLogDebug << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
 
@@ -275,19 +275,19 @@ public:
 
   void MSquareRoot(GaugeField& P){
     MSquareRootInt(Mparam,P);
-    std::cout << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
+    std::cout <<GridLogDebug << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void MInvSquareRoot(GaugeField& P){
     MSquareRootInt(Gparam,P);
-    std::cout << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
+    std::cout <<GridLogDebug << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void M(const GaugeField& in, GaugeField& out) {
       out = in;
       MSquareRoot(out);
       MSquareRoot(out);
-      std::cout << "M:norm2(out) = "<<norm2(out)<<std::endl;
+      std::cout <<GridLogDebug << "M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
   void Minv(const GaugeField& in, GaugeField& inverted){
@@ -296,7 +296,7 @@ public:
       inverted = in;
       MInvSquareRoot(inverted);
       MInvSquareRoot(inverted);
-      std::cout << "Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
+      std::cout <<GridLogDebug << "Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
   }
 
 
