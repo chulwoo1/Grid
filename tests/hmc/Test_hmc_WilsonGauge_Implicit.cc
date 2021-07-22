@@ -56,7 +56,7 @@ int main(int argc, char **argv)
   IntegratorParameters MD;
 //  MD.name    = std::string("ImplicitLeapFrog");
   MD.name    = std::string("ImplicitMinimumNorm2");
-  MD.trajL   = 0.1*std::sqrt(2.);
+  MD.trajL   = 0.01*std::sqrt(2.);
   MD.MDsteps = 1;
   if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){
     arg= GridCmdOptionPayload(argv,argv+argc,"--trajL");
