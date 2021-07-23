@@ -162,6 +162,7 @@ private:
 #if 0
     std::cout << GridLogMessage << "Kappa = " << Kappa << std::endl;
     LaplacianAdjointField<PeriodicGimplR> Laplacian(UGrid, CG, LapPar, Kappa);
+    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 #else
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
 #if 0
@@ -222,9 +223,9 @@ private:
     std::cout << GridLogMessage << " b0= " << mpar.b0 <<std::endl;
     std::cout << GridLogMessage << " b1= " << mpar.b1 <<std::endl;
     std::cout << GridLogMessage << " b2= " << mpar.b2 <<std::endl;
-    LaplacianAdjointRat<PeriodicGimplR> Laplacian(UGrid, CG, gpar, mpar);
+    LaplacianAdjointRat<PeriodicGimplR> LaplacianRat(UGrid, CG, gpar, mpar);
+    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, LaplacianRat);
 #endif
-    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 #endif
 
     if (Parameters.StartingType == "HotStart") {

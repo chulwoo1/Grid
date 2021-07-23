@@ -184,27 +184,26 @@ public:
 
     GMom = par.offset * right;
     for(int i =0;i<par.order;i++){
-//      QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(*this);
-//      HermOp.a0=par.b0[i];
-//      HermOp.a1=par.b1[i];
-//      HermOp.a2=par.b2;
-    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
+    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
+//    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
     GaugeField Gtemp2(left.Grid());
-    Quad(HermOp,right,MinvMom[i]);
-//    Solver(HermOp,right,MinvMom[i]);
+//    Quad(HermOp,right,MinvMom[i]);
+    Solver(QuadOp,right,MinvMom[i]);
     GMom += par.a0[i]*MinvMom[i]; 
     HermOp.HermOp(MinvMom[i],Gtemp2);
     GMom += par.a1[i]*Gtemp2; 
     }
     for(int i =0;i<par.order;i++){
-    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
+    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
+//    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
     GaugeField Gtemp(left.Grid());
     GaugeField Gtemp2(left.Grid());
 
-    Quad(HermOp,GMom,MinvGMom);
+//    Quad(HermOp,GMom,MinvGMom);
+    Solver(QuadOp,GMom,MinvGMom);
     Laplacian.M(MinvGMom, LMinvGMom);
-//    Lap(MinvGMom, LMinvGMom);
-    Quad(HermOp,right,MinvMom[i]);
+//    Quad(HermOp,right,MinvMom[i]);
+    Solver(QuadOp,right,MinvMom[i]);
 
     Laplacian.M(MinvMom[i], LMinvMom);
 //    Lap(MinvMom[i], LMinvMom);
@@ -262,10 +261,12 @@ public:
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
 
     for(int i =0;i<par.order;i++){
-    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
+//    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
+    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
-    Quad(HermOp,P,Gtemp);
+//    Quad(HermOp,P,Gtemp);
+    Solver(QuadOp,P,Gtemp);
     Gp += par.a0[i]*Gtemp; 
     HermOp.HermOp(Gtemp,Gtemp2);
     Gp += par.a1[i]*Gtemp2; 

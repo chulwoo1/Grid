@@ -133,6 +133,36 @@ public:
 //    std::cout << GridLogDebug <<"M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
+  void Quad(const GaugeField& in, GaugeField& out,RealD a0,RealD a1,RealD a2) {
+
+    GaugeLinkField tmp(in.Grid());
+    GaugeLinkField tmp2(in.Grid());
+    std::vector<GaugeLinkField> sum(in.Grid(),Nd);
+    std::vector<GaugeLinkField> sum2(in.Grid(),Nd);
+    std::vector<GaugeLinkField> in_nu(in.Grid(),Nd);
+    std::vector<GaugeLinkField> out_nu(in.Grid(),Nd);
+
+    for (int nu = 0; nu < Nd; nu++) {
+      sum[nu] = Zero();
+      in_nu[nu] = PeekIndex<LorentzIndex>(in, nu);
+      out_nu[nu] = a0*in_nu[nu];
+      for (int mu = 0; mu < Nd; mu++) {
+        tmp = U[mu] * Cshift(in_nu[nu], mu, +1) * adj(U[mu]);
+        tmp2 = adj(U[mu]) * in_nu[nu] * U[mu];
+        sum[nu] += tmp + Cshift(tmp2, mu, -1) - 2.0 * in_nu;
+      }
+      out_nu[nu] +=  a1*  1. / (double(4 * Nd)) * sum[nu];
+      sum2[nu] = Zero();
+      for (int mu = 0; mu < Nd; mu++) {
+        tmp = U[mu] * Cshift(sum[nu], mu, +1) * adj(U[mu]);
+        tmp2 = adj(U[mu]) * in_nu * U[mu];
+        sum2[nu] += tmp + Cshift(tmp2, mu, -1) - 2.0 * in_nu;
+      }
+      out_nu[nu] +=  a2* ( 1. / (double(4 * Nd)))^2 * sum[nu];
+      PokeIndex<LorentzIndex>(out, out_nu[nu], nu);
+    }
+  }
+
   void MDeriv(const GaugeField& in, GaugeField& der) {
     // in is anti-hermitian
 //    std::cout << GridLogDebug <<"MDeriv:Kappa = "<<kappa<<std::endl;
