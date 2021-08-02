@@ -141,7 +141,8 @@ template<class Gimpl>
 class DBW2GaugeAction : public RBCGaugeAction<Gimpl> {
 public:
   INHERIT_GIMPL_TYPES(Gimpl);
-  DBW2GaugeAction(RealD beta) : RBCGaugeAction<Gimpl>(beta,-1.4067) {};
+//  DBW2GaugeAction(RealD beta) : RBCGaugeAction<Gimpl>(beta,-1.4067) {};
+  DBW2GaugeAction(RealD beta) : RBCGaugeAction<Gimpl>(beta,-1.4088) {};
   virtual std::string action_name(){return "DBW2GaugeAction";}
 };
 

@@ -69,7 +69,7 @@ int main(int argc, char **argv)
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;
   HMCparams.Trajectories     = 200;
-  HMCparams.NoMetropolisUntil=  0;
+  HMCparams.NoMetropolisUntil=  100;
   // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   HMCparams.StartingType     =std::string("ColdStart");
   HMCparams.Kappa=0.01; //checking against trivial. Pathetic.
@@ -116,8 +116,9 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-  RealD beta = 6.4 ;
+  RealD beta = 6.4;
   WilsonGaugeActionR Waction(beta);
+  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);
