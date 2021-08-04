@@ -64,28 +64,22 @@ public:
     out = in;
   }
   virtual void Minv(const Field& in, Field& out){
-//    printf("Minv:norm=%0.15e\n",norm2(in));
     std::cout << GridLogIntegrator << " Minv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     out = in;
   }
   virtual void MSquareRoot(Field& P){
-//    printf("MSquareRoot:norm=%0.15e\n",norm2(P));
     std::cout << GridLogIntegrator << " MSquareRoot:norm(P)= " << std::sqrt(norm2(P)) << std::endl;
     // do nothing
   }
   virtual void MInvSquareRoot(Field& P){
-//    printf("MInvSquareRoot:=%0.15e\n",norm2(P));
     std::cout << GridLogIntegrator << " MInvSquareRoot:norm(P)= " << std::sqrt(norm2(P)) << std::endl;
     // do nothing
   }
   virtual void MDeriv(const Field& in, Field& out){
-//    printf("MDeriv:norm=%0.15e\n",norm2(in));
     std::cout << GridLogIntegrator << " MDeriv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
-//    printf("HERE!\n");exit(-42);
     out = Zero();
   }
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
-//    printf("MDeriv:norm=%0.15e %0.15e \n",norm2(left),norm2(right));
     std::cout << GridLogIntegrator << " MDeriv:norm(left)= " << std::sqrt(norm2(left)) << std::endl;
     std::cout << GridLogIntegrator << " MDeriv:norm(right)= " << std::sqrt(norm2(right)) << std::endl;
     out = Zero();

@@ -75,18 +75,20 @@ struct LaplacianRatParams {
 // an HermitianLinearOperator<.. , ..>
 ////////////////////////////////////////////////////////////
 
-template <class Impl>
+template <class Impl, class ImplF>
 class LaplacianAdjointRat: public Metric<typename Impl::Field> {
   OperatorFunction<typename Impl::Field> &Solver;
   LaplacianRatParams Gparam;
   LaplacianRatParams Mparam;
+  GridBase *grid;
+  GridBase *grid_f;
 
 public:
   INHERIT_GIMPL_TYPES(Impl);
   GaugeField Usav;
 
-	  LaplacianAdjointRat(GridBase* grid, OperatorFunction<GaugeField>& S, LaplacianRatParams& gpar, LaplacianRatParams& mpar)
-    : U(Nd, grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(grid) {
+	  LaplacianAdjointRat(GridBase* _grid, GridBase* _grid_f, OperatorFunction<GaugeField>& S, LaplacianRatParams& gpar, LaplacianRatParams& mpar)
+    : grid(_grid),grid_f(_grid_f), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid) {
 //    std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     this->triv=0;
         
@@ -176,8 +178,10 @@ public:
 
 
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
+    ConjugateGradient<LatticeGaugeFieldF> CG_f(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
-    LaplacianAdjointField<PeriodicGimplR> Laplacian(left.Grid(), CG, LapPar, 1.,false);
+    LaplacianAdjointField<Impl> Laplacian(left.Grid(), CG, LapPar, 1.,false);
+    LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
     Laplacian.ImportGauge(Usav);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
     
@@ -253,10 +257,13 @@ public:
 
   void MSquareRootInt(LaplacianRatParams &par, GaugeField& P){
     GaugeField Gp(P.Grid());
+    GaugeField Gp_f(grid_f);
     Gp = par.offset * P;
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
+    ConjugateGradient<LatticeGaugeFieldF> CG_f(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
-    LaplacianAdjointField<PeriodicGimplR> Laplacian(P.Grid(), CG, LapPar, 1.,false);
+    LaplacianAdjointField<Impl> Laplacian(P.Grid(), CG, LapPar, 1.,false);
+    LaplacianAdjointField<ImplF> LaplacianF(P.Grid(), CG_f, LapPar, 1.,false);
     Laplacian.ImportGauge(Usav);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
 

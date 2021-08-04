@@ -89,6 +89,7 @@ int main(int argc, char **argv)
   HMCWrapper TheHMC(HMCparams);
   // Grid from the command line
   TheHMC.Resources.AddFourDimGrid("gauge");
+  TheHMC.Resources.AddFourDimGridF("gauge_f");
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
 
   RNGModuleParameters RNGpar;
@@ -104,10 +105,10 @@ int main(int argc, char **argv)
   TopologyObsParameters TopParams;
   TopParams.interval = 1;
   TopParams.do_smearing = true;
-  TopParams.Smearing.steps = 200;
+  TopParams.Smearing.steps = 1600;
   TopParams.Smearing.step_size = 0.01;
-  TopParams.Smearing.meas_interval = 50;
-  TopParams.Smearing.maxTau = 2.0; 
+  TopParams.Smearing.meas_interval = 10;
+  TopParams.Smearing.maxTau = 16.0; 
   TheHMC.Resources.AddObservable<QObs>(TopParams);
   //////////////////////////////////////////////
 
