@@ -226,12 +226,12 @@ public:
     return Grids[s].get_full();
   }
 
-#if 0
+#if 1
   GridCartesian* GetCartesianF(std::string s = "") {
     if (s.empty()) s = Grids.begin()->first;
     std::cout << GridLogDebug << "Getting cartesian single grid from: " << s
               << std::endl;
-    return Grids[s].get_full_f();
+    return Grids[s].get_full_single();
   }
 #endif
 

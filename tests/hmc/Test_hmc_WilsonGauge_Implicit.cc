@@ -89,7 +89,7 @@ int main(int argc, char **argv)
   HMCWrapper TheHMC(HMCparams);
   // Grid from the command line
   TheHMC.Resources.AddFourDimGrid("gauge");
-  TheHMC.Resources.AddFourDimGridF("gauge_f");
+//  TheHMC.Resources.AddFourDimGridF("gauge_f");
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
 
   RNGModuleParameters RNGpar;

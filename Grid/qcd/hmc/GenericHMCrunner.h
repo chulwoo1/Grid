@@ -146,9 +146,10 @@ private:
     Field U(UGrid);
     std::cout << GridLogMessage << "UGrid= " <<UGrid << std::endl;
     GridCartesian *UGrid_f(NULL);
-    UGrid_f = Resources.GetCartesian("gauge_f");
+    UGrid_f = Resources.GetCartesianF();
 //    Field U_f(UGrid_f);
     std::cout << GridLogMessage << "UGrid_f="<<UGrid_f << std::endl;
+//    exit(-42);
 
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
