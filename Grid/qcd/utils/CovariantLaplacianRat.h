@@ -198,8 +198,8 @@ public:
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
     GaugeField Gtemp2(left.Grid());
-//    MixedCG(right,MinvMom[i]);
-    CG(QuadOp,right,MinvMom[i]);
+    MixedCG(right,MinvMom[i]);
+//    CG(QuadOp,right,MinvMom[i]);
     
     GMom += par.a0[i]*MinvMom[i]; 
     HermOp.HermOp(MinvMom[i],Gtemp2);
@@ -213,11 +213,11 @@ public:
     GaugeField Gtemp2(left.Grid());
 
 //    Solver(QuadOp,GMom,MinvGMom);
-//    MixedCG(GMom,MinvGMom);
-    CG(QuadOp,GMom,MinvGMom);
+    MixedCG(GMom,MinvGMom);
+//    CG(QuadOp,GMom,MinvGMom);
     Laplacian.M(MinvGMom, LMinvGMom);
-//    MixedCG(right,MinvMom[i]);
-    CG(QuadOp,right,MinvMom[i]);
+    MixedCG(right,MinvMom[i]);
+//    CG(QuadOp,right,MinvMom[i]);
 
     Laplacian.M(MinvMom[i], LMinvMom);
     Laplacian.M(MinvMom[i], AMinvMom);
@@ -266,14 +266,15 @@ public:
 
   void MSquareRootInt(LaplacianRatParams &par, GaugeField& P){
     GaugeField Gp(P.Grid());
-    GaugeField Gp_f(grid_f);
+//    GaugeField Gp_f(grid_f);
     Gp = par.offset * P;
     ConjugateGradient<GaugeField> CG(1.0e-8,10000);
     ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
     LaplacianAdjointField<Impl> Laplacian(P.Grid(), CG, LapPar, 1.,false);
-    LaplacianAdjointField<ImplF> LaplacianF(P.Grid(), CG_f, LapPar, 1.,false);
+    LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
     Laplacian.ImportGauge(Usav);
+    LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
 
     for(int i =0;i<par.order;i++){
@@ -282,8 +283,8 @@ public:
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,10,grid_f,QuadOpF,QuadOp);
     GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
-//    MixedCG(P,Gtemp);
-    CG(QuadOp,P,Gtemp);
+    MixedCG(P,Gtemp);
+//    CG(QuadOp,P,Gtemp);
     Gp += par.a0[i]*Gtemp; 
     HermOp.HermOp(Gtemp,Gtemp2);
     Gp += par.a1[i]*Gtemp2; 
