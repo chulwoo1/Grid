@@ -116,7 +116,8 @@ NAMESPACE_BEGIN(Grid);
 	std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Outer iteration converged on iteration " <<outer_iter <<std::endl;
 	break;
       }
-      while(norm * inner_tol * inner_tol < stop) inner_tol *= 2;  // inner_tol = sqrt(stop/norm) ??
+      while(norm * inner_tol * inner_tol < stop*0.2) inner_tol *= 2;  // inner_tol = sqrt(stop/norm) ??
+      std::cout<<GridLogMessage<<"inner_tol: " <<inner_tol <<std::endl;
 
       PrecChangeTimer.Start();
       precisionChange(src_f, src_d);
