@@ -162,11 +162,11 @@ private:
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
-    // Better to pass the generalised momenta to the integrator
+// Better to pass the generalised momenta to the integrator
 //    RealD Kappa = Parameters.Kappa;
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
-//#include "Wilson64.h.inc"
-#include "Wilson64_2.h.inc"
+//#include "Wilson64_3.h.inc"
+#include "g_x3_1.h.inc"
     std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
     std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
     std::cout << GridLogMessage << " b0= " << gpar.b0 <<std::endl;

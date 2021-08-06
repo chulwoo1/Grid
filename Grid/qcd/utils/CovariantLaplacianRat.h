@@ -82,13 +82,14 @@ class LaplacianAdjointRat: public Metric<typename Impl::Field> {
   LaplacianRatParams Mparam;
   GridBase *grid;
   GridBase *grid_f;
-
 public:
   INHERIT_GIMPL_TYPES(Impl);
+  typedef typename ImplF::Field GaugeFieldF;
   GaugeField Usav;
+  GaugeFieldF UsavF;
 
 	  LaplacianAdjointRat(GridBase* _grid, GridBase* _grid_f, OperatorFunction<GaugeField>& S, LaplacianRatParams& gpar, LaplacianRatParams& mpar)
-    : grid(_grid),grid_f(_grid_f), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid) {
+    : grid(_grid),grid_f(_grid_f), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid), UsavF(_grid_f)  {
 //    std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     this->triv=0;
         
@@ -106,9 +107,11 @@ public:
       total += norm2(U[mu]);
     }
     Usav = _U;
+    precisionChange(UsavF,Usav);
     std::cout <<GridLogDebug << "ImportGauge:norm2(_U) = "<<" "<<total<<std::endl;
   }
 
+#if 0
   void Lap(const GaugeField& in, GaugeField& out) {
     // in is an antihermitian matrix
     // test
@@ -155,6 +158,7 @@ public:
     }
     std::cout <<GridLogDebug << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
+#endif
 
   // separating this temporarily
   void MDerivInt(LaplacianRatParams &par, const GaugeField& left, const GaugeField& right,
@@ -177,40 +181,45 @@ public:
     std::vector<GaugeField> MinvMom(par.order,left.Grid());
 
 
-    ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
-    ConjugateGradient<LatticeGaugeFieldF> CG_f(1.0e-8,10000);
+    ConjugateGradient<GaugeField> CG(1.0e-8,10000);
+    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
     LaplacianAdjointField<Impl> Laplacian(left.Grid(), CG, LapPar, 1.,false);
     LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
     Laplacian.ImportGauge(Usav);
+    LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
+//    HermitianLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> HermOpF(Laplacian);
     
 
     GMom = par.offset * right;
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
-//    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
+    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
+    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
     GaugeField Gtemp2(left.Grid());
-//    Quad(HermOp,right,MinvMom[i]);
-    Solver(QuadOp,right,MinvMom[i]);
+//    MixedCG(right,MinvMom[i]);
+    CG(QuadOp,right,MinvMom[i]);
+    
     GMom += par.a0[i]*MinvMom[i]; 
     HermOp.HermOp(MinvMom[i],Gtemp2);
     GMom += par.a1[i]*Gtemp2; 
     }
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
-//    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
+    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
+    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
     GaugeField Gtemp(left.Grid());
     GaugeField Gtemp2(left.Grid());
 
-//    Quad(HermOp,GMom,MinvGMom);
-    Solver(QuadOp,GMom,MinvGMom);
+//    Solver(QuadOp,GMom,MinvGMom);
+//    MixedCG(GMom,MinvGMom);
+    CG(QuadOp,GMom,MinvGMom);
     Laplacian.M(MinvGMom, LMinvGMom);
-//    Quad(HermOp,right,MinvMom[i]);
-    Solver(QuadOp,right,MinvMom[i]);
+//    MixedCG(right,MinvMom[i]);
+    CG(QuadOp,right,MinvMom[i]);
 
     Laplacian.M(MinvMom[i], LMinvMom);
-//    Lap(MinvMom[i], LMinvMom);
     Laplacian.M(MinvMom[i], AMinvMom);
     AMinvMom = par.a1[i]*LMinvMom;
     AMinvMom += par.a0[i]*MinvMom[i];
@@ -259,8 +268,8 @@ public:
     GaugeField Gp(P.Grid());
     GaugeField Gp_f(grid_f);
     Gp = par.offset * P;
-    ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
-    ConjugateGradient<LatticeGaugeFieldF> CG_f(1.0e-8,10000);
+    ConjugateGradient<GaugeField> CG(1.0e-8,10000);
+    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
     LaplacianAdjointField<Impl> Laplacian(P.Grid(), CG, LapPar, 1.,false);
     LaplacianAdjointField<ImplF> LaplacianF(P.Grid(), CG_f, LapPar, 1.,false);
@@ -268,12 +277,13 @@ public:
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
 
     for(int i =0;i<par.order;i++){
-//    ConjugateGradientQuad<GaugeField> Quad(par.b0[i],par.b1[i],par.b2,par.tolerance,par.MaxIter);
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
+    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
+    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,10,grid_f,QuadOpF,QuadOp);
     GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
-//    Quad(HermOp,P,Gtemp);
-    Solver(QuadOp,P,Gtemp);
+//    MixedCG(P,Gtemp);
+    CG(QuadOp,P,Gtemp);
     Gp += par.a0[i]*Gtemp; 
     HermOp.HermOp(Gtemp,Gtemp2);
     Gp += par.a1[i]*Gtemp2; 
