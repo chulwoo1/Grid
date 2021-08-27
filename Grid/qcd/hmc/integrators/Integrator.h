@@ -42,11 +42,13 @@ public:
   GRID_SERIALIZABLE_CLASS_MEMBERS(IntegratorParameters,
 				  std::string, name,      // name of the integrator
 				  unsigned int, MDsteps,  // number of outer steps
+				  RealD, RMHMCTol,
+				  RealD, RMHMCCGTol,
 				  RealD, trajL)           // trajectory length
 
   IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
   : MDsteps(MDsteps_),
-    trajL(trajL_) {};
+    trajL(trajL_),RMHMCTol(1e-8),RMHMCCGTol(1e-8) {};
 
   template <class ReaderClass, typename std::enable_if<isReader<ReaderClass>::value, int >::type = 0 >
   IntegratorParameters(ReaderClass & Reader)
@@ -227,7 +229,7 @@ protected:
 
     MomentaField NewMom = P.Mom;
     MomentaField OldMom = P.Mom;
-    double threshold = 1e-8;
+    double threshold = Params.RMHMCTol;
     P.M.ImportGauge(U);
     MomentaField MomDer(P.Mom.Grid());
     MomentaField MomDer1(P.Mom.Grid());
@@ -239,7 +241,7 @@ protected:
       P.DerivativeU(P.Mom, MomDer1);
       factor = 1.0;
     }
-    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
+//    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
 
     // Auxiliary fields
     P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
@@ -306,7 +308,7 @@ protected:
     MomentaField Mom2(P.Mom.Grid());
     RealD RelativeError;
     Field diff(U.Grid());
-    Real threshold = 1e-8;
+    Real threshold =  Params.RMHMCTol;
     int counter = 1;
     int MaxCounter = 100;
 

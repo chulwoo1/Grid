@@ -197,7 +197,7 @@ public:
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
-    MixedCG.InnerTolerance=par.tolerance*0.1;
+    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp2(left.Grid());
     MixedCG(right,MinvMom[i]);
 //    CG(QuadOp,right,MinvMom[i]);
@@ -210,7 +210,7 @@ public:
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
-    MixedCG.InnerTolerance=par.tolerance*0.1;
+    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp(left.Grid());
     GaugeField Gtemp2(left.Grid());
 
@@ -283,7 +283,7 @@ public:
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,10,grid_f,QuadOpF,QuadOp);
-    MixedCG.InnerTolerance=par.tolerance*0.1;
+    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
     MixedCG(P,Gtemp);

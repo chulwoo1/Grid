@@ -154,7 +154,7 @@ private:
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
-#if 0
+#if 1
     std::cout << GridLogMessage << "Trivial metric" << std::endl;
     TrivialMetric<typename Implementation::Field> Mtr;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
@@ -165,8 +165,14 @@ private:
 // Better to pass the generalised momenta to the integrator
 //    RealD Kappa = Parameters.Kappa;
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
+//#include "DBW2_3.h.inc"
+#include "Wilson10_3.h.inc"
+//#include "g_x3_1.h.inc"
 //#include "Wilson64_3.h.inc"
-#include "g_x3_1.h.inc"
+//#include "Wilson64.h.inc"
+//#include "32I3.1Gev.h.inc"
+    gpar.tolerance=Parameters.MD.RMHMCCGTol;
+    mpar.tolerance=Parameters.MD.RMHMCCGTol;
     std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
     std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
     std::cout << GridLogMessage << " b0= " << gpar.b0 <<std::endl;
@@ -179,6 +185,10 @@ private:
     std::cout << GridLogMessage << " b1= " << mpar.b1 <<std::endl;
     std::cout << GridLogMessage << " b2= " << mpar.b2 <<std::endl;
     LaplacianAdjointRat<Implementation, ImplementationF> Laplacian(UGrid, UGrid_f,CG, gpar, mpar);
+//    Laplacian.RMHMCCGTol=Parameters.MD.RMHMCCGTol;
+//    Laplacian.RMHMCTol=Parameters.MD.RMHMCTol;
+    std::cout << GridLogMessage << " RMHMCCGTol= " << Parameters.MD.RMHMCCGTol <<std::endl;
+    std::cout << GridLogMessage << " RMHMCTol= " << Parameters.MD.RMHMCTol <<std::endl;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 #endif
 

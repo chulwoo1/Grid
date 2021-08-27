@@ -82,8 +82,12 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-  RealD beta = 5.6 ;
-  WilsonGaugeActionD Waction(beta);
+//  RealD beta = 10.0;
+//  WilsonGaugeActionD Waction(beta);
+//  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
+//  RBC c_1 for DBW2
+  RealD beta = 1.0038;
+  RBCGaugeActionR Waction(beta,-1.4088);
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);
@@ -99,9 +103,19 @@ int main(int argc, char **argv)
   TheHMC.Parameters.StartingType     =std::string("ColdStart");
   TheHMC.Parameters.Kappa=0.0;
   TheHMC.Parameters.MD.MDsteps = 20;
-  TheHMC.Parameters.MD.trajL   = 1.0;
+  TheHMC.Parameters.MD.trajL   = 0.1*std::sqrt(2.);
 
   TheHMC.ReadCommandLine(argc, argv); // these can be parameters from file
+  if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){
+    std::string arg= GridCmdOptionPayload(argv,argv+argc,"--trajL");
+    std::vector<int> traj(0);
+    GridCmdOptionIntVector(arg,traj);
+    assert(traj.size()==1);
+    TheHMC.Parameters.MD.trajL *= double(traj[0]);
+  }
+
+  std::cout << "trajL= " <<TheHMC.Parameters.MD.trajL <<" steps= "<<TheHMC.Parameters.MD.MDsteps << " integrator= "<<TheHMC.Parameters.MD.name<<std::endl;
+
   TheHMC.Run();  // no smearing
 
   Grid_finalize();

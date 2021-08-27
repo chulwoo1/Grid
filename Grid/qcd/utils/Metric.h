@@ -79,6 +79,10 @@ public:
     std::cout << GridLogIntegrator << " MDeriv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     out = Zero();
   }
+  virtual void MinvDeriv(const Field& in, Field& out){
+    std::cout << GridLogIntegrator << " MinvDeriv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
+    out = Zero();
+  }
   virtual void MDeriv(const Field& left, const Field& right, Field& out){
     std::cout << GridLogIntegrator << " MDeriv:norm(left)= " << std::sqrt(norm2(left)) << std::endl;
     std::cout << GridLogIntegrator << " MDeriv:norm(right)= " << std::sqrt(norm2(right)) << std::endl;
