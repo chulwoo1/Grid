@@ -87,7 +87,9 @@ int main(int argc, char **argv)
 //  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
 //  RBC c_1 for DBW2
   RealD beta = 1.0038;
-  RBCGaugeActionR Waction(beta,-1.4088);
+  RealD c_1 = -1.4088;
+  RBCGaugeActionR Waction(beta,c_1);
+  std::cout << "P+R Gauge beta= " <<beta <<"c_1= "<<c_1 <<std::endl;
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);

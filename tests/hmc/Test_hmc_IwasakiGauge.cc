@@ -50,12 +50,15 @@ int main(int argc, char **argv)
 #endif
 
    // Typedefs to simplify notation
-  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
-//  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper;  // Uses the default minimum norm
-
   IntegratorParameters MD;
-//  MD.name    = std::string("ImplicitLeapFrog");
+
+#if 1
+  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper;  // Uses the default minimum norm
+  MD.name    = std::string("ImplicitLeapFrog");
+#else 
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
   MD.name    = std::string("ImplicitMinimumNorm2");
+#endif 
   MD.trajL   = 0.01*std::sqrt(2.);
   MD.MDsteps = 1;
   if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){

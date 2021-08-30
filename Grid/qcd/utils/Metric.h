@@ -143,8 +143,8 @@ public:
     MomentaField inv(Mom.Grid());
     inv = Zero();
     M.Minv(Mom, inv);
-    LatticeComplex Hloc(Mom.Grid());
-    Hloc = Zero();
+    LatticeComplex Hloc(Mom.Grid()); Hloc = Zero();
+    LatticeComplex Hloc2(Mom.Grid()); Hloc2 = Zero();
     for (int mu = 0; mu < Nd; mu++) {
       // This is not very general
       // hide in the metric
@@ -154,7 +154,7 @@ public:
     }
     auto Htmp1 = TensorRemove(sum(Hloc));
     std::cout << GridLogMessage << "S:dSmom = " << Htmp1.real()-Smom << "\n";
-    Smom=Htmp1.real();
+    Smom=Htmp1.real()/HMC_MOMENTUM_DENOMINATOR;
     
 
     
@@ -170,17 +170,18 @@ public:
         auto inv_mu = PeekIndex<LorentzIndex>(inv, mu);
         auto am_mu = PeekIndex<LorentzIndex>(AuxMom, mu);
         auto af_mu = PeekIndex<LorentzIndex>(AuxField, mu);
-        Hloc += trace(am_mu * inv_mu);// p M p
-        Hloc += trace(af_mu * af_mu);
+        Hloc += trace(am_mu * inv_mu);
+        Hloc2 += trace(af_mu * af_mu);
       }
     }
     auto Htmp2 = TensorRemove(sum(Hloc))-Htmp1;
     std::cout << GridLogMessage << "S:dSaux = " << Htmp2.real()-Saux << "\n";
     Saux=Htmp2.real();
 
-    auto Hsum = TensorRemove(sum(Hloc));
-    std::cout << GridLogIntegrator << "MomentaAction: " <<  Hsum.real() << std::endl;
-    return Hsum.real();
+    auto Hsum = TensorRemove(sum(Hloc))/HMC_MOMENTUM_DENOMINATOR;
+    auto Hsum2 = TensorRemove(sum(Hloc2));
+    std::cout << GridLogIntegrator << "MomentaAction: " <<  Hsum.real()+Hsum2.real() << std::endl;
+    return Hsum.real()+Hsum2.real();
   }
 
   // Correct
@@ -191,15 +192,10 @@ public:
     MomentaField MDer(in.Grid());
     MomentaField X(in.Grid());
     X = Zero();
-#if 0
-    M.Minv(in, X);  // X = G in
-    M.MDeriv(X, MDer);  // MDer = U * dS/dU
-#else
     M.MinvDeriv(in, MDer);  // MDer = U * dS/dU
-#endif
     der = -1.0* Implementation::projectForce(MDer);  // Ta if gauge fields
-    std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
-    std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
+//    std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
+//    std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
     
   }
 
@@ -238,7 +234,7 @@ public:
   void update_auxiliary_momenta(RealD ep){
 //    if(!M.Trivial()) 
     {
-      AuxMom -= ep * AuxField;
+      AuxMom -= ep * AuxField * HMC_MOMENTUM_DENOMINATOR;
       std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
     }
   }

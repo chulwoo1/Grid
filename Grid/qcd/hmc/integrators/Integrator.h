@@ -167,12 +167,12 @@ protected:
     std::cout << GridLogIntegrator << "Mom update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
 
     // Auxiliary fields
-    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
+    P.update_auxiliary_momenta(ep*0.5 );
     P.AuxiliaryFieldsDerivative(MomDer);
     std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
 //    Mom -= MomDer * ep;
     Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
-    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
+    P.update_auxiliary_momenta(ep*0.5 );
 
     for (int a = 0; a < as[level].actions.size(); ++a) {
       double start_full = usecond();
@@ -244,7 +244,7 @@ protected:
 //    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
 
     // Auxiliary fields
-    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
+    P.update_auxiliary_momenta(ep*0.5 );
     P.AuxiliaryFieldsDerivative(AuxDer);
     Msum += AuxDer;
     
@@ -274,7 +274,7 @@ protected:
     std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
 
     // update the auxiliary fields momenta    
-    P.update_auxiliary_momenta(ep*0.5 * HMC_MOMENTUM_DENOMINATOR);
+    P.update_auxiliary_momenta(ep*0.5 );
   }
 
   void update_U(Field& U, double ep) 
@@ -477,12 +477,11 @@ public:
     std::cout << GridLogMessage << "S:dSField = " << H-Smom << "\n";
     Smom=H;
     P.M.ImportGauge(U);
-    RealD Hterm = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
+    RealD Hterm = - P.MomentaAction();
 //    H = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
     std::cout << GridLogMessage << "S:Momentum action H_p = " << Hterm << "\n";
     std::cout << GridLogMessage << "S:dSMom = " << Hterm-Saux << "\n";
     Saux=Hterm;
-// jky
     H = Hterm;
 
     // Actions
