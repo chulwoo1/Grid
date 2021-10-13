@@ -24,8 +24,8 @@ public:
 
 const std::vector<int> directions   ({Xdir,Ydir,Zdir,Xdir,Ydir,Zdir});
 const std::vector<int> displacements({1,1,1,-1,-1,-1});
-const std::vector<int> directions4D   ({Xdir,Ydir,Zdir,Tdir,Xdir,Ydir,Zdir,Tdir});
-const std::vector<int> displacements4D({1,1,1,1,-1,-1,-1,-1});
+const std::vector<int> directions4DTest   ({Xdir,Ydir,Zdir,Tdir,Xdir,Ydir,Zdir,Tdir});
+const std::vector<int> displacements4DTest({1,1,1,1,-1,-1,-1,-1});
 
 template<class Field, int Dim > class FreeLaplacianCshift : public SparseMatrixBase<Field>
 {
@@ -301,7 +301,7 @@ public:
 
 #undef LEG_LOAD_MULT
 
-template<class Gimpl,class Field> class CovariantAdjointLaplacianStencil : public SparseMatrixBase<Field>
+template<class Gimpl,class Field> class CovariantAdjointLaplacianStencilTest : public SparseMatrixBase<Field>
 {
 public:
   INHERIT_GIMPL_TYPES(Gimpl);
@@ -319,10 +319,10 @@ public:
   StencilImpl Stencil;
   SimpleCompressor<siteObject> Compressor;
   DoubledGaugeField Uds;
-  CovariantAdjointLaplacianStencil(GaugeField &Umu)
+  CovariantAdjointLaplacianStencilTest(GaugeField &Umu)
     :
       grid(Umu.Grid()),
-      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Stencil    (grid,8,Even,directions4DTest,displacements4DTest,0),
       Uds(grid)
   {
     for (int mu = 0; mu < Nd; mu++) {
@@ -434,7 +434,7 @@ int main(int argc, char ** argv)
   CovariantLaplacianCshift <PeriodicGimplR,Field> CLcs(U);
   CovariantLaplacianStencil<PeriodicGimplR,Field> CLst(U);
   CovariantAdjointLaplacianCshift <PeriodicGimplR,Field> CLcsA(U);
-  CovariantAdjointLaplacianStencil<PeriodicGimplR,Field> CLstA(U);
+  CovariantAdjointLaplacianStencilTest<PeriodicGimplR,Field> CLstA(U);
 
   Field in(&Grid); gaussian(RNG,in);
   Field out_FLcs(&Grid);
@@ -545,7 +545,7 @@ int main(int argc, char ** argv)
   CovariantLaplacianCshift <PeriodicGimplR,Field> CLcs_GT(U_GT);
   CovariantLaplacianStencil<PeriodicGimplR,Field> CLst_GT(U_GT);
   CovariantAdjointLaplacianCshift <PeriodicGimplR,Field> CLcs_GTA(U_GT);
-  CovariantAdjointLaplacianStencil<PeriodicGimplR,Field> CLst_GTA(U_GT);
+  CovariantAdjointLaplacianStencilTest<PeriodicGimplR,Field> CLst_GTA(U_GT);
 
   in_GT  = g*in;
   out_GT = g*out_FLcs;

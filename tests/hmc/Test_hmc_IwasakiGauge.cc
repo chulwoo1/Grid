@@ -54,9 +54,9 @@ int main(int argc, char **argv)
 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;  MD.name    = std::string("MinimumNorm2");
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper;  MD.name    = std::string("LeapFrog");
-//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  MD.name    = std::string("ImplicitMinimumNorm2");
-  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; MD.name    = std::string("ImplicitLeapFrog");
-  MD.trajL   = 0.001*std::sqrt(2.);
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  MD.name    = std::string("ImplicitMinimumNorm2");
+//  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; MD.name    = std::string("ImplicitLeapFrog");
+  MD.trajL   = 0.01*std::sqrt(2.);
   MD.MDsteps = 1;
   if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){
     arg= GridCmdOptionPayload(argv,argv+argc,"--trajL");
@@ -65,9 +65,12 @@ int main(int argc, char **argv)
     assert(traj.size()==1);
     MD.trajL *= double(traj[0]);
   }
+// For HMC 
+  MD.RMHMCTol=1e-6;
+  MD.RMHMCCGTol=1e-6;
 // For HMC testing
-  MD.RMHMCTol=1e-8;
-  MD.RMHMCCGTol=1e-8;
+//  MD.RMHMCTol=1e-8;
+//  MD.RMHMCCGTol=1e-8;
 
 
   HMCparameters HMCparams;
@@ -124,8 +127,8 @@ int main(int argc, char **argv)
 //  RealD beta = 6.4;
 //  WilsonGaugeActionR Waction(beta);
 //  RBC c_1 for DBW2
-//  RealD beta = 1.0038; RealD c_1 = -1.4088;
-  RealD beta = 2.37; RealD c_1 = -0.331;
+  RealD beta = 1.0038; RealD c_1 = -1.4088;
+//  RealD beta = 2.37; RealD c_1 = -0.331;
   RBCGaugeActionR Iaction(beta,c_1);
   std::cout << "P+R Gauge beta = " <<beta <<" c_1= "<<c_1 <<std::endl;
   

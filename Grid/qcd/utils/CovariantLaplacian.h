@@ -54,7 +54,133 @@ struct LaplacianParams : Serializable {
       precision(precision){};
 };
 
+#define LEG_LOAD(Dir)						 \
+  SE = st.GetEntry(ptype, Dir, ss);				 \
+  if (SE->_is_local ) {						 \
+    int perm= SE->_permute;					 \
+    chi = coalescedReadPermute(in[SE->_offset],ptype,perm,lane); \
+  } else {							 \
+    chi = coalescedRead(buf[SE->_offset],lane);			 \
+  }								 \
+  acceleratorSynchronise();
 
+const std::vector<int> directions4D   ({Xdir,Ydir,Zdir,Tdir,Xdir,Ydir,Zdir,Tdir});
+const std::vector<int> displacements4D({1,1,1,1,-1,-1,-1,-1});
+
+template<class Gimpl,class Field> class CovariantAdjointLaplacianStencil : public SparseMatrixBase<Field>
+{
+public:
+  INHERIT_GIMPL_TYPES(Gimpl);
+//  RealD kappa;
+
+  typedef typename Field::vector_object siteObject;
+
+  template <typename vtype> using iImplDoubledGaugeField = iVector<iScalar<iMatrix<vtype, Nc> >, Nds>;
+  typedef iImplDoubledGaugeField<Simd> SiteDoubledGaugeField;
+  typedef Lattice<SiteDoubledGaugeField> DoubledGaugeField;
+  typedef CartesianStencil<siteObject, siteObject, int> StencilImpl;
+
+  GridBase *grid;
+  StencilImpl Stencil;
+  SimpleCompressor<siteObject> Compressor;
+  DoubledGaugeField Uds;
+
+  CovariantAdjointLaplacianStencil( GridBase *_grid)
+    : grid(_grid),
+      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Uds(grid){}
+
+  CovariantAdjointLaplacianStencil(GaugeField &Umu)
+    :
+      grid(Umu.Grid()),
+      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Uds(grid)
+  { GaugeImport(Umu); }
+
+  void GaugeImport (const GaugeField &Umu)
+  {
+    assert(grid == Umu.Grid());
+    for (int mu = 0; mu < Nd; mu++) {
+      auto U = PeekIndex<LorentzIndex>(Umu, mu);
+      PokeIndex<LorentzIndex>(Uds, U, mu );
+      U = adj(Cshift(U, mu, -1));
+      PokeIndex<LorentzIndex>(Uds, U, mu + 4);
+    }
+  };
+  
+  virtual GridBase *Grid(void) { return grid; };
+
+  virtual void  M    (const Field &_in, Field &_out)
+  {
+    ///////////////////////////////////////////////
+    // Halo exchange for this geometry of stencil
+    ///////////////////////////////////////////////
+    Stencil.HaloExchange(_in, Compressor);
+
+    ///////////////////////////////////
+    // Arithmetic expressions
+    ///////////////////////////////////
+    auto st = Stencil.View(AcceleratorRead);
+    auto buf = st.CommBuf();
+
+    autoView( in     , _in    , AcceleratorRead);
+    autoView( out    , _out   , AcceleratorWrite);
+    autoView( U     , Uds    , AcceleratorRead);
+
+    typedef typename Field::vector_object        vobj;
+    typedef decltype(coalescedRead(in[0]))    calcObj;
+    typedef decltype(coalescedRead(U[0](0))) calcLink;
+
+    const int      Nsimd = vobj::Nsimd();
+    const uint64_t NN = grid->oSites();
+
+    accelerator_for( ss, NN, Nsimd, {
+
+	StencilEntry *SE;
+	
+	const int lane=acceleratorSIMTlane(Nsimd);
+
+	calcObj chi;
+	calcObj res;
+	calcObj Uchi;
+	calcObj Utmp;
+	calcObj Utmp2;
+	calcLink UU;
+	calcLink Udag;
+	int ptype;
+
+	res                 = coalescedRead(in[ss])*(-8.0);
+
+#define LEG_LOAD_MULT(leg,polarisation)			\
+	UU = coalescedRead(U[ss](polarisation));	\
+	Udag = adj(UU);					\
+	LEG_LOAD(leg);					\
+	mult(&Utmp(), &UU, &chi());			\
+	Utmp2 = adj(Utmp);				\
+	mult(&Utmp(), &UU, &Utmp2());			\
+	Uchi = adj(Utmp);				\
+	res = res + Uchi;
+	
+	LEG_LOAD_MULT(0,Xp);
+	LEG_LOAD_MULT(1,Yp);
+	LEG_LOAD_MULT(2,Zp);
+	LEG_LOAD_MULT(3,Tp);
+	LEG_LOAD_MULT(4,Xm);
+	LEG_LOAD_MULT(5,Ym);
+	LEG_LOAD_MULT(6,Zm);
+	LEG_LOAD_MULT(7,Tm);
+
+	coalescedWrite(out[ss], res,lane);
+    });
+  };
+  virtual void  Mdag (const Field &in, Field &out) { M(in,out);}; // Laplacian is hermitian
+  virtual  void Mdiag    (const Field &in, Field &out)                  {assert(0);}; // Unimplemented need only for multigrid
+  virtual  void Mdir     (const Field &in, Field &out,int dir, int disp){assert(0);}; // Unimplemented need only for multigrid
+  virtual  void MdirAll  (const Field &in, std::vector<Field> &out)     {assert(0);}; // Unimplemented need only for multigrid
+};
+
+#undef LEG_LOAD_MULT
+#undef LEG_LOAD
 
 ////////////////////////////////////////////////////////////
 // Laplacian operator L on adjoint fields
@@ -76,12 +202,15 @@ class LaplacianAdjointField: public Metric<typename Impl::Field> {
   LaplacianParams param;
   MultiShiftFunction PowerHalf;    
   MultiShiftFunction PowerInvHalf;    
+//template<class Gimpl,class Field> class CovariantAdjointLaplacianStencil : public SparseMatrixBase<Field>
+  CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField> LapStencil;
 
 public:
   INHERIT_GIMPL_TYPES(Impl);
 
   LaplacianAdjointField(GridBase* grid, OperatorFunction<GaugeField>& S, LaplacianParams& p, const RealD k = 1.0, bool if_remez=true)
-    : U(Nd, grid), Solver(S), param(p), kappa(k){
+    : U(Nd, grid), Solver(S), param(p), kappa(k)
+	,LapStencil(grid){
     AlgRemez remez(param.lo,param.hi,param.precision);
     std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     if(if_remez){
@@ -104,6 +233,8 @@ public:
       U[mu] = PeekIndex<LorentzIndex>(_U, mu);
       total += norm2(U[mu]);
     }
+    LapStencil.GaugeImport (_U);
+
     std::cout << GridLogDebug <<"ImportGauge:norm2(U _U) = "<<total<<std::endl;
   }
 
@@ -114,9 +245,10 @@ public:
     //std::cout << "AHermiticity: " << norm2(herm) << std::endl;
 //    std::cout << GridLogDebug <<"M:Kappa = "<<kappa<<std::endl;
 
+    GaugeLinkField sum(in.Grid());
+#if 0
     GaugeLinkField tmp(in.Grid());
     GaugeLinkField tmp2(in.Grid());
-    GaugeLinkField sum(in.Grid());
 
     for (int nu = 0; nu < Nd; nu++) {
       sum = Zero();
@@ -130,6 +262,15 @@ public:
       out_nu = (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
       PokeIndex<LorentzIndex>(out, out_nu, nu);
     }
+#else
+    for (int nu = 0; nu < Nd; nu++) {
+      GaugeLinkField in_nu = PeekIndex<LorentzIndex>(in, nu);
+      GaugeLinkField out_nu(out.Grid());
+      LapStencil.M(in_nu,sum);
+      out_nu = (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
+      PokeIndex<LorentzIndex>(out, out_nu, nu);
+    }
+#endif
 //    std::cout << GridLogDebug <<"M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
@@ -137,6 +278,7 @@ public:
 
     GaugeLinkField tmp(in.Grid());
     GaugeLinkField tmp2(in.Grid());
+#if 0
     std::vector<GaugeLinkField> sum(in.Grid(),Nd);
     std::vector<GaugeLinkField> sum2(in.Grid(),Nd);
     std::vector<GaugeLinkField> in_nu(in.Grid(),Nd);
@@ -161,6 +303,21 @@ public:
       out_nu[nu] +=  a2* ( 1. / (double(4 * Nd)))^2 * sum[nu];
       PokeIndex<LorentzIndex>(out, out_nu[nu], nu);
     }
+#else
+    for (int nu = 0; nu < Nd; nu++) {
+      GaugeLinkField in_nu = PeekIndex<LorentzIndex>(in, nu);
+      GaugeLinkField out_nu(out.Grid());
+      GaugeLinkField sum(out.Grid());
+      GaugeLinkField sum2(out.Grid());
+      out_nu=a0*in_nu;
+      LapStencil.M(in_nu,sum);
+      out_nu +=  a1*  1. / (double(4 * Nd)) * sum;
+      LapStencil.M(sum,sum2);
+      out_nu +=  a2* ( 1. / (double(4 * Nd)))^2 * sum;
+//      out_nu += (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
+      PokeIndex<LorentzIndex>(out, out_nu, nu);
+    }
+#endif
   }
 
   void MDeriv(const GaugeField& in, GaugeField& der) {

@@ -145,7 +145,7 @@ double AlgRemez::generateApprox(int num_degree, int den_degree,
 
   while (spread > tolerance) { //iterate until convergance
 
-    if (iter++%100==0) 
+//    if (iter++%100==0) 
       std::cout<<"Iteration " <<iter-1<<" spread "<<(double)spread<<" delta "<<(double)delta<<std::endl; 
 
     equations();
