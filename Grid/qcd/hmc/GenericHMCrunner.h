@@ -154,7 +154,7 @@ private:
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
-#if 1
+#if 0
     std::cout << GridLogMessage << "Trivial metric" << std::endl;
     TrivialMetric<typename Implementation::Field> Mtr;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
@@ -168,9 +168,9 @@ private:
 //#include "DBW2_3.h.inc"
 //#include "Wilson10_3.h.inc"
 //#include "g_x3_1.h.inc"
-#include "g_x3_1_sym.h.inc"
+//#include "g_x3_1_sym.h.inc"
 //#include "Wilson64_3.h.inc"
-//#include "Wilson64.h.inc"
+#include "Wilson64.h.inc"
 //#include "32I3.1Gev.h.inc"
     gpar.tolerance=Parameters.MD.RMHMCCGTol;
     mpar.tolerance=Parameters.MD.RMHMCCGTol;
