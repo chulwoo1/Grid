@@ -89,7 +89,7 @@ struct HMCparameters: Serializable {
   
 };
 	
-template <class IntegratorType>
+template <class IntegratorType, class IntegratorType2>
 class HybridMonteCarlo {
 private:
   const HMCparameters Params;
@@ -104,6 +104,7 @@ private:
   Field &Ucur;
   
   IntegratorType &TheIntegrator;
+  IntegratorType2 &TheIntegrator2;
   ObsListType Observables;
 
   /////////////////////////////////////////////////////////
@@ -180,10 +181,10 @@ public:
   /////////////////////////////////////////
   // Constructor
   /////////////////////////////////////////
-  HybridMonteCarlo(HMCparameters _Pams, IntegratorType &_Int,
+  HybridMonteCarlo(HMCparameters _Pams, IntegratorType &_Int, IntegratorType &_Int2,
                    GridSerialRNG &_sRNG, GridParallelRNG &_pRNG, 
                    ObsListType _Obs, Field &_U)
-    : Params(_Pams), TheIntegrator(_Int), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U) {}
+    : Params(_Pams), TheIntegrator(_Int), TheIntegrator2(_Int2), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U) {}
   ~HybridMonteCarlo(){};
 
   void evolve(void) {

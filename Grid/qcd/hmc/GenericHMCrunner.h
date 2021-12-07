@@ -154,11 +154,11 @@ private:
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     // Metric
-#if 1
+//#if 1
     std::cout << GridLogMessage << "Trivial metric" << std::endl;
     TrivialMetric<typename Implementation::Field> Mtr;
-    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
-#else
+    TheIntegrator MDynamics1(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
+//#else
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
@@ -190,8 +190,8 @@ private:
 //    Laplacian.RMHMCTol=Parameters.MD.RMHMCTol;
     std::cout << GridLogMessage << " RMHMCCGTol= " << Parameters.MD.RMHMCCGTol <<std::endl;
     std::cout << GridLogMessage << " RMHMCTol= " << Parameters.MD.RMHMCTol <<std::endl;
-    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
-#endif
+    TheIntegrator MDynamics2(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
+//#endif
 
     if (Parameters.StartingType == "HotStart") {
       // Hot start
@@ -221,7 +221,7 @@ private:
 
     Smearing.set_Field(U);
 
-    HybridMonteCarlo<TheIntegrator> HMC(Parameters, MDynamics,
+    HybridMonteCarlo<TheIntegrator> HMC(Parameters, MDynamics1,MDynamics2,
                                         Resources.GetSerialRNG(),
                                         Resources.GetParallelRNG(), 
                                         Resources.GetObservables(), U);
