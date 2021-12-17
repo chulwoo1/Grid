@@ -666,12 +666,14 @@ int main (int argc, char ** argv)
   std::vector<double> staggered;
 
   int Ls=1;
+#if 0
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   std::cout<<GridLogMessage << " Wilson dslash 4D vectorised" <<std::endl;
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   for(int l=0;l<L_list.size();l++){
     wilson.push_back(Benchmark::DWF(Ls,L_list[l]));
   }
+#endif
 
   Ls=12;
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
