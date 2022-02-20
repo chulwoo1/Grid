@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<grid>
+  <HMCparameters>
+    <StartTrajectory>634</StartTrajectory>
+    <Trajectories>10000</Trajectories>
+    <MetropolisTest>true</MetropolisTest>
+    <NoMetropolisUntil>0</NoMetropolisUntil>
+    <StartingType>CheckpointStart</StartingType>
+    <SW>4</SW>
+    <Kappa>0</Kappa>
+    <MD>
+      <name>Force Gradient</name>
+      <MDsteps>2</MDsteps>
+      <RMHMCTol>1e-06</RMHMCTol>
+      <RMHMCCGTol>1e-06</RMHMCCGTol>
+      <trajL>0.05</trajL>
+    </MD>
+  </HMCparameters>
+</grid>
