@@ -65,8 +65,8 @@ int main(int argc, char **argv)
     assert(traj.size()==1);
     MD.trajL *= double(traj[0]);
   }
-  MD.RMHMCTol=1e-6;
-  MD.RMHMCCGTol=1e-6;
+  MD.RMHMCTol=1e-7;
+  MD.RMHMCCGTol=1e-8;
   std::cout << "RMHMCTol= "<<  MD.RMHMCTol<<" RMHMCCGTol= "<<MD.RMHMCCGTol<<std::endl;
 
   HMCparameters HMCparams;

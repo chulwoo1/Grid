@@ -185,24 +185,28 @@ int main(int argc, char **argv) {
   typedef Grid::XmlReader       Serialiser;
   
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-  IntegratorParameters MD;
+//  IntegratorParameters MD;
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   //  MD.name    = std::string("Leap Frog");
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-  MD.name    = std::string("Force Gradient");
-  //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  //  MD.name    = std::string("MinimumNorm2");
-  MD.MDsteps = 6;
-  MD.trajL   = 1.0;
+//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
   
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 590;
   HMCparams.Trajectories     = 1000;
   HMCparams.NoMetropolisUntil=  0;
   //  "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
-  //  HMCparams.StartingType     =std::string("ColdStart");
-  HMCparams.StartingType     =std::string("CheckpointStart");
-  HMCparams.MD = MD;
+  HMCparams.StartingType     =std::string("ColdStart");
+//  HMCparams.StartingType     =std::string("CheckpointStart");
+  HMCparams.MD.name    = std::string("Force Gradient");
+//  HMCparams.MD.name    = std::string("MinimumNorm2");
+  HMCparams.MD.MDsteps = 2;
+  HMCparams.MD.trajL   = 0.1;
+  {
+  XmlWriter HMCwr("HMCparameters.xml.out");
+  write(HMCwr,"HMCparameters",HMCparams);
+  }
+
   HMCWrapper TheHMC(HMCparams);
 
   // Grid from the command line arguments --grid and --mpi

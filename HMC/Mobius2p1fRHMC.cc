@@ -52,8 +52,8 @@ int main(int argc, char **argv) {
   //  MD.name    = std::string("Force Gradient");
   typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;
   MD.name    = std::string("MinimumNorm2");
-  MD.MDsteps = 20;
-  MD.trajL   = 1.0;
+  MD.MDsteps = 2;
+  MD.trajL   = 0.1;
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;

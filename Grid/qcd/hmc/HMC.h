@@ -53,6 +53,7 @@ struct HMCparameters: Serializable {
                                   bool, MetropolisTest,
                                   Integer, NoMetropolisUntil,
                                   std::string, StartingType,
+                                  Integer, SW,
 				  RealD, Kappa,
                                   IntegratorParameters, MD)
 
@@ -61,6 +62,7 @@ struct HMCparameters: Serializable {
     MetropolisTest    = true;
     NoMetropolisUntil = 10;
     StartTrajectory   = 0;
+    SW                = 2;
     Trajectories      = 10;
     StartingType      = "HotStart";
     /////////////////////////////////
