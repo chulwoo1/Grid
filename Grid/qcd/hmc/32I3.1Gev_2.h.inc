@@ -1,4 +1,4 @@
-    LaplacianRatParams gpar(3),mpar(3);
+    LaplacianRatParams gpar(3,10000),mpar(3,10000);
     gpar.offset = 1.309343709298949e+00;
     gpar.a0[0] = -1.342896202157906e-01;
     gpar.a1[0] = -3.408156867250778e-02;

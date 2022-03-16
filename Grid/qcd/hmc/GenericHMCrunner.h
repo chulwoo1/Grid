@@ -167,10 +167,12 @@ private:
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
 //#include "DBW2_3.h.inc"
 //#include "Wilson10_3.h.inc"
-#include "g_x3_1.h.inc"
+//#include "g_x3_1.h.inc"
 //#include "g_x3_3_sym.h.inc"
-//#include "Wilson64.h.inc"
+#include "g_rat_1.h.inc"
+//#include "Wilson64_2.h.inc"
 //#include "32I2.8Gev.h.inc"
+//#include "32I3.1Gev_2.h.inc"
     gpar.tolerance=Parameters.MD.RMHMCCGTol;
     mpar.tolerance=Parameters.MD.RMHMCCGTol;
     std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
