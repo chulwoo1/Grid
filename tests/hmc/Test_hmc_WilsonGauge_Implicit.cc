@@ -37,14 +37,47 @@ int main(int argc, char **argv)
   Grid_init(&argc, &argv);
   GridLogLayout();
 
-   // Typedefs to simplify notation
-  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;  // Uses the default minimum norm
-  HMCWrapper TheHMC;
-  TheHMC.Parameters.MD.name    = std::string("MinimumNorm2");
-    
+  
+  std::string arg;
 
-  // Grid from the command line
-  TheHMC.Resources.AddFourDimGrid("gauge");
+#if 0
+  std::vector<int> steps(0);
+  if( GridCmdOptionExists(argv,argv+argc,"--MDsteps") ){
+    arg= GridCmdOptionPayload(argv,argv+argc,"--MDsteps");
+    GridCmdOptionIntVector(arg,steps);
+    assert(steps.size()==1);
+  }
+#endif
+
+   // Typedefs to simplify notation
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper;  // Uses the default minimum norm
+//  typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper;  // Uses the default minimum norm
+
+  IntegratorParameters MD;
+//  MD.name    = std::string("ImplicitLeapFrog");
+  MD.name    = std::string("ImplicitMinimumNorm2");
+  MD.trajL   = 0.01*std::sqrt(2.);
+  MD.MDsteps = 1;
+  if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){
+    arg= GridCmdOptionPayload(argv,argv+argc,"--trajL");
+    std::vector<int> traj(0);
+    GridCmdOptionIntVector(arg,traj);
+    assert(traj.size()==1);
+    MD.trajL *= double(traj[0]);
+  }
+  MD.RMHMCTol=1e-6;
+  MD.RMHMCCGTol=1e-6;
+  std::cout << "RMHMCTol= "<<  MD.RMHMCTol<<" RMHMCCGTol= "<<MD.RMHMCCGTol<<std::endl;
+
+  HMCparameters HMCparams;
+  HMCparams.StartTrajectory  = 0;
+  HMCparams.Trajectories     = 200;
+  HMCparams.NoMetropolisUntil=  100;
+  // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
+  HMCparams.StartingType     =std::string("ColdStart");
+  HMCparams.Kappa=0.01; //checking against trivial. Pathetic.
+  HMCparams.MD = MD;
+
   // Possibile to create the module by hand 
   // hardcoding parameters or using a Reader
 
@@ -56,6 +89,10 @@ int main(int argc, char **argv)
   CPparams.saveInterval = 1;
   CPparams.format = "IEEE64BIG";
   
+  HMCWrapper TheHMC(HMCparams);
+  // Grid from the command line
+  TheHMC.Resources.AddFourDimGrid("gauge");
+//  TheHMC.Resources.AddFourDimGridF("gauge_f");
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
 
   RNGModuleParameters RNGpar;
@@ -69,12 +106,12 @@ int main(int argc, char **argv)
   typedef TopologicalChargeMod<HMCWrapper::ImplPolicy> QObs;
   TheHMC.Resources.AddObservable<PlaqObs>();
   TopologyObsParameters TopParams;
-  TopParams.interval = 5;
+  TopParams.interval = 1;
   TopParams.do_smearing = true;
-  TopParams.Smearing.steps = 200;
+  TopParams.Smearing.steps = 1600;
   TopParams.Smearing.step_size = 0.01;
-  TopParams.Smearing.meas_interval = 50;
-  TopParams.Smearing.maxTau = 2.0; 
+  TopParams.Smearing.meas_interval = 10;
+  TopParams.Smearing.maxTau = 16.0; 
   TheHMC.Resources.AddObservable<QObs>(TopParams);
   //////////////////////////////////////////////
 
@@ -83,14 +120,9 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-//  RealD beta = 10.0;
-//  WilsonGaugeActionD Waction(beta);
-//  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
-//  RBC c_1 for DBW2
-  RealD beta = 1.0038;
-  RealD c_1 = -1.4088;
-  RBCGaugeActionR Waction(beta,c_1);
-  std::cout << "P+R Gauge beta= " <<beta <<"c_1= "<<c_1 <<std::endl;
+  RealD beta = 10.0;
+  WilsonGaugeActionR Waction(beta);
+  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);
@@ -99,26 +131,11 @@ int main(int argc, char **argv)
   /////////////////////////////////////////////////////////////
 
   // HMC parameters are serialisable 
-    // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
-//    HMCparams.StartingType     =std::string("ColdStart");
-//    HMCparams.Kappa=0.0;
-//    HMCparams.MD = MD;
-  TheHMC.Parameters.StartingType     =std::string("ColdStart");
-  TheHMC.Parameters.Kappa=0.0;
-  TheHMC.Parameters.MD.MDsteps = 20;
-  TheHMC.Parameters.MD.trajL   = 0.1*std::sqrt(2.);
+//  TheHMC.Parameters.MD.MDsteps = 20;
+//  TheHMC.Parameters.MD.trajL   = 1.0;
 
   TheHMC.ReadCommandLine(argc, argv); // these can be parameters from file
-  if( GridCmdOptionExists(argv,argv+argc,"--trajL") ){
-    std::string arg= GridCmdOptionPayload(argv,argv+argc,"--trajL");
-    std::vector<int> traj(0);
-    GridCmdOptionIntVector(arg,traj);
-    assert(traj.size()==1);
-    TheHMC.Parameters.MD.trajL *= double(traj[0]);
-  }
-
   std::cout << "trajL= " <<TheHMC.Parameters.MD.trajL <<" steps= "<<TheHMC.Parameters.MD.MDsteps << " integrator= "<<TheHMC.Parameters.MD.name<<std::endl;
-
   TheHMC.Run();  // no smearing
 
   Grid_finalize();

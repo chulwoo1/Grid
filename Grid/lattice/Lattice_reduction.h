@@ -104,6 +104,8 @@ inline Double max(const Double *arg, Integer osites)
   //  const int Nsimd = vobj::Nsimd();
   const int nthread = GridThread::GetThreads();
 
+<<<<<<< HEAD
+=======
   std::vector<Double> maxarray(nthread);
   
   thread_for(thr,nthread, {
@@ -122,6 +124,7 @@ inline Double max(const Double *arg, Integer osites)
     if (maxarray[i]>tmax) tmax = maxarray[i];
   } 
   return tmax;
+>>>>>>> 980e721f6e25864cadfea3611a9c1a052d8d05c4
 }
 */
 template<class vobj>
@@ -142,6 +145,7 @@ inline typename vobj::scalar_objectD sumD(const vobj *arg, Integer osites)
   return sumD_cpu(arg,osites);
 #endif  
 }
+
 
 template<class vobj>
 inline typename vobj::scalar_object sum(const Lattice<vobj> &arg)
@@ -228,6 +232,52 @@ inline ComplexD rankInnerProduct(const Lattice<vobj> &left,const Lattice<vobj> &
   nrm = anrm;
   return nrm;
 }
+
+#if 1
+template<class vobj>
+RealD rankInnerMax(const Lattice<vobj> &left,const Lattice<vobj> &right)
+{
+  typedef typename vobj::scalar_type scalar_type;
+  typedef typename vobj::vector_typeD vector_type;
+  RealD  nrm;
+  
+  GridBase *grid = left.Grid();
+
+  const uint64_t nsimd = grid->Nsimd();
+  const uint64_t sites = grid->oSites();
+  
+  // Might make all code paths go this way.
+  typedef decltype(innerProductD(vobj(),vobj())) inner_t;
+  Vector<inner_t> inner_tmp(sites);
+  auto inner_tmp_v = &inner_tmp[0];
+    
+  {
+    autoView( left_v , left, AcceleratorRead);
+    autoView( right_v,right, AcceleratorRead);
+
+    // GPU - SIMT lane compliance...
+    accelerator_for( ss, sites, 1,{
+	auto x_l = left_v[ss];
+	auto y_l = right_v[ss];
+	inner_tmp_v[ss]=innerProductD(x_l,y_l);
+    });
+  }
+
+  // This is in single precision and fails some tests
+//  auto anrm = sum(inner_tmp_v,sites);  
+  
+  scalar_type *inner_tmp_s = (scalar_type*) inner_tmp.data();
+  RealD norm=0;
+  nrm = real(inner_tmp_s[0]);
+  for( int s=0;s<nsimd*sites;s++){
+     if(real(inner_tmp_s[s]) > nrm) nrm= real(inner_tmp_s[s]);
+     norm += real(inner_tmp_s[s]);
+  }
+//  std::cout << GridLogMessage << "norm2 from Max : " << norm << std::endl;
+//  nrm = anrm;
+  return nrm;
+}
+#endif
 
 template<class vobj>
 inline ComplexD innerProduct(const Lattice<vobj> &left,const Lattice<vobj> &right) {

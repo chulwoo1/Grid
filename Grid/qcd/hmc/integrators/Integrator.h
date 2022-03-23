@@ -9,6 +9,7 @@ Copyright (C) 2015
 Author: Azusa Yamaguchi <ayamaguc@staffmail.ed.ac.uk>
 Author: Peter Boyle <paboyle@ph.ed.ac.uk>
 Author: Guido Cossu <cossu@post.kek.jp>
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,7 +34,6 @@ directory
 #define INTEGRATOR_INCLUDED
 
 #include <memory>
-#include "MomentumFilter.h"
 
 NAMESPACE_BEGIN(Grid);
 
@@ -42,11 +42,13 @@ public:
   GRID_SERIALIZABLE_CLASS_MEMBERS(IntegratorParameters,
 				  std::string, name,      // name of the integrator
 				  unsigned int, MDsteps,  // number of outer steps
+				  RealD, RMHMCTol,
+				  RealD, RMHMCCGTol,
 				  RealD, trajL)           // trajectory length
 
   IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
   : MDsteps(MDsteps_),
-    trajL(trajL_) {};
+    trajL(trajL_),RMHMCTol(1e-8),RMHMCCGTol(1e-8) {};
 
   template <class ReaderClass, typename std::enable_if<isReader<ReaderClass>::value, int >::type = 0 >
   IntegratorParameters(ReaderClass & Reader)
@@ -74,28 +76,26 @@ protected:
   double t_U;  // Track time passing on each level and for U and for P
   std::vector<double> t_P;  
 
-  MomentaField P;
+//  MomentaField P;
+  GeneralisedMomenta<FieldImplementation > P;
   SmearingPolicy& Smearer;
   RepresentationPolicy Representations;
   IntegratorParameters Params;
 
-  //Filters allow the user to manipulate the conjugate momentum, for example to freeze links in DDHMC
-  //It is applied whenever the momentum is updated / refreshed
-  //The default filter does nothing
-  MomentumFilterBase<MomentaField> const* MomFilter;
-
   const ActionSet<Field, RepresentationPolicy> as;
-
-  //Get a pointer to a shared static instance of the "do-nothing" momentum filter to serve as a default
-  static MomentumFilterBase<MomentaField> const* getDefaultMomFilter(){ 
-    static MomentumFilterNone<MomentaField> filter;
-    return &filter;
-  }
 
   void update_P(Field& U, int level, double ep) 
   {
     t_P[level] += ep;
-    update_P(P, U, level, ep);
+    update_P(P.Mom, U, level, ep);
+
+    std::cout << GridLogIntegrator << "[" << level << "] P " << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+  }
+
+  void update_P2(Field& U, int level, double ep) 
+  {
+    t_P[level] += ep;
+    update_P2(P.Mom, U, level, ep);
 
     std::cout << GridLogIntegrator << "[" << level << "] P " << " dt " << ep << " : t_P " << t_P[level] << std::endl;
   }
@@ -147,13 +147,139 @@ protected:
 
     // Force from the other representations
     as[level].apply(update_P_hireps, Representations, Mom, U, ep);
+  }
 
-    MomFilter->applyFilter(Mom);
+  void update_P2(MomentaField& Mom, Field& U, int level, double ep) {
+    // input U actually not used in the fundamental case
+    // Fundamental updates, include smearing
+
+    std::cout << GridLogIntegrator << "U before update_P2: " << std::sqrt(norm2(U)) << std::endl;
+    // Generalised momenta  
+    // Derivative of the kinetic term must be computed before
+    // Mom is the momenta and gets updated by the 
+    // actions derivatives
+    MomentaField MomDer(P.Mom.Grid());
+    P.M.ImportGauge(U);
+    P.DerivativeU(P.Mom, MomDer);
+    std::cout << GridLogIntegrator << "MomDer update_P2: " << std::sqrt(norm2(MomDer)) << std::endl;
+//    Mom -= MomDer * ep;
+    Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
+    std::cout << GridLogIntegrator << "Mom update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
+
+    // Auxiliary fields
+    P.update_auxiliary_momenta(ep*0.5 );
+    P.AuxiliaryFieldsDerivative(MomDer);
+    std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
+//    Mom -= MomDer * ep;
+    Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
+    P.update_auxiliary_momenta(ep*0.5 );
+
+    for (int a = 0; a < as[level].actions.size(); ++a) {
+      double start_full = usecond();
+      Field force(U.Grid());
+      conformable(U.Grid(), Mom.Grid());
+
+      Field& Us = Smearer.get_U(as[level].actions.at(a)->is_smeared);
+      double start_force = usecond();
+      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
+
+      std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
+      if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
+      force = FieldImplementation::projectForce(force); // Ta for gauge fields
+      double end_force = usecond();
+      Real force_abs = std::sqrt(norm2(force)/U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "["<<level<<"]["<<a<<"] Force average: " << force_abs << std::endl;
+      Mom -= force * ep* HMC_MOMENTUM_DENOMINATOR;; 
+      double end_full = usecond();
+      double time_full  = (end_full - start_full) / 1e3;
+      double time_force = (end_force - start_force) / 1e3;
+      std::cout << GridLogMessage << "["<<level<<"]["<<a<<"] P update elapsed time: " << time_full << " ms (force: " << time_force << " ms)"  << std::endl;
+    }
+
+    // Force from the other representations
+    as[level].apply(update_P_hireps, Representations, Mom, U, ep);
+  }
+
+  void implicit_update_P(Field& U, int level, double ep, bool intermediate = false) {
+    t_P[level] += ep;
+
+    std::cout << GridLogIntegrator << "[" << level << "] P "
+              << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+    std::cout << GridLogIntegrator << "U before implicit_update_P: " << std::sqrt(norm2(U)) << std::endl;
+    // Fundamental updates, include smearing
+    MomentaField Msum(P.Mom.Grid());
+    Msum = Zero();
+    for (int a = 0; a < as[level].actions.size(); ++a) {
+      // Compute the force terms for the lagrangian part
+      // We need to compute the derivative of the actions
+      // only once
+      Field force(U.Grid());
+      conformable(U.Grid(), P.Mom.Grid());
+      Field& Us = Smearer.get_U(as[level].actions.at(a)->is_smeared);
+      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
+
+      std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
+      if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
+      force = FieldImplementation::projectForce(force);  // Ta for gauge fields
+      Real force_abs = std::sqrt(norm2(force) / U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "|Force| site average: " << force_abs
+                << std::endl;
+      Msum += force;
+    }
+
+    MomentaField NewMom = P.Mom;
+    MomentaField OldMom = P.Mom;
+    double threshold = Params.RMHMCTol;
+    P.M.ImportGauge(U);
+    MomentaField MomDer(P.Mom.Grid());
+    MomentaField MomDer1(P.Mom.Grid());
+    MomentaField AuxDer(P.Mom.Grid());
+    MomDer1 = Zero();
+    MomentaField diff(P.Mom.Grid());
+    double factor = 2.0;
+    if (intermediate){
+      P.DerivativeU(P.Mom, MomDer1);
+      factor = 1.0;
+    }
+//    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
+
+    // Auxiliary fields
+    P.update_auxiliary_momenta(ep*0.5 );
+    P.AuxiliaryFieldsDerivative(AuxDer);
+    Msum += AuxDer;
+    
+
+    // Here run recursively
+    int counter = 1;
+    RealD RelativeError;
+    do {
+      std::cout << GridLogIntegrator << "UpdateP implicit step "<< counter << std::endl;
+
+      // Compute the derivative of the kinetic term
+      // with respect to the gauge field
+      P.DerivativeU(NewMom, MomDer);
+      Real force_abs = std::sqrt(norm2(MomDer) / U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "|Force| laplacian site average: " << force_abs
+                << std::endl;
+
+      NewMom = P.Mom - ep* 0.5 * HMC_MOMENTUM_DENOMINATOR * (2.0*Msum + factor*MomDer + MomDer1);// simplify
+      diff = NewMom - OldMom;
+      counter++;
+      RelativeError = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
+      std::cout << GridLogIntegrator << "UpdateP RelativeError: " << RelativeError << std::endl;
+      OldMom = NewMom;
+    } while (RelativeError > threshold);
+
+    P.Mom = NewMom;
+    std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
+
+    // update the auxiliary fields momenta    
+    P.update_auxiliary_momenta(ep*0.5 );
   }
 
   void update_U(Field& U, double ep) 
   {
-    update_U(P, U, ep);
+    update_U(P.Mom, U, ep);
 
     t_U += ep;
     int fl = levels - 1;
@@ -172,15 +298,68 @@ protected:
     Representations.update(U);  // void functions if fundamental representation
   }
 
+  void implicit_update_U(Field&U, double ep){
+    t_U += ep;
+    int fl = levels - 1;
+    std::cout << GridLogIntegrator << "   " << "[" << fl << "] U " << " dt " << ep << " : t_U " << t_U << std::endl;
+    std::cout << GridLogIntegrator << "U before implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
+
+    MomentaField Mom1(P.Mom.Grid());
+    MomentaField Mom2(P.Mom.Grid());
+    RealD RelativeError;
+    Field diff(U.Grid());
+    Real threshold =  Params.RMHMCTol;
+    int counter = 1;
+    int MaxCounter = 100;
+
+    Field OldU = U;
+    Field NewU = U;
+
+    P.M.ImportGauge(U);
+    P.DerivativeP(Mom1); // first term in the derivative 
+    std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
+
+    P.update_auxiliary_fields(ep*0.5);
+
+
+    MomentaField sum=Mom1;
+    do {
+      std::cout << GridLogIntegrator << "UpdateU implicit step "<< counter << std::endl;
+      
+      P.DerivativeP(Mom2); // second term in the derivative, on the updated U
+      std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
+      sum = (Mom1 + Mom2);
+
+      for (int mu = 0; mu < Nd; mu++) {
+        auto Umu = PeekIndex<LorentzIndex>(U, mu);
+        auto Pmu = PeekIndex<LorentzIndex>(sum, mu);
+        Umu = expMat(Pmu, ep * 0.5, 12) * Umu;
+        PokeIndex<LorentzIndex>(NewU, ProjectOnGroup(Umu), mu);
+      }
+
+      diff = NewU - OldU;
+      RelativeError = std::sqrt(norm2(diff))/std::sqrt(norm2(NewU));
+      std::cout << GridLogIntegrator << "UpdateU RelativeError: " << RelativeError << std::endl;
+      
+      P.M.ImportGauge(NewU);
+      OldU = NewU; // some redundancy to be eliminated
+      counter++;
+    } while (RelativeError > threshold && counter < MaxCounter);
+
+    U = NewU;
+    std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
+    P.update_auxiliary_fields(ep*0.5);
+  }
+
   virtual void step(Field& U, int level, int first, int last) = 0;
 
 public:
   Integrator(GridBase* grid, IntegratorParameters Par,
              ActionSet<Field, RepresentationPolicy>& Aset,
-             SmearingPolicy& Sm)
+             SmearingPolicy& Sm, Metric<MomentaField>& M)
     : Params(Par),
       as(Aset),
-      P(grid),
+      P(grid, M),
       levels(Aset.size()),
       Smearer(Sm),
       Representations(grid) 
@@ -188,23 +367,11 @@ public:
     t_P.resize(levels, 0.0);
     t_U = 0.0;
     // initialization of smearer delegated outside of Integrator
-
-    //Default the momentum filter to "do-nothing"
-    MomFilter = getDefaultMomFilter();
   };
 
   virtual ~Integrator() {}
 
   virtual std::string integrator_name() = 0;
-  
-  //Set the momentum filter allowing for manipulation of the conjugate momentum
-  void setMomentumFilter(const MomentumFilterBase<MomentaField> &filter){
-    MomFilter = &filter;
-  }
-
-  //Access the conjugate momentum
-  const MomentaField & getMomentum() const{ return P; }
-  
 
   void print_parameters()
   {
@@ -229,7 +396,9 @@ public:
 
   void reverse_momenta()
   {
-    P *= -1.0;
+//    P *= -1.0;
+    P.Mom *= -1.0;
+    P.AuxMom *= -1.0;
   }
 
   // to be used by the actionlevel class to iterate
@@ -246,12 +415,15 @@ public:
   } refresh_hireps{};
 
   // Initialization of momenta and actions
-  void refresh(Field& U,  GridSerialRNG & sRNG, GridParallelRNG& pRNG) 
+  void refresh(Field& U, GridSerialRNG & sRNG, GridParallelRNG& pRNG) 
   {
-    assert(P.Grid() == U.Grid());
+    assert(P.Mom.Grid() == U.Grid());
     std::cout << GridLogIntegrator << "Integrator refresh\n";
 
-    FieldImplementation::generate_momenta(P, sRNG, pRNG);
+//    FieldImplementation::generate_momenta(P.Mom, pRNG);
+    P.M.ImportGauge(U);
+    P.MomentaDistribution(sRNG,pRNG);
+
 
     // Update the smeared fields, can be implemented as observer
     // necessary to keep the fields updated even after a reject
@@ -268,14 +440,12 @@ public:
         // get gauge field from the SmearingPolicy and
         // based on the boolean is_smeared in actionID
         Field& Us = Smearer.get_U(as[level].actions.at(actionID)->is_smeared);
-        as[level].actions.at(actionID)->refresh(Us, sRNG, pRNG);
+        as[level].actions.at(actionID)->refresh(Us, sRNG,pRNG);
       }
 
       // Refresh the higher representation actions
-      as[level].apply(refresh_hireps, Representations, sRNG, pRNG);
+      as[level].apply(refresh_hireps, Representations, pRNG);
     }
-
-    MomFilter->applyFilter(P);
   }
 
   // to be used by the actionlevel class to iterate
@@ -297,11 +467,22 @@ public:
   RealD S(Field& U) 
   {  // here also U not used
 
+    std::cout.precision(15);
     std::cout << GridLogIntegrator << "Integrator action\n";
+    std::cout.precision(15);
+    static RealD Saux=0.,Smom=0.,Sg=0.;
 
-    RealD H = - FieldImplementation::FieldSquareNorm(P)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
-
-    RealD Hterm;
+    RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
+    std::cout << GridLogMessage << "S:FieldSquareNorm H_p = " << H << "\n";
+    std::cout << GridLogMessage << "S:dSField = " << H-Smom << "\n";
+    Smom=H;
+    P.M.ImportGauge(U);
+    RealD Hterm = - P.MomentaAction();
+//    H = - P.MomentaAction()/HMC_MOMENTUM_DENOMINATOR;
+    std::cout << GridLogMessage << "S:Momentum action H_p = " << Hterm << "\n";
+    std::cout << GridLogMessage << "S:dSMom = " << Hterm-Saux << "\n";
+    Saux=Hterm;
+    H = Hterm;
 
     // Actions
     for (int level = 0; level < as.size(); ++level) {
@@ -311,12 +492,15 @@ public:
         Field& Us = Smearer.get_U(as[level].actions.at(actionID)->is_smeared);
         std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] action eval " << std::endl;
         Hterm = as[level].actions.at(actionID)->S(Us);
-        std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] H = " << Hterm << std::endl;
+        std::cout << GridLogMessage << "S: action [" << level << "][" << actionID << "] H = " << Hterm << std::endl;
+        std::cout << GridLogMessage << "S:dSg = " << Hterm-Sg << "\n";
+        Sg=Hterm;
         H += Hterm;
       }
       as[level].apply(S_hireps, Representations, level, H);
     }
 
+    std::cout << GridLogMessage << "S:Total  H = " << H << "\n";
     return H;
   }
 
@@ -339,8 +523,6 @@ public:
       assert(fabs(t_U - t_P[level]) < 1.0e-6);  // must be the same
       std::cout << GridLogIntegrator << " times[" << level << "]= " << t_P[level] << " " << t_U << std::endl;
     }
-
-    FieldImplementation::Project(U);
 
     // and that we indeed got to the end of the trajectory
     assert(fabs(t_U - Params.trajL) < 1.0e-6);

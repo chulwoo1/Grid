@@ -32,7 +32,7 @@ directory
 
 NAMESPACE_BEGIN(Grid);
 
-#define CPS_MD_TIME
+#undef CPS_MD_TIME
 
 #ifdef CPS_MD_TIME
 #define HMC_MOMENTUM_DENOMINATOR (2.0)
@@ -125,6 +125,7 @@ public:
       Pmu = Pmu*scale;
       PokeIndex<LorentzIndex>(P, Pmu, mu);
     }
+    printf("generate_momenta norm=%0.15e\n",norm2(P));
   }
 
   static inline Field projectForce(Field &P) { return Ta(P); }

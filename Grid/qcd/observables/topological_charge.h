@@ -36,10 +36,11 @@ struct TopologySmearingParameters : Serializable {
 				  int, steps,
 				  float, step_size,
 				  int, meas_interval,
-				  float, maxTau);
+				  float, maxTau,
+				  float, tolerance);
 
-  TopologySmearingParameters(int s = 0, float ss = 0.0f, int mi = 0, float mT = 0.0f):
-    steps(s), step_size(ss), meas_interval(mi), maxTau(mT){}
+  TopologySmearingParameters(int s = 0, float ss = 0.0f, int mi = 0, float mT = 0.0f,float tol=1e-3):
+    steps(s), step_size(ss), meas_interval(mi), maxTau(mT),tolerance(tol){}
 
   template < class ReaderClass >
   TopologySmearingParameters(Reader<ReaderClass>& Reader){
@@ -97,7 +98,7 @@ public:
         
       if (Pars.do_smearing){
 	// using wilson flow by default here
-	WilsonFlow<PeriodicGimplR> WF(Pars.Smearing.steps, Pars.Smearing.step_size, Pars.Smearing.meas_interval);
+	WilsonFlow<PeriodicGimplR> WF(Pars.Smearing.steps, Pars.Smearing.step_size, Pars.Smearing.meas_interval,Pars.Smearing.tolerance);
 	WF.smear_adaptive(Usmear, U, Pars.Smearing.maxTau);
 	Real T0   = WF.energyDensityPlaquette(Usmear);
 	std::cout << GridLogMessage << std::setprecision(std::numeric_limits<Real>::digits10 + 1)

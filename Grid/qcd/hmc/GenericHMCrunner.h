@@ -42,7 +42,7 @@ public:
   virtual void initialize(ReaderClass& ) = 0;
 };
 
-template <class Implementation,
+template <class Implementation, class ImplementationF,
           template <typename, typename, typename> class Integrator,
           class RepresentationsPolicy = NoHirep, class ReaderClass = XmlReader>
 class HMCWrapperTemplate: public HMCRunnerBase<ReaderClass> {
@@ -54,7 +54,7 @@ public:
 
   HMCparameters Parameters;
   std::string ParameterFile;
-  HMCResourceManager<Implementation> Resources;
+  HMCResourceManager<Implementation, ImplementationF> Resources;
 
   // The set of actions (keep here for lower level users, for now)
   ActionSet<Field, RepresentationsPolicy> TheAction;
@@ -112,9 +112,16 @@ public:
       GridCmdOptionIntVector(arg, ivec);
       Parameters.NoMetropolisUntil = ivec[0];
     }
+
     if (GridCmdOptionExists(argv, argv + argc, "--ParameterFile")) {
       arg = GridCmdOptionPayload(argv, argv + argc, "--ParameterFile");
       ParameterFile = arg;
+    }
+    if (GridCmdOptionExists(argv, argv + argc, "--MDsteps")) {
+      arg = GridCmdOptionPayload(argv, argv + argc, "--MDsteps");
+      std::vector<int> ivec(0);
+      GridCmdOptionIntVector(arg, ivec);
+      Parameters.MD.MDsteps = ivec[0];
     }
   }
 
@@ -134,13 +141,57 @@ public:
 private:
   template <class SmearingPolicy>
   void Runner(SmearingPolicy &Smearing) {
-    auto UGrid = Resources.GetCartesian();
+    GridCartesian *UGrid = Resources.GetCartesian();
     Resources.AddRNGs();
     Field U(UGrid);
+    std::cout << GridLogMessage << "UGrid= " <<UGrid << std::endl;
+    GridCartesian *UGrid_f(NULL);
+    UGrid_f = Resources.GetCartesianF();
+//    Field U_f(UGrid_f);
+    std::cout << GridLogMessage << "UGrid_f="<<UGrid_f << std::endl;
+//    exit(-42);
 
     // Can move this outside?
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
-    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing);
+    // Metric
+#if 1
+    std::cout << GridLogMessage << "Trivial metric" << std::endl;
+    TrivialMetric<typename Implementation::Field> Mtr;
+    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Mtr);
+#else
+    ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
+    LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
+
+// Better to pass the generalised momenta to the integrator
+//    RealD Kappa = Parameters.Kappa;
+    std::cout << GridLogMessage << "LaplacianRat " << std::endl;
+//#include "DBW2_3.h.inc"
+//#include "Wilson10_3.h.inc"
+//#include "g_x3_1.h.inc"
+#include "g_x3_1_sym.h.inc"
+//#include "Wilson64_3.h.inc"
+//#include "Wilson64.h.inc"
+//#include "32I3.1Gev.h.inc"
+    gpar.tolerance=Parameters.MD.RMHMCCGTol;
+    mpar.tolerance=Parameters.MD.RMHMCCGTol;
+    std::cout << GridLogMessage << "gpar a0= " << gpar.a0 <<std::endl;
+    std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
+    std::cout << GridLogMessage << " b0= " << gpar.b0 <<std::endl;
+    std::cout << GridLogMessage << " b1= " << gpar.b1 <<std::endl;
+    std::cout << GridLogMessage << " b2= " << gpar.b2 <<std::endl ;;
+
+    std::cout << GridLogMessage << "mpar a0= " << mpar.a0 <<std::endl;
+    std::cout << GridLogMessage << " a1= " << mpar.a1 <<std::endl;
+    std::cout << GridLogMessage << " b0= " << mpar.b0 <<std::endl;
+    std::cout << GridLogMessage << " b1= " << mpar.b1 <<std::endl;
+    std::cout << GridLogMessage << " b2= " << mpar.b2 <<std::endl;
+    LaplacianAdjointRat<Implementation, ImplementationF> Laplacian(UGrid, UGrid_f,CG, gpar, mpar);
+//    Laplacian.RMHMCCGTol=Parameters.MD.RMHMCCGTol;
+//    Laplacian.RMHMCTol=Parameters.MD.RMHMCTol;
+    std::cout << GridLogMessage << " RMHMCCGTol= " << Parameters.MD.RMHMCCGTol <<std::endl;
+    std::cout << GridLogMessage << " RMHMCTol= " << Parameters.MD.RMHMCTol <<std::endl;
+    TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
+#endif
 
     if (Parameters.StartingType == "HotStart") {
       // Hot start
@@ -182,40 +233,40 @@ private:
 
 // These are for gauge fields, default integrator MinimumNorm2
 template <template <typename, typename, typename> class Integrator>
-using GenericHMCRunner = HMCWrapperTemplate<PeriodicGimplR, Integrator>;
-template <template <typename, typename, typename> class Integrator>
-using GenericHMCRunnerF = HMCWrapperTemplate<PeriodicGimplF, Integrator>;
-template <template <typename, typename, typename> class Integrator>
-using GenericHMCRunnerD = HMCWrapperTemplate<PeriodicGimplD, Integrator>;
+using GenericHMCRunner = HMCWrapperTemplate<PeriodicGimplD, PeriodicGimplF, Integrator>;
+//template <template <typename, typename, typename> class Integrator>
+//using GenericHMCRunnerF = HMCWrapperTemplate<PeriodicGimplF, Integrator>;
+//template <template <typename, typename, typename> class Integrator>
+//using GenericHMCRunnerD = HMCWrapperTemplate<PeriodicGimplD, Integrator>;
 
 
 // These are for gauge fields, default integrator MinimumNorm2
 template <template <typename, typename, typename> class Integrator>
-using ConjugateHMCRunner = HMCWrapperTemplate<ConjugateGimplR, Integrator>;
-template <template <typename, typename, typename> class Integrator>
-using ConjugateHMCRunnerF = HMCWrapperTemplate<ConjugateGimplF, Integrator>;
-template <template <typename, typename, typename> class Integrator>
-using ConjugateHMCRunnerD = HMCWrapperTemplate<ConjugateGimplD, Integrator>;
+using ConjugateHMCRunner = HMCWrapperTemplate<ConjugateGimplD, ConjugateGimplF, Integrator>;
+//template <template <typename, typename, typename> class Integrator>
+//using ConjugateHMCRunnerF = HMCWrapperTemplate<ConjugateGimplF, Integrator>;
+//template <template <typename, typename, typename> class Integrator>
+//using ConjugateHMCRunnerD = HMCWrapperTemplate<ConjugateGimplD, Integrator>;
 
 
 
 template <class RepresentationsPolicy,
           template <typename, typename, typename> class Integrator>
 using GenericHMCRunnerHirep =
-				     HMCWrapperTemplate<PeriodicGimplR, Integrator, RepresentationsPolicy>;
+				     HMCWrapperTemplate<PeriodicGimplD, PeriodicGimplF, Integrator, RepresentationsPolicy>;
 
-template <class Implementation, class RepresentationsPolicy, 
+template <class Implementation, class ImplementationF, class RepresentationsPolicy, 
           template <typename, typename, typename> class Integrator>
-using GenericHMCRunnerTemplate = HMCWrapperTemplate<Implementation, Integrator, RepresentationsPolicy>;
+using GenericHMCRunnerTemplate = HMCWrapperTemplate<Implementation, ImplementationF, Integrator, RepresentationsPolicy>;
 
-typedef HMCWrapperTemplate<ScalarImplR, MinimumNorm2, ScalarFields>
+typedef HMCWrapperTemplate<ScalarImplD, ScalarImplF, MinimumNorm2, ScalarFields>
 ScalarGenericHMCRunner;
 
-typedef HMCWrapperTemplate<ScalarAdjImplR, MinimumNorm2, ScalarMatrixFields>
+typedef HMCWrapperTemplate<ScalarAdjImplD, ScalarAdjImplF, MinimumNorm2, ScalarMatrixFields>
 ScalarAdjGenericHMCRunner;
 
 template <int Colours> 
-using ScalarNxNAdjGenericHMCRunner = HMCWrapperTemplate < ScalarNxNAdjImplR<Colours>, ForceGradient, ScalarNxNMatrixFields<Colours> >;
+using ScalarNxNAdjGenericHMCRunner = HMCWrapperTemplate < ScalarNxNAdjImplD<Colours>, ScalarNxNAdjImplF<Colours>, ForceGradient, ScalarNxNMatrixFields<Colours> >;
 
 NAMESPACE_END(Grid);
 

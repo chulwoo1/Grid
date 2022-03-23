@@ -53,6 +53,7 @@ struct HMCparameters: Serializable {
                                   bool, MetropolisTest,
                                   Integer, NoMetropolisUntil,
                                   std::string, StartingType,
+				  RealD, Kappa,
                                   IntegratorParameters, MD)
 
   HMCparameters() {
@@ -95,7 +96,7 @@ private:
 
   typedef typename IntegratorType::Field Field;
   typedef std::vector< HmcObservable<Field> * > ObsListType;
-
+  
   //pass these from the resource manager
   GridSerialRNG &sRNG;   
   GridParallelRNG &pRNG; 
@@ -139,7 +140,7 @@ private:
   // Evolution
   /////////////////////////////////////////////////////////
   RealD evolve_hmc_step(Field &U) {
-    TheIntegrator.refresh(U, sRNG, pRNG);  // set U and initialize P and phi's
+    TheIntegrator.refresh(U, sRNG,pRNG);  // set U and initialize P and phi's
 
     RealD H0 = TheIntegrator.S(U);  // initial state action
 

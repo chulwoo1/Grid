@@ -67,7 +67,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 NAMESPACE_BEGIN(Grid);
 
 // HMC Resource manager
-template <class ImplementationPolicy>
+template <class ImplementationPolicy, class ImplementationPolicyF >
 class HMCResourceManager {
   typedef HMCModuleBase< BaseHmcCheckpointer<ImplementationPolicy> > CheckpointerBaseModule;
   typedef HMCModuleBase< HmcObservable<typename ImplementationPolicy::Field> > ObservableBaseModule;
@@ -103,15 +103,17 @@ class HMCResourceManager {
 public:
   HMCResourceManager() : have_RNG(false), have_CheckPointer(false) {}
 
-  template <class ReaderClass, class vector_type = vComplex >
+  template <class ReaderClass, class vector_type = vComplex , class single_type=vComplexF>
   void initialize(ReaderClass &Read){
     // assumes we are starting from the main node
-
     // Geometry
     GridModuleParameters GridPar(Read);
     GridFourDimModule<vector_type> GridMod( GridPar) ;
+    GridFourDimModule<single_type> GridMod_f( GridPar) ;
     AddGrid("gauge", GridMod);
-
+    std::cout << "gauge done " << std::endl;
+    AddGrid("gauge_f", GridMod_f);
+    std::cout << "gauge_f done " << std::endl;
     // Checkpointer
     auto &CPfactory = HMC_CPModuleFactory<cp_string, ImplementationPolicy, ReaderClass >::getInstance();
     Read.push("Checkpointer");
@@ -202,6 +204,12 @@ public:
     AddGrid(s, Mod);
   }
 
+  // Add a named grid set, 4d shortcut
+  void AddFourDimGridF(const std::string s) {
+    GridFourDimModule<vComplexF> Mod;
+    AddGrid(s, Mod);
+  }
+
   // Add a named grid set, 4d shortcut + tweak simd lanes
   void AddFourDimGrid(const std::string s, const std::vector<int> simd_decomposition) {
     GridFourDimModule<vComplex> Mod(simd_decomposition);
@@ -210,10 +218,19 @@ public:
 
 
   GridCartesian* GetCartesian(std::string s = "") {
+    std::cout << GridLogDebug << "Getting cartesian grid from: " << s
+              << std::endl;
     if (s.empty()) s = Grids.begin()->first;
     std::cout << GridLogDebug << "Getting cartesian grid from: " << s
               << std::endl;
     return Grids[s].get_full();
+  }
+
+  GridCartesian* GetCartesianF(std::string s = "") {
+    if (s.empty()) s = Grids.begin()->first;
+    std::cout << GridLogDebug << "Getting cartesian single grid from: " << s
+              << std::endl;
+    return Grids[s].get_full_single();
   }
 
   GridRedBlackCartesian* GetRBCartesian(std::string s = "") {

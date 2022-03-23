@@ -79,11 +79,15 @@ public:
   GridCartesian* get_full() {
     std::cout << GridLogDebug << "Getting cartesian in module"<< std::endl;
     return grid_.get(); }
+  GridCartesian* get_full_single() {
+    std::cout << GridLogDebug << "Getting cartesian single in module"<< std::endl;
+    return grid_f.get(); }
   GridRedBlackCartesian* get_rb() {
     std::cout << GridLogDebug << "Getting rb-cartesian in module"<< std::endl;
     return rbgrid_.get(); }
 
   void set_full(GridCartesian* grid) { grid_.reset(grid); }
+  void set_full_f(GridCartesian* grid) { grid_f.reset(grid); }
   void set_rb(GridRedBlackCartesian* rbgrid) { rbgrid_.reset(rbgrid); }
   void show_full_decomposition(){ grid_->show_decomposition(); }
   void show_rb_decomposition(){ rbgrid_->show_decomposition(); }
@@ -91,6 +95,8 @@ public:
 protected:
   std::unique_ptr<GridCartesian> grid_;
   std::unique_ptr<GridRedBlackCartesian> rbgrid_;
+  std::unique_ptr<GridCartesian> grid_f;
+  std::unique_ptr<GridRedBlackCartesian> rbgrid_f;
 
 };
 
@@ -106,6 +112,10 @@ public:
     set_full(SpaceTimeGrid::makeFourDimGrid(
 					    GridDefaultLatt(), 
 					    GridDefaultSimd(4, vector_type::Nsimd()),
+					    GridDefaultMpi()));
+    set_full_f(SpaceTimeGrid::makeFourDimGrid(
+					    GridDefaultLatt(), 
+					    GridDefaultSimd(4, vComplexF::Nsimd()),
 					    GridDefaultMpi()));
     set_rb(SpaceTimeGrid::makeFourDimRedBlackGrid(grid_.get()));
   }
