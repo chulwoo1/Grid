@@ -120,7 +120,8 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-  RealD beta = 10.0;
+//  RealD beta = 10.0;
+  RealD beta = 6.4;
   WilsonGaugeActionR Waction(beta);
   std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
   
