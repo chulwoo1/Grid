@@ -75,10 +75,12 @@ int main (int argc, char ** argv)
 
   precisionChange(Umu_f,Umu);
   
-  RealD mass=0.1;
+  RealD mass=0.01;
   RealD M5=1.8;
-  DomainWallFermionD Ddwf(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5);
-  DomainWallFermionF Ddwf_f(Umu_f,*FGrid_f,*FrbGrid_f,*UGrid_f,*UrbGrid_f,mass,M5);
+  RealD c=0.5;
+  RealD b=c+1.;
+  MobiusFermionD Ddwf(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5,b,c);
+  MobiusFermionF Ddwf_f(Umu_f,*FGrid_f,*FrbGrid_f,*UGrid_f,*UrbGrid_f,mass,M5,b,c);
 
   LatticeFermionD    src_o(FrbGrid);
   LatticeFermionD result_o(FrbGrid);
@@ -89,8 +91,8 @@ int main (int argc, char ** argv)
   result_o_2.Checkerboard() = Odd;
   result_o_2 = Zero();
 
-  SchurDiagMooeeOperator<DomainWallFermionD,LatticeFermionD> HermOpEO(Ddwf);
-  SchurDiagMooeeOperator<DomainWallFermionF,LatticeFermionF> HermOpEO_f(Ddwf_f);
+  SchurDiagMooeeOperator<MobiusFermionD,LatticeFermionD> HermOpEO(Ddwf);
+  SchurDiagMooeeOperator<MobiusFermionF,LatticeFermionF> HermOpEO_f(Ddwf_f);
 
   std::cout << GridLogMessage << "::::::::::::: Starting mixed CG" << std::endl;
   MixedPrecisionConjugateGradient<LatticeFermionD,LatticeFermionF> mCG(1.0e-8, 10000, 50, FrbGrid_f, HermOpEO_f, HermOpEO);
