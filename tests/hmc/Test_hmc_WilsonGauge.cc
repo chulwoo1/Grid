@@ -38,9 +38,13 @@ int main(int argc, char **argv)
   GridLogLayout();
 
    // Typedefs to simplify notation
-  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;  // Uses the default minimum norm
+//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;  // Uses the default minimum norm
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper;  // Uses the default minimum norm
+
   HMCWrapper TheHMC;
-  TheHMC.Parameters.MD.name    = std::string("MinimumNorm2");
+
+//  TheHMC.Parameters.MD.name    = std::string("MinimumNorm2");
+  TheHMC.Parameters.MD.name    = std::string("ForceGradient");
     
 
   // Grid from the command line
@@ -75,7 +79,7 @@ int main(int argc, char **argv)
   TopParams.Smearing.step_size = 0.01;
   TopParams.Smearing.meas_interval = 50;
   TopParams.Smearing.maxTau = 2.0; 
-  TheHMC.Resources.AddObservable<QObs>(TopParams);
+//  TheHMC.Resources.AddObservable<QObs>(TopParams);
   //////////////////////////////////////////////
 
   /////////////////////////////////////////////////////////////
@@ -83,14 +87,17 @@ int main(int argc, char **argv)
   // need wrappers of the fermionic classes 
   // that have a complex construction
   // standard
-//  RealD beta = 10.0;
-//  WilsonGaugeActionD Waction(beta);
-//  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
+#if 1
+  RealD beta = 6.4;
+  WilsonGaugeActionD Waction(beta);
+  std::cout << "Wilson Gauge beta= " <<beta <<std::endl;
+#else
 //  RBC c_1 for DBW2
   RealD beta = 1.0038;
   RealD c_1 = -1.4088;
   RBCGaugeActionR Waction(beta,c_1);
   std::cout << "P+R Gauge beta= " <<beta <<"c_1= "<<c_1 <<std::endl;
+#endif
   
   ActionLevel<HMCWrapper::Field> Level1(1);
   Level1.push_back(&Waction);

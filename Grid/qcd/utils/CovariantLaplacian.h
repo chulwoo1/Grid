@@ -212,8 +212,8 @@ public:
     : U(Nd, grid), Solver(S), param(p), kappa(k)
 	,LapStencil(grid){
     AlgRemez remez(param.lo,param.hi,param.precision);
-    std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     if(if_remez){
+    std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     remez.generateApprox(param.degree,1,2);
     PowerHalf.Init(remez,param.tolerance,false);
     PowerInvHalf.Init(remez,param.tolerance,true);

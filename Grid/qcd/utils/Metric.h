@@ -60,11 +60,11 @@ public:
   virtual void ImportGauge(const Field&){};
   virtual void M(const Field& in, Field& out){
 //    printf("M:norm=%0.15e\n",norm2(in));
-    std::cout << GridLogIntegrator << " M:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
+//    std::cout << GridLogIntegrator << " M:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     out = in;
   }
   virtual void Minv(const Field& in, Field& out){
-    std::cout << GridLogIntegrator << " Minv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
+//    std::cout << GridLogIntegrator << " Minv:norm(in)= " << std::sqrt(norm2(in)) << std::endl;
     out = in;
   }
   virtual void MSquareRoot(Field& P){
@@ -175,12 +175,12 @@ public:
       }
     }
     auto Htmp2 = TensorRemove(sum(Hloc))-Htmp1;
-    std::cout << GridLogMessage << "S:dSaux = " << Htmp2.real()-Saux << "\n";
+//    std::cout << GridLogMessage << "S:dSaux = " << Htmp2.real()-Saux << "\n";
     Saux=Htmp2.real();
 
     auto Hsum = TensorRemove(sum(Hloc))/HMC_MOMENTUM_DENOMINATOR;
     auto Hsum2 = TensorRemove(sum(Hloc2));
-    std::cout << GridLogIntegrator << "MomentaAction: " <<  Hsum.real()+Hsum2.real() << std::endl;
+//    std::cout << GridLogIntegrator << "MomentaAction: " <<  Hsum.real()+Hsum2.real() << std::endl;
     return Hsum.real()+Hsum2.real();
   }
 
@@ -210,7 +210,7 @@ public:
       //M.M(AuxMom, X); // X = M Aux
       // Two derivative terms
       // the Mderiv need separation of left and right terms
-    std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(AuxMom)= " << std::sqrt(norm2(AuxMom)) << std::endl;
+//    std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(AuxMom)= " << std::sqrt(norm2(AuxMom)) << std::endl;
       M.MDeriv(AuxMom, der); 
 
 
@@ -218,7 +218,7 @@ public:
       //M.MDeriv(X, AuxMom, der_temp); der += der_temp;
 
       der = -1.0*Implementation::projectForce(der);
-      std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
+//      std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
     }
   }
 
@@ -228,14 +228,14 @@ public:
     // is the projection necessary here?
     // no for fields in the algebra
     der = Implementation::projectForce(der); 
-    std::cout << GridLogIntegrator << " DerivativeP:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
+//    std::cout << GridLogIntegrator << " DerivativeP:norm(der)= " << std::sqrt(norm2(der)) << std::endl;
   }
 
   void update_auxiliary_momenta(RealD ep){
 //    if(!M.Trivial()) 
     {
       AuxMom -= ep * AuxField * HMC_MOMENTUM_DENOMINATOR;
-      std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
+//      std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
     }
   }
 
@@ -248,7 +248,7 @@ public:
       // M.M(tmp, tmp2);
       AuxField += ep * tmp;  // M^2 AuxMom
       // factor of 2?
-      std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
+//      std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
     }
   }
 
