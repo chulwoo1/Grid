@@ -196,11 +196,11 @@ public:
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
-    MixedCG.InnerTolerance=par.tolerance;
+//    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
+//    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp2(left.Grid());
-    MixedCG(right,MinvMom[i]);
-//    CG(QuadOp,right,MinvMom[i]);
+//    MixedCG(right,MinvMom[i]);
+    CG(QuadOp,right,MinvMom[i]);
     
     GMom += par.a0[i]*MinvMom[i]; 
     HermOp.HermOp(MinvMom[i],Gtemp2);
@@ -209,17 +209,17 @@ public:
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
-    MixedCG.InnerTolerance=par.tolerance;
+//    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,1000,grid_f,QuadOpF,QuadOp);
+//    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp(left.Grid());
     GaugeField Gtemp2(left.Grid());
 
 //    Solver(QuadOp,GMom,MinvGMom);
-    MixedCG(GMom,MinvGMom);
-//    CG(QuadOp,GMom,MinvGMom);
+//    MixedCG(GMom,MinvGMom);
+    CG(QuadOp,GMom,MinvGMom);
     Laplacian.M(MinvGMom, LMinvGMom);
-    MixedCG(right,MinvMom[i]);
-//    CG(QuadOp,right,MinvMom[i]);
+//    MixedCG(right,MinvMom[i]);
+    CG(QuadOp,right,MinvMom[i]);
 
     Laplacian.M(MinvMom[i], LMinvMom);
     Laplacian.M(MinvMom[i], AMinvMom);
@@ -282,12 +282,12 @@ public:
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,10,grid_f,QuadOpF,QuadOp);
-    MixedCG.InnerTolerance=par.tolerance;
+//    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,1000,10,grid_f,QuadOpF,QuadOp);
+//    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
-    MixedCG(P,Gtemp);
-//    CG(QuadOp,P,Gtemp);
+//    MixedCG(P,Gtemp);
+    CG(QuadOp,P,Gtemp);
     Gp += par.a0[i]*Gtemp; 
     HermOp.HermOp(Gtemp,Gtemp2);
     Gp += par.a1[i]*Gtemp2; 
