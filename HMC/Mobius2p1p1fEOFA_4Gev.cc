@@ -33,6 +33,8 @@ directory
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
 #define MIXED_PRECISION
 #endif
+// second level EOFA
+#undef EOFA_H
 
 NAMESPACE_BEGIN(Grid);
 
@@ -226,24 +228,25 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.98;
+  Real beta         = 5.973;
   Real light_mass   = 0.0003;
-  Real strange_mass = 0.02144;
-  Real charm_mass = 0.02144;
-  Real pv_mass      = 1.0;
-  RealD M5  = 1.6;
-  RealD b   = 1.5; 
-  RealD c   = 0.5;
+  Real strange_mass = 0.0146;
+  Real charm_mass = 0.183;
+  Real pv_mass    = 1.0;
+  RealD M5  = 1.4;
+  RealD b   = 2.0;
+  RealD c   = 1.0;
 
   // Copied from paper
   std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.6 }); // Paper values from F1 incorrect run
   std::vector<Real> hasenbusch2({ 0.31 }); // Paper values from F1 incorrect run
 
+//  RealD eofa_mass=0.05 ;
+
   ///////////////////////////////////////////////////////////////////////////////////////////////
   //Bad choices with large dH. Equalising force L2 norm was not wise.
   ///////////////////////////////////////////////////////////////////////////////////////////////
   //std::vector<Real> hasenbusch({ 0.03, 0.2, 0.3, 0.5, 0.8 }); 
-  //std::vector<Real> hasenbusch({ 0.05, 0.2, 0.4, 0.6, 0.8 });
 
   auto GridPtr   = TheHMC.Resources.GetCartesian();
   auto GridRBPtr = TheHMC.Resources.GetRBCartesian();
@@ -260,19 +263,22 @@ int main(int argc, char **argv) {
   auto FrbGridF   = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls,GridPtrF);
 
 //  IwasakiGaugeActionR GaugeAction(beta);
-  WilsonGaugeActionR GaugeAction(beta);
+  std::vector<Complex> boundaryG = {1,1,1,0};
+  WilsonGaugeActionR::ImplParams ParamsG(boundaryG);
+  WilsonGaugeActionR GaugeAction(beta,ParamsG);
+  // These lines are unecessary if BC are all periodic
 
   // temporarily need a gauge field
   LatticeGaugeField U(GridPtr);
   LatticeGaugeFieldF UF(GridPtrF);
 
   // These lines are unecessary if BC are all periodic
-  std::vector<Complex> boundary = {1,1,1,-1};
+  std::vector<Complex> boundary = {1,1,1,0};
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
   double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-12;
+  double DerivativeStoppingCondition = 1e-8;
   double MaxCGIterations = 30000;
 
   ////////////////////////////////////
@@ -295,23 +301,24 @@ int main(int argc, char **argv) {
   // DJM: setup for EOFA ratio (Mobius)
   OneFlavourRationalParams OFRp;
   OFRp.lo       = 0.99; // How do I know this on F1?
-  OFRp.hi       = 9.;
+  OFRp.hi       = 20;
   OFRp.MaxIter  = 10000;
   OFRp.tolerance= 1.0e-12;
   OFRp.degree   = 12;
   OFRp.precision= 50;
 
-  RealD eofa_mass=0.163;
   
-  MobiusEOFAFermionR Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , strange_mass, strange_mass, eofa_mass, 0.0, -1, M5, b, c);
-  MobiusEOFAFermionF Strange_Op_LF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, strange_mass, strange_mass, eofa_mass, 0.0, -1, M5, b, c);
-  MobiusEOFAFermionR Strange_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, strange_mass,      eofa_mass, -1.0, 1, M5, b, c);
-  MobiusEOFAFermionF Strange_Op_RF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, eofa_mass, strange_mass,      eofa_mass, -1.0, 1, M5, b, c);
+  MobiusEOFAFermionR Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , strange_mass, strange_mass, charm_mass, 0.0, -1, M5, b, c);
+  MobiusEOFAFermionF Strange_Op_LF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, strange_mass, strange_mass, charm_mass, 0.0, -1, M5, b, c);
+  MobiusEOFAFermionR Strange_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , charm_mass, strange_mass,      charm_mass, -1.0, 1, M5, b, c);
+  MobiusEOFAFermionF Strange_Op_RF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, charm_mass, strange_mass,      charm_mass, -1.0, 1, M5, b, c);
   
-  MobiusEOFAFermionR Strange2_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, eofa_mass, pv_mass, 0.0, -1, M5, b, c);
-  MobiusEOFAFermionF Strange2_Op_LF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, eofa_mass, eofa_mass, pv_mass, 0.0, -1, M5, b, c);
-  MobiusEOFAFermionR Strange2_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , pv_mass, eofa_mass,      pv_mass, -1.0, 1, M5, b, c);
-  MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, pv_mass, eofa_mass,      pv_mass, -1.0, 1, M5, b, c);
+#ifdef EOFA_H
+  MobiusEOFAFermionR Strange2_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, eofa_mass, charm_mass , 0.0, -1, M5, b, c);
+  MobiusEOFAFermionF Strange2_Op_LF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, eofa_mass, eofa_mass, charm_mass , 0.0, -1, M5, b, c);
+  MobiusEOFAFermionR Strange2_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
+  MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
+#endif
 
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
@@ -324,11 +331,13 @@ int main(int argc, char **argv) {
   LinearOperatorEOFAF Strange_LinOp_LF(Strange_Op_LF);
   LinearOperatorEOFAF Strange_LinOp_RF(Strange_Op_RF);
 
+#ifdef EOFA_H
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange2_LinOp_L (Strange2_Op_L);
   LinearOperatorEOFAD Strange2_LinOp_R (Strange2_Op_R);
   LinearOperatorEOFAF Strange2_LinOp_LF(Strange2_Op_LF);
   LinearOperatorEOFAF Strange2_LinOp_RF(Strange2_Op_RF);
+#endif
 
   MxPCG_EOFA ActionCGL(ActionStoppingCondition,
 		       MX_inner,
@@ -338,6 +347,7 @@ int main(int argc, char **argv) {
 		       Strange_Op_LF,Strange_Op_L,
 		       Strange_LinOp_LF,Strange_LinOp_L);
 
+#ifdef EOFA_H
   MxPCG_EOFA ActionCGL2(ActionStoppingCondition,
 		       MX_inner,
 		       MaxCGIterations,
@@ -345,6 +355,7 @@ int main(int argc, char **argv) {
 		       FrbGridF,
 		       Strange2_Op_LF,Strange2_Op_L,
 		       Strange2_LinOp_LF,Strange2_LinOp_L);
+#endif
 
   MxPCG_EOFA DerivativeCGL(DerivativeStoppingCondition,
 			   MX_inner,
@@ -354,6 +365,7 @@ int main(int argc, char **argv) {
 			   Strange_Op_LF,Strange_Op_L,
 			   Strange_LinOp_LF,Strange_LinOp_L);
 
+#ifdef EOFA_H
   MxPCG_EOFA DerivativeCGL2(DerivativeStoppingCondition,
 			   MX_inner,
 			   MaxCGIterations,
@@ -361,6 +373,7 @@ int main(int argc, char **argv) {
 			   FrbGridF,
 			   Strange2_Op_LF,Strange2_Op_L,
 			   Strange2_LinOp_LF,Strange2_LinOp_L);
+#endif
   
   MxPCG_EOFA ActionCGR(ActionStoppingCondition,
 		       MX_inner,
@@ -370,6 +383,7 @@ int main(int argc, char **argv) {
 		       Strange_Op_RF,Strange_Op_R,
 		       Strange_LinOp_RF,Strange_LinOp_R);
   
+#ifdef EOFA_H
   MxPCG_EOFA ActionCGR2(ActionStoppingCondition,
 		       MX_inner,
 		       MaxCGIterations,
@@ -377,6 +391,7 @@ int main(int argc, char **argv) {
 		       FrbGridF,
 		       Strange2_Op_RF,Strange2_Op_R,
 		       Strange2_LinOp_RF,Strange2_LinOp_R);
+#endif
   
   MxPCG_EOFA DerivativeCGR(DerivativeStoppingCondition,
 			   MX_inner,
@@ -386,6 +401,7 @@ int main(int argc, char **argv) {
 			   Strange_Op_RF,Strange_Op_R,
 			   Strange_LinOp_RF,Strange_LinOp_R);
   
+#ifdef EOFA_H
   MxPCG_EOFA DerivativeCGR2(DerivativeStoppingCondition,
 			   MX_inner,
 			   MaxCGIterations,
@@ -393,6 +409,7 @@ int main(int argc, char **argv) {
 			   FrbGridF,
 			   Strange2_Op_RF,Strange2_Op_R,
 			   Strange2_LinOp_RF,Strange2_LinOp_R);
+#endif
   
   ExactOneFlavourRatioPseudoFermionAction<FermionImplPolicy> 
     EOFA(Strange_Op_L, Strange_Op_R, 
@@ -401,15 +418,20 @@ int main(int argc, char **argv) {
 	 DerivativeCGL, DerivativeCGR,
 	 OFRp, true);
   
+#ifdef EOFA_H
   ExactOneFlavourRatioPseudoFermionAction<FermionImplPolicy> 
     EOFA2(Strange2_Op_L, Strange2_Op_R, 
 	 ActionCG, 
 	 ActionCGL2, ActionCGR2,
 	 DerivativeCGL2, DerivativeCGR2,
 	 OFRp, true);
+#endif
 
   Level1.push_back(&EOFA);
+#ifdef EOFA_H
   Level1.push_back(&EOFA2);
+#endif
+
 #else
   ExactOneFlavourRatioPseudoFermionAction<FermionImplPolicy> 
     EOFA(Strange_Op_L, Strange_Op_R, 
@@ -435,6 +457,15 @@ int main(int argc, char **argv) {
   }
   light_num.push_back(pv_mass);
 
+  int n_hasenbusch2 = hasenbusch2.size();
+  light_den.push_back(charm_mass);
+  for(int h=0;h<n_hasenbusch2;h++){
+    light_den.push_back(hasenbusch2[h]);
+    light_num.push_back(hasenbusch2[h]);
+  }
+  light_num.push_back(pv_mass);
+
+
   //////////////////////////////////////////////////////////////
   // Forced to replicate the MxPCG and DenominatorsF etc.. because
   // there is no convenient way to "Clone" physics params from double op
@@ -450,7 +481,7 @@ int main(int argc, char **argv) {
   std::vector<LinearOperatorD *> LinOpD;
   std::vector<LinearOperatorF *> LinOpF; 
 
-  for(int h=0;h<n_hasenbusch+1;h++){
+  for(int h=0;h<light_den.size();h++){
 
     std::cout << GridLogMessage << " 2f quotient Action  "<< light_num[h] << " / " << light_den[h]<< std::endl;
 
