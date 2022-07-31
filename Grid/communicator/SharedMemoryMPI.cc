@@ -206,6 +206,11 @@ void GlobalSharedMemory::GetShmDims(const Coordinate &WorldDims,Coordinate &ShmD
     int p;
     for(p=0;p<primes.size();p++) {
       int prime=primes[p];
+if ( WorldRank == 0) {
+      std::cout << "p " << p << " prime " << prime << std::endl;
+      std::cout << "dim " << dim << " WorldDims " << WorldDims[dim] << " ShmDims " << ShmDims[dim] << std::endl;
+      std::cout << "AutoShmSize " << AutoShmSize << " WorldShmSize "<<WorldShmSize<<std::endl;
+}
       if ( divides(prime,WorldDims[dim]/ShmDims[dim])
         && divides(prime,WorldShmSize/AutoShmSize)  ) {
 	AutoShmSize*=prime;

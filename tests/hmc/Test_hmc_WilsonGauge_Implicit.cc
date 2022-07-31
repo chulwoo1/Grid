@@ -71,7 +71,7 @@ int main(int argc, char **argv)
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;
-  HMCparams.Trajectories     = 200;
+  HMCparams.Trajectories     = 1;
   HMCparams.NoMetropolisUntil=  100;
   // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   HMCparams.StartingType     =std::string("ColdStart");
@@ -137,6 +137,7 @@ int main(int argc, char **argv)
 
   TheHMC.ReadCommandLine(argc, argv); // these can be parameters from file
   std::cout << "trajL= " <<TheHMC.Parameters.MD.trajL <<" steps= "<<TheHMC.Parameters.MD.MDsteps << " integrator= "<<TheHMC.Parameters.MD.name<<std::endl;
+
   TheHMC.Run();  // no smearing
 
   Grid_finalize();
