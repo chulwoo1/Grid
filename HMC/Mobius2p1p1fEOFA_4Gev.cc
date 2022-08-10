@@ -185,7 +185,6 @@ int main(int argc, char **argv) {
   }
 #else
   {
-//    HMCparameters HMCparams;
   //  "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   //  HMCparams.StartingType     =std::string("ColdStart");
     HMCparams.StartingType     =std::string("CheckpointStart");
@@ -238,8 +237,8 @@ int main(int argc, char **argv) {
   RealD c   = 1.0;
 
   // Copied from paper
-  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.6 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch2({ 0.31 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
 
 //  RealD eofa_mass=0.05 ;
 
@@ -288,7 +287,7 @@ int main(int argc, char **argv) {
   // Collect actions
   ////////////////////////////////////
   ActionLevel<HMCWrapper::Field> Level1(1);
-  ActionLevel<HMCWrapper::Field> Level2(4);
+  ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
 
   ////////////////////////////////////
   // Strange action
