@@ -10,6 +10,7 @@ extern cudaDeviceProp *gpu_props;
 #endif
 
 __device__ unsigned int retirementCount = 0;
+//__device__ unsigned int retirementCount;
 
 template <class Iterator>
 unsigned int nextPow2(Iterator x) {
