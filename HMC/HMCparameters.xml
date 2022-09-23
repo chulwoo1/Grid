@@ -10,10 +10,10 @@
     <Kappa>0</Kappa>
     <MD>
       <name>Force Gradient</name>
-      <MDsteps>2</MDsteps>
-      <RMHMCTol>1e-06</RMHMCTol>
-      <RMHMCCGTol>1e-06</RMHMCCGTol>
-      <trajL>0.05</trajL>
+      <MDsteps>1</MDsteps>
+      <RMHMCTol>1e-08</RMHMCTol>
+      <RMHMCCGTol>1e-08</RMHMCCGTol>
+      <trajL>0.1414</trajL>
     </MD>
   </HMCparameters>
 </grid>
