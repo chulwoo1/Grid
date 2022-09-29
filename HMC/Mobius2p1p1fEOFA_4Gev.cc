@@ -34,6 +34,7 @@ directory
 #define MIXED_PRECISION
 #endif
 // second level EOFA
+#define EOFA_S
 #undef EOFA_H
 
 NAMESPACE_BEGIN(Grid);
@@ -163,8 +164,10 @@ int main(int argc, char **argv) {
   typedef WilsonImplR FermionImplPolicy;
   typedef MobiusFermionR FermionAction;
   typedef MobiusFermionF FermionActionF;
+#ifdef EOFA_S
   typedef MobiusEOFAFermionR FermionEOFAAction;
   typedef MobiusEOFAFermionF FermionEOFAActionF;
+#endif
   typedef typename FermionAction::FermionField FermionField;
   typedef typename FermionActionF::FermionField FermionFieldF;
 
@@ -173,9 +176,9 @@ int main(int argc, char **argv) {
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
   HMCparameters HMCparams;
 #if 1
@@ -210,8 +213,10 @@ int main(int argc, char **argv) {
   TheHMC.Resources.AddFourDimGrid("gauge"); // use default simd lanes decomposition
   
   CheckpointerParameters CPparams;
-  CPparams.config_prefix = "ckpoint_EODWF_lat";
-  CPparams.rng_prefix    = "ckpoint_EODWF_rng";
+//  CPparams.config_prefix = "ckpoint_EODWF_lat";
+//  CPparams.rng_prefix    = "ckpoint_EODWF_rng";
+  CPparams.config_prefix = "ckpoint_lat";
+  CPparams.rng_prefix    = "ckpoint_rng";
   CPparams.saveInterval  = 1;
   CPparams.format        = "IEEE64BIG";
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
@@ -228,10 +233,10 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.973;
+  Real beta         = 5.965;
   Real light_mass   = 0.0003;
-  Real strange_mass = 0.0146;
-  Real charm_mass = 0.183;
+  Real strange_mass = 0.01378;
+  Real charm_mass = 0.188;
   Real pv_mass    = 1.0;
   RealD M5  = 1.4;
   RealD b   = 2.0;
@@ -262,10 +267,14 @@ int main(int argc, char **argv) {
   auto FGridF     = SpaceTimeGrid::makeFiveDimGrid(Ls,GridPtrF);
   auto FrbGridF   = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls,GridPtrF);
 
+#if 0
 //  IwasakiGaugeActionR GaugeAction(beta);
+  WilsonGaugeActionR GaugeAction(beta);
+#else
   std::vector<Complex> boundaryG = {1,1,1,0};
   WilsonGaugeActionR::ImplParams ParamsG(boundaryG);
   WilsonGaugeActionR GaugeAction(beta,ParamsG);
+#endif
   // These lines are unecessary if BC are all periodic
 
   // temporarily need a gauge field
@@ -273,6 +282,7 @@ int main(int argc, char **argv) {
   LatticeGaugeFieldF UF(GridPtrF);
 
   // These lines are unecessary if BC are all periodic
+//  std::vector<Complex> boundary = {1,1,1,-1};
   std::vector<Complex> boundary = {1,1,1,0};
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
@@ -292,13 +302,20 @@ int main(int argc, char **argv) {
   ////////////////////////////////////
   typedef SchurDiagMooeeOperator<FermionActionF,FermionFieldF> LinearOperatorF;
   typedef SchurDiagMooeeOperator<FermionAction ,FermionField > LinearOperatorD;
+  typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusFermionD,MobiusFermionF,LinearOperatorD,LinearOperatorF> MxPCG;
+
+#ifdef EOFA_S
   typedef SchurDiagMooeeOperator<FermionEOFAActionF,FermionFieldF> LinearOperatorEOFAF;
   typedef SchurDiagMooeeOperator<FermionEOFAAction ,FermionField > LinearOperatorEOFAD;
-
-  typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusFermionD,MobiusFermionF,LinearOperatorD,LinearOperatorF> MxPCG;
   typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusEOFAFermionD,MobiusEOFAFermionF,LinearOperatorEOFAD,LinearOperatorEOFAF> MxPCG_EOFA;
+#endif
+
+  const int MX_inner = 50000;
+  ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
+  ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 
   // DJM: setup for EOFA ratio (Mobius)
+#ifdef EOFA_S
   OneFlavourRationalParams OFRp;
   OFRp.lo       = 0.99; // How do I know this on F1?
   OFRp.hi       = 20;
@@ -306,6 +323,7 @@ int main(int argc, char **argv) {
   OFRp.tolerance= 1.0e-12;
   OFRp.degree   = 12;
   OFRp.precision= 50;
+
 
   
   MobiusEOFAFermionR Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , strange_mass, strange_mass, charm_mass, 0.0, -1, M5, b, c);
@@ -320,10 +338,7 @@ int main(int argc, char **argv) {
   MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
 #endif
 
-  ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
-  ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
-  const int MX_inner = 5000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
@@ -441,6 +456,7 @@ int main(int argc, char **argv) {
 	 //         DerivativeCG, DerivativeCG,
 	 OFRp, true);
   Level1.push_back(&EOFA);
+#endif
 #endif
 
   ////////////////////////////////////

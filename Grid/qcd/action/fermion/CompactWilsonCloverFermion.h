@@ -134,8 +134,8 @@ public:
 public:
 
   virtual void Instantiatable() {};
-  int          ConstEE()     override { return 0; };
-  int          isTrivialEE() override { return 0; };
+  virtual int          ConstEE()     override { return 0; };
+  virtual int          isTrivialEE() override { return 0; };
 
   void Dhop(const FermionField& in, FermionField& out, int dag) override;
 

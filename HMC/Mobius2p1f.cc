@@ -52,13 +52,13 @@ int main(int argc, char **argv) {
   //  MD.name    = std::string("Force Gradient");
   typedef GenericHMCRunner<MinimumNorm2> HMCWrapper;
   MD.name    = std::string("MinimumNorm2");
-  MD.MDsteps = 20;
-  MD.trajL   = 1.0;
+  MD.MDsteps = 1;
+  MD.trajL   = 0.1;
 
   HMCparameters HMCparams;
   HMCparams.StartTrajectory  = 0;
-  HMCparams.Trajectories     = 200;
-  HMCparams.NoMetropolisUntil=  20;
+  HMCparams.Trajectories     = 1;
+  HMCparams.NoMetropolisUntil=  1;
   // "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   HMCparams.StartingType     =std::string("ColdStart");
   HMCparams.MD = MD;
@@ -88,12 +88,15 @@ int main(int argc, char **argv) {
   const int Ls      = 16;
   Real beta         = 2.13;
   Real light_mass   = 0.01;
+#ifdef RHMC
   Real strange_mass = 0.04;
+#endif
   Real pv_mass      = 1.0;
   RealD M5  = 1.8;
   RealD b   = 1.0; // Scale factor two
   RealD c   = 0.0;
 
+#ifdef RHMC
   OneFlavourRationalParams OFRp;
   OFRp.lo       = 1.0e-2;
   OFRp.hi       = 64;
@@ -101,6 +104,7 @@ int main(int argc, char **argv) {
   OFRp.tolerance= 1.0e-10;
   OFRp.degree   = 14;
   OFRp.precision= 40;
+#endif
 
   std::vector<Real> hasenbusch({ 0.1 });
 
@@ -137,6 +141,7 @@ int main(int argc, char **argv) {
   //  DomainWallEOFAFermionR Strange_Op_R(Umu, *FGrid, *FrbGrid, *UGrid, *UrbGrid, mb, mf, mb, shift_R, pm, M5);
   //  ExactOneFlavourRatioPseudoFermionAction EOFA(Strange_Op_L,Strange_Op_R,CG,ofp, false);
 
+#ifdef RHMC
   FermionAction StrangeOp (U,*FGrid,*FrbGrid,*GridPtr,*GridRBPtr,strange_mass,M5,b,c, Params);
   FermionAction StrangePauliVillarsOp(U,*FGrid,*FrbGrid,*GridPtr,*GridRBPtr,pv_mass,  M5,b,c, Params);
 
@@ -146,6 +151,7 @@ int main(int argc, char **argv) {
   //  TwoFlavourPseudoFermionAction<FermionImplPolicy> StrangePseudoFermion2F(StrangeOp,CG,CG);
   //  Level1.push_back(&StrangePseudoFermion2F);
   //  Level1.push_back(&StrangePseudoFermion);
+#endif
 
   ////////////////////////////////////
   // up down action
