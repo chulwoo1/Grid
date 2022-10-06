@@ -35,6 +35,7 @@ directory
 
 #include <memory>
 
+#include <Grid/parallelIO/NerscIO.h>
 NAMESPACE_BEGIN(Grid);
 
 class IntegratorParameters: Serializable {
@@ -516,7 +517,15 @@ public:
       int first_step = (stp == 0);
       int last_step = (stp == Params.MDsteps - 1);
       this->step(U, 0, first_step, last_step);
+
+    std::string file("./config."+std::to_string(stp+1) );
+//    std::string file("./config");
+    int precision32 = 0;
+    int tworow      = 0;
+   NerscIO::writeConfiguration(U,file,tworow,precision32);
+
     }
+
 
     // Check the clocks all match on all levels
     for (int level = 0; level < as.size(); ++level) {

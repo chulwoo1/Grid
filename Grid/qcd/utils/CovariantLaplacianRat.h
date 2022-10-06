@@ -181,9 +181,9 @@ public:
     std::vector<GaugeField> MinvMom(par.order,left.Grid());
 
 
-    ConjugateGradient<GaugeField> CG(1.0e-8,10000);
-    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000);
-    LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
+    ConjugateGradient<GaugeField> CG(1.0e-8,50000);
+    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,50000);
+    LaplacianParams LapPar(0.0001, 1.0, 50000, 1e-8, 12, 64);
     LaplacianAdjointField<Impl> Laplacian(left.Grid(), CG, LapPar, 1.,false);
     LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
     Laplacian.ImportGauge(Usav);
@@ -270,9 +270,9 @@ public:
     GaugeField Gp(P.Grid());
 //    GaugeField Gp_f(grid_f);
     Gp = par.offset * P;
-    ConjugateGradient<GaugeField> CG(1.0e-8,10000);
-    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000);
-    LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
+    ConjugateGradient<GaugeField> CG(1.0e-8,50000);
+    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,50000);
+    LaplacianParams LapPar(0.0001, 1.0, 50000, 1e-8, 12, 64);
     LaplacianAdjointField<Impl> Laplacian(P.Grid(), CG, LapPar, 1.,false);
     LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
     Laplacian.ImportGauge(Usav);

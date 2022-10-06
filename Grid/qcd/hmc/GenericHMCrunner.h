@@ -165,12 +165,13 @@ private:
 // Better to pass the generalised momenta to the integrator
 //    RealD Kappa = Parameters.Kappa;
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
+#include "copy.h.inc"
 //#include "DBW2_3.h.inc"
 //#include "Wilson10_3.h.inc"
-//#include "g_x3_0.75.h.inc"
-//#include "g_x3_0.75_sym.h.inc"
-#include "g_rat_5.h.inc"
-//#include "Wilson64.h.inc"
+//#include "g_x3_1.h.inc"
+//#include "g_x3_1_sym.h.inc"
+//#include "g_rat_11.h.inc"
+//#include "Wilson64_4.h.inc"
 //#include "32I2.8Gev.h.inc"
 //#include "32I3.1Gev_2.h.inc"
 //#include "W64_ng/0.1_16/220714.dat.recom.rat_arg.h.inc"
