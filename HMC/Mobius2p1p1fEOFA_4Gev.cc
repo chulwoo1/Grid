@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
@@ -185,6 +185,7 @@ int main(int argc, char **argv) {
   }
 #else
   {
+//    HMCparameters HMCparams;
   //  "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   //  HMCparams.StartingType     =std::string("ColdStart");
     HMCparams.StartingType     =std::string("CheckpointStart");
@@ -228,12 +229,13 @@ int main(int argc, char **argv) {
 
   const int Ls      = 12;
   Real beta         = 5.96;
+  std::cout << GridLogMessage << " beta  "<< beta << std::endl;
   Real light_mass   = 0.0003;
   Real strange_mass = 0.0146;
   Real charm_mass = 0.183;
   Real pv_mass    = 1.0;
   RealD M5  = 1.4;
-  RealD b   = 2.0;
+  RealD b   = 2.0; 
   RealD c   = 1.0;
 
   // Copied from paper
@@ -261,26 +263,20 @@ int main(int argc, char **argv) {
   auto FGridF     = SpaceTimeGrid::makeFiveDimGrid(Ls,GridPtrF);
   auto FrbGridF   = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls,GridPtrF);
 
-#if 1
-  IwasakiGaugeActionR GaugeAction(beta);
-#else
-  std::vector<Complex> boundaryG = {1,1,1,0};
-  WilsonGaugeActionR::ImplParams ParamsG(boundaryG);
-  WilsonGaugeActionR GaugeAction(beta,ParamsG);
-#endif
-  // These lines are unecessary if BC are all periodic
+//  IwasakiGaugeActionR GaugeAction(beta);
+  WilsonGaugeActionR GaugeAction(beta);
 
   // temporarily need a gauge field
   LatticeGaugeField U(GridPtr);
   LatticeGaugeFieldF UF(GridPtrF);
 
   // These lines are unecessary if BC are all periodic
-  std::vector<Complex> boundary = {1,1,1,0};
+  std::vector<Complex> boundary = {1,1,1,-1};
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
   double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-9;
+  double DerivativeStoppingCondition = 1e-10;
   double MaxCGIterations = 30000;
 
   ////////////////////////////////////
@@ -494,7 +490,7 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     // Mixed precision CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    double DerivativeStoppingConditionLoose = 3e-7;
+    double DerivativeStoppingConditionLoose = 1e-10;
 
     DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*GridPtrF,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));
