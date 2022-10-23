@@ -1,4 +1,4 @@
-/*****************************************************************
+/*************************************************************************************
 
 Grid physics library, www.github.com/paboyle/Grid
 
@@ -172,8 +172,8 @@ int main(int argc, char **argv) {
   
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-//  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+  //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
+    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.965;
+  Real beta         = 5.96;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
   Real light_mass   = 0.0003;
   Real strange_mass = 0.0146;
