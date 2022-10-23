@@ -1,5 +1,5 @@
     LaplacianRatParams gpar(4),mpar(4);
-    gpar.offset = 1.;
+    gpar.offset = 0.853249352982598;
     gpar.a0[0] = 250.;
     gpar.a1[0] = 0.;
     gpar.b0[0] = 0.5625;
@@ -13,7 +13,6 @@
     gpar. a1[2] = 0;
     gpar. b0[2] = 280.5625;
     gpar. b1[2] = -33.5;
-    gpar. b1[2] = -34;
     gpar. a0[3] = -250;
     gpar. a1[3] = 0;
     gpar. b0[3] =  283.9225;

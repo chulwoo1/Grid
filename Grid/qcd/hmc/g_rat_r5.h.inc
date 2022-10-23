@@ -1,0 +1,29 @@
+  LaplacianRatParams gpar(2),mpar(2);
+gpar.offset =	0.1	;
+gpar.a0[0] =	50	;
+gpar.a1[0] =	0	;
+gpar.b0[0] =	200	;
+gpar.b1[0] =	-40	;
+gpar.a0[1] =	50	;
+gpar.a1[1] =	0	;
+gpar.b0[1] =	4	;
+gpar.b1[1] =	4	;
+gpar.b2=1.;
+mpar.offset =	10	;
+mpar.a0[0] =	9422.6384548736368743	;
+mpar.a1[0] =	0	;
+mpar.b0[0] =	370.55728090000843622	;
+mpar.b1[0] =	-18.000000000000000000	;
+mpar.a0[1] =	-19422.638454873638693	;
+mpar.a1[1] =	0	;
+mpar.b0[1] =	549.44271909999167747	;
+mpar.b1[1] =	-18.000000000000000000	;
+mpar.b2=1.;
+for(int i=0;i<2;i++){
+gpar.a1[i] *=16.;
+gpar.b1[i] *=16.;
+mpar.a1[i] *=16.;
+mpar.b1[i] *=16.;
+}
+gpar.b2 *= 16.*16.;
+mpar.b2 *= 16.*16.;
