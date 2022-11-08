@@ -249,11 +249,11 @@ int main (int argc, char ** argv)
   CmdJobParams JP;
   JP.Parse(argv,argc);
 
-  GridCartesian         * UGrid   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(Nd,vComplex::Nsimd()),GridDefaultMpi());
+  GridCartesian         * UGrid   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(Nd,vComplexF::Nsimd()),GridDefaultMpi());
   GridRedBlackCartesian * UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
   GridCartesian         * FGrid   = SpaceTimeGrid::makeFiveDimGrid(JP.Ls,UGrid);
   GridRedBlackCartesian * FrbGrid = SpaceTimeGrid::makeFiveDimRedBlackGrid(JP.Ls,UGrid);
-//  printf("UGrid=%p UrbGrid=%p FGrid=%p FrbGrid=%p\n",UGrid,UrbGrid,FGrid,FrbGrid);
+
   GridCartesian         * UGridF   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(Nd,vComplexF::Nsimd()),GridDefaultMpi());
   GridRedBlackCartesian * UrbGridF = SpaceTimeGrid::makeFourDimRedBlackGrid(UGridF);
   GridCartesian         * FGridF   = SpaceTimeGrid::makeFiveDimGrid(JP.Ls,UGridF);
@@ -270,15 +270,17 @@ int main (int argc, char ** argv)
   std::vector<LatticeColourMatrix> U(4,UGrid);
   LatticeGaugeFieldF UmuF(UGridF); 
   std::vector<LatticeColourMatrix> UF(4,UGridF);
+
   
   if ( JP.gaugefile.compare("Hot") == 0 ) {
-    SU3::HotConfiguration(RNG4, Umu);
+    SU3::HotConfiguration(RNG4, UmuD);
   } else {
     FieldMetaData header;
-    NerscIO::readConfiguration(Umu,header,JP.gaugefile);
+    NerscIO::readConfiguration(UmuD,header,JP.gaugefile);
     // ypj [fixme] additional checks for the loaded configuration?
   }
   precisionChange (UmuF,Umu);
+//  precisionChange(Umu,UmuD);
   
   for(int mu=0;mu<Nd;mu++){
     U[mu] = PeekIndex<LorentzIndex>(Umu,mu);
