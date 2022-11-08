@@ -864,7 +864,7 @@ cudaStat = cudaMallocManaged((void **)&evec_acc, Nevec_acc*sites*12*sizeof(CUDA_
           
           std::cout.precision(13);
           std::cout << "[" << std::setw(4)<< std::setiosflags(std::ios_base::right) <<i<<"] ";
-          std::cout << "eval = "<<std::setw(20)<< std::setiosflags(std::ios_base::left)<< vnum/vden<<" "<<eval2[i];;
+          std::cout << "eval = "<<std::setw(20)<< std::setiosflags(std::ios_base::left)<< vnum/vden;
           std::cout << "   resid^2 = "<< std::setw(20)<< std::setiosflags(std::ios_base::right)<< vv<< std::endl;
         eval[i] = vnum/vden;
       }

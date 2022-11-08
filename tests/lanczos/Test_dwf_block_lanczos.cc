@@ -34,7 +34,7 @@ using namespace Grid;
 //using namespace Grid::QCD;
 
 //typedef typename GparityDomainWallFermionR::FermionField FermionField;
-typedef typename ZMobiusFermionR::FermionField FermionField;
+typedef typename ZMobiusFermionF::FermionField FermionField;
 
 RealD AllZero(RealD x){ return 0.;}
 
@@ -254,6 +254,10 @@ int main (int argc, char ** argv)
   GridCartesian         * FGrid   = SpaceTimeGrid::makeFiveDimGrid(JP.Ls,UGrid);
   GridRedBlackCartesian * FrbGrid = SpaceTimeGrid::makeFiveDimRedBlackGrid(JP.Ls,UGrid);
 //  printf("UGrid=%p UrbGrid=%p FGrid=%p FrbGrid=%p\n",UGrid,UrbGrid,FGrid,FrbGrid);
+  GridCartesian         * UGridF   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(Nd,vComplexF::Nsimd()),GridDefaultMpi());
+  GridRedBlackCartesian * UrbGridF = SpaceTimeGrid::makeFourDimRedBlackGrid(UGridF);
+  GridCartesian         * FGridF   = SpaceTimeGrid::makeFiveDimGrid(JP.Ls,UGridF);
+  GridRedBlackCartesian * FrbGridF = SpaceTimeGrid::makeFiveDimRedBlackGrid(JP.Ls,UGridF);
 
   std::vector<int> seeds4({1,2,3,4});
   std::vector<int> seeds5({5,6,7,8});
@@ -264,6 +268,8 @@ int main (int argc, char ** argv)
 
   LatticeGaugeField Umu(UGrid); 
   std::vector<LatticeColourMatrix> U(4,UGrid);
+  LatticeGaugeFieldF UmuF(UGridF); 
+  std::vector<LatticeColourMatrix> UF(4,UGridF);
   
   if ( JP.gaugefile.compare("Hot") == 0 ) {
     SU3::HotConfiguration(RNG4, Umu);
@@ -272,6 +278,7 @@ int main (int argc, char ** argv)
     NerscIO::readConfiguration(Umu,header,JP.gaugefile);
     // ypj [fixme] additional checks for the loaded configuration?
   }
+  precisionChange (UmuF,Umu);
   
   for(int mu=0;mu<Nd;mu++){
     U[mu] = PeekIndex<LorentzIndex>(Umu,mu);
@@ -318,10 +325,10 @@ int main (int argc, char ** argv)
 //    assert(JP.Nu==tmp);
 
   /////////////////////////////////////////////
-  // Split into 1^4 mpi communicators
+  // Split into 1^4 mpi communicators, keeping it explicitly single
   /////////////////////////////////////////////
   GridCartesian         * SGrid = new GridCartesian(GridDefaultLatt(),
-                                                    GridDefaultSimd(Nd,vComplex::Nsimd()),
+                                                    GridDefaultSimd(Nd,vComplexF::Nsimd()),
                                                     mpi_split,
                                                     *UGrid);
 
@@ -329,19 +336,19 @@ int main (int argc, char ** argv)
   GridRedBlackCartesian * SrbGrid  = SpaceTimeGrid::makeFourDimRedBlackGrid(SGrid);
   GridRedBlackCartesian * SFrbGrid = SpaceTimeGrid::makeFiveDimRedBlackGrid(JP.Ls,SGrid);
 
-  LatticeGaugeField s_Umu(SGrid);
-  Grid_split  (Umu,s_Umu);
+  LatticeGaugeFieldF s_Umu(SGrid);
+  Grid_split  (UmuF,s_Umu);
 
   //WilsonFermionR::ImplParams params;
-  ZMobiusFermionR::ImplParams params;
+  ZMobiusFermionF::ImplParams params;
   params.overlapCommsCompute = true;
   params.boundary_phases = JP.boundary_phase;
-  ZMobiusFermionR  Ddwf(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5,JP.omega,1.,0.,params);
-//  SchurDiagTwoOperator<ZMobiusFermionR,FermionField> HermOp(Ddwf);
-  SchurDiagOneOperator<ZMobiusFermionR,FermionField> HermOp(Ddwf);
-  ZMobiusFermionR  Dsplit(s_Umu,*SFGrid,*SFrbGrid,*SGrid,*SrbGrid,mass,M5,JP.omega,1.,0.,params);
-//  SchurDiagTwoOperator<ZMobiusFermionR,FermionField> SHermOp(Dsplit);
-  SchurDiagOneOperator<ZMobiusFermionR,FermionField> SHermOp(Dsplit);
+  ZMobiusFermionF  DdwfF(UmuF,*FGridF,*FrbGridF,*UGridF,*UrbGridF,mass,M5,JP.omega,1.,0.,params);
+//  SchurDiagTwoOperator<ZMobiusFermionF,FermionField> HermOp(Ddwf);
+  SchurDiagOneOperator<ZMobiusFermionF,FermionField> HermOp(DdwfF);
+  ZMobiusFermionF  Dsplit(s_Umu,*SFGrid,*SFrbGrid,*SGrid,*SrbGrid,mass,M5,JP.omega,1.,0.,params);
+//  SchurDiagTwoOperator<ZMobiusFermionF,FermionField> SHermOp(Dsplit);
+  SchurDiagOneOperator<ZMobiusFermionF,FermionField> SHermOp(Dsplit);
 
   //std::vector<double> Coeffs { 0.,-1.}; 
   // ypj [note] this may not be supported by some compilers
