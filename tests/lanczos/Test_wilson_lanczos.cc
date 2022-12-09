@@ -38,6 +38,57 @@ typedef typename WilsonFermionD::FermionField FermionField;
 
 RealD AllZero(RealD x) { return 0.; }
 
+namespace Grid {
+
+struct LanczosParameters: Serializable {
+  GRID_SERIALIZABLE_CLASS_MEMBERS(LanczosParameters,
+		  		RealD, mass ) 
+//                                  Integer, StartTrajectory,
+//                                  Integer, Trajectories, /* @brief Number of sweeps in this run */
+//                                  bool, MetropolisTest,
+//                                  Integer, NoMetropolisUntil,
+//                                  std::string, StartingType,
+//                                  Integer, SW,
+//				  RealD, Kappa,
+//                                  IntegratorParameters, MD)
+
+  LanczosParameters() {
+    ////////////////////////////// Default values
+      mass = 0;
+//    MetropolisTest    = true;
+//    NoMetropolisUntil = 10;
+//    StartTrajectory   = 0;
+//    SW                = 2;
+//    Trajectories      = 10;
+//    StartingType      = "HotStart";
+    /////////////////////////////////
+  }
+
+  template <class ReaderClass >
+  LanczosParameters(Reader<ReaderClass> & TheReader){
+    initialize(TheReader);
+  }
+
+  template < class ReaderClass > 
+  void initialize(Reader<ReaderClass> &TheReader){
+//    std::cout << GridLogMessage << "Reading HMC\n";
+    read(TheReader, "HMC", *this);
+  }
+
+
+  void print_parameters() const {
+//    std::cout << GridLogMessage << "[HMC parameters] Trajectories            : " << Trajectories << "\n";
+//    std::cout << GridLogMessage << "[HMC parameters] Start trajectory        : " << StartTrajectory << "\n";
+//    std::cout << GridLogMessage << "[HMC parameters] Metropolis test (on/off): " << std::boolalpha << MetropolisTest << "\n";
+//    std::cout << GridLogMessage << "[HMC parameters] Thermalization trajs    : " << NoMetropolisUntil << "\n";
+//    std::cout << GridLogMessage << "[HMC parameters] Starting type           : " << StartingType << "\n";
+//    MD.print_parameters();
+  }
+  
+};
+
+}
+
 int main(int argc, char** argv) {
   Grid_init(&argc, &argv);
 
@@ -48,8 +99,7 @@ int main(int argc, char** argv) {
       SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
   GridCartesian* FGrid = UGrid;
   GridRedBlackCartesian* FrbGrid = UrbGrid;
-  printf("UGrid=%p UrbGrid=%p FGrid=%p FrbGrid=%p\n", UGrid, UrbGrid, FGrid,
-         FrbGrid);
+//  printf("UGrid=%p UrbGrid=%p FGrid=%p FrbGrid=%p\n", UGrid, UrbGrid, FGrid, FrbGrid);
 
   std::vector<int> seeds4({1, 2, 3, 4});
   std::vector<int> seeds5({5, 6, 7, 8});
@@ -61,7 +111,15 @@ int main(int argc, char** argv) {
   RNG5.SeedFixedIntegers(seeds5);
 
   LatticeGaugeField Umu(UGrid);
-  SU<Nc>::HotConfiguration(RNG4, Umu);
+//  SU<Nc>::HotConfiguration(RNG4, Umu);
+
+  FieldMetaData header;
+  std::string file("./config");
+
+  int precision32 = 0;
+  int tworow      = 0;
+//  NerscIO::writeConfiguration(Umu,file,tworow,precision32);
+  NerscIO::readConfiguration(Umu,header,file);
 
 /*
   std::vector<LatticeColourMatrix> U(4, UGrid);
@@ -70,26 +128,50 @@ int main(int argc, char** argv) {
   }
 */
 
-  RealD mass = -0.1;
+  int Nstop = 10;
+  int Nk = 20;
+  int Np = 80;
+  int Nm = Nk + Np;
+  int MaxIt = 10000;
+  RealD resid = 1.0e-5;
+
+  RealD mass = -2.7;
+
+  LanczosParameters LanParams;
+#if 1
+  {
+    XmlReader  HMCrd("LanParams.xml");
+    read(HMCrd,"LanczosParameters",LanParams);
+  }
+#else
+  {
+    LanParams.mass = mass;
+  }
+#endif
+  std::cout << GridLogMessage<< LanParams <<std::endl;
+  { 
+    XmlWriter HMCwr("LanParams.xml.out");
+    write(HMCwr,"LanczosParameters",LanParams);
+  }
+
+  mass=LanParams.mass;
+
+
+while ( mass > - 5.0){
   FermionOp WilsonOperator(Umu,*FGrid,*FrbGrid,mass);
   MdagMLinearOperator<FermionOp,LatticeFermion> HermOp(WilsonOperator); /// <-----
   //SchurDiagTwoOperator<FermionOp,FermionField> HermOp(WilsonOperator);
-
-  const int Nstop = 20;
-  const int Nk = 60;
-  const int Np = 60;
-  const int Nm = Nk + Np;
-  const int MaxIt = 10000;
-  RealD resid = 1.0e-6;
+  Gamma5HermitianLinearOperator <FermionOp,LatticeFermion> HermOp2(WilsonOperator); /// <-----
 
   std::vector<double> Coeffs{0, 1.};
   Polynomial<FermionField> PolyX(Coeffs);
-  Chebyshev<FermionField> Cheby(0.0, 10., 12);
+  Chebyshev<FermionField> Cheby(0.5, 60., 31);
 
   FunctionHermOp<FermionField> OpCheby(Cheby,HermOp);
      PlainHermOp<FermionField> Op     (HermOp);
+     PlainHermOp<FermionField> Op2     (HermOp2);
 
-  ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op, Nstop, Nk, Nm, resid, MaxIt);
+  ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op2, Nstop, Nk, Nm, resid, MaxIt);
 
   std::vector<RealD> eval(Nm);
   FermionField src(FGrid);
@@ -103,7 +185,19 @@ int main(int argc, char** argv) {
   int Nconv;
   IRL.calc(eval, evec, src, Nconv);
 
-  std::cout << eval << std::endl;
+  std::cout << mass <<" : " << eval << std::endl;
+
+  Gamma g5(Gamma::Algebra::Gamma5) ;
+  ComplexD dot;
+  FermionField tmp(FGrid);
+  for (int i = 0; i < Nstop ; i++) {
+    tmp = g5*evec[i];
+    dot = innerProduct(tmp,evec[i]);
+    std::cout << mass << " : " << eval[i]  << " " << real(dot) << " " << imag(dot)  << std::endl ;
+  }
+  src  = evec[0]+evec[1]+evec[2];
+  mass += -0.1;
+}
 
   Grid_finalize();
 }

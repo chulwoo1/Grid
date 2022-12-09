@@ -48,6 +48,9 @@ typedef IwasakiGaugeAction<PeriodicGimplD>         IwasakiGaugeActionD;
 typedef SymanzikGaugeAction<PeriodicGimplR>        SymanzikGaugeActionR;
 typedef SymanzikGaugeAction<PeriodicGimplF>        SymanzikGaugeActionF;
 typedef SymanzikGaugeAction<PeriodicGimplD>        SymanzikGaugeActionD;
+typedef RBCGaugeAction<PeriodicGimplR>             RBCGaugeActionR;
+typedef RBCGaugeAction<PeriodicGimplF>             RBCGaugeActionF;
+typedef RBCGaugeAction<PeriodicGimplD>             RBCGaugeActionD;
 
 
 typedef WilsonGaugeAction<ConjugateGimplR>          ConjugateWilsonGaugeActionR;
@@ -62,6 +65,9 @@ typedef IwasakiGaugeAction<ConjugateGimplD>         ConjugateIwasakiGaugeActionD
 typedef SymanzikGaugeAction<ConjugateGimplR>        ConjugateSymanzikGaugeActionR;
 typedef SymanzikGaugeAction<ConjugateGimplF>        ConjugateSymanzikGaugeActionF;
 typedef SymanzikGaugeAction<ConjugateGimplD>        ConjugateSymanzikGaugeActionD;
+typedef RBCGaugeAction<ConjugateGimplR>             ConjugateRBCGaugeActionR;
+typedef RBCGaugeAction<ConjugateGimplF>             ConjugateRBCGaugeActionF;
+typedef RBCGaugeAction<ConjugateGimplD>             ConjugateRBCGaugeActionD;
 
 NAMESPACE_END(Grid);
 

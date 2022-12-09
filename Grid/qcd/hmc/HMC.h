@@ -55,6 +55,8 @@ struct HMCparameters: Serializable {
                                   Integer, NoMetropolisUntil,
 				  bool, PerformRandomShift, /* @brief Randomly shift the gauge configuration at the start of a trajectory */
                                   std::string, StartingType,
+                                  Integer, SW,
+				  RealD, Kappa,
                                   IntegratorParameters, MD)
 
   HMCparameters() {
@@ -62,6 +64,7 @@ struct HMCparameters: Serializable {
     MetropolisTest    = true;
     NoMetropolisUntil = 10;
     StartTrajectory   = 0;
+    SW                = 2;
     Trajectories      = 10;
     StartingType      = "HotStart";
     PerformRandomShift = true;
@@ -100,7 +103,7 @@ private:
   typedef typename IntegratorType::Field Field;
   typedef typename IntegratorType::FieldImplementation FieldImplementation;
   typedef std::vector< HmcObservable<Field> * > ObsListType;
-
+  
   //pass these from the resource manager
   GridSerialRNG &sRNG;   
   GridParallelRNG &pRNG; 
@@ -139,6 +142,8 @@ private:
   // Evolution
   /////////////////////////////////////////////////////////
   RealD evolve_hmc_step(Field &U) {
+
+//    TheIntegrator.refresh(U, sRNG,pRNG);  // set U and initialize P and phi's
 
     GridBase *Grid = U.Grid();
 

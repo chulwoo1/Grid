@@ -48,7 +48,7 @@ public:
   // directed plaquette oriented in mu,nu plane
   //////////////////////////////////////////////////
   static void dirPlaquette(GaugeMat &plaq, const std::vector<GaugeMat> &U,
-                           const int mu, const int nu) {
+                           const int mu_p, const int nu_p) {
     // Annoyingly, must use either scope resolution to find dependent base
     // class,
     // or this-> ; there is no "this" in a static method. This forces explicit
@@ -63,10 +63,35 @@ public:
     */
     // _
     //|< _|
+    int mu=mu_p,nu=nu_p;
+if ( mu_p >=0){
+  if( nu_p>=0){
     plaq = Gimpl::CovShiftForward(U[mu],mu,
 				  Gimpl::CovShiftForward(U[nu],nu,
 							 Gimpl::CovShiftBackward(U[mu],mu,
 										 Gimpl::CovShiftIdentityBackward(U[nu], nu))));
+  } else {
+    nu=-1-nu_p;
+    plaq = Gimpl::CovShiftForward(U[mu],mu,
+				  Gimpl::CovShiftBackward(U[nu],nu,
+							 Gimpl::CovShiftBackward(U[mu],mu,
+										 Gimpl::CovShiftIdentityForward(U[nu], nu))));
+  }
+} else {
+  mu=-1-mu_p;
+  if( nu_p>=0){
+    plaq = Gimpl::CovShiftBackward(U[mu],mu,
+				  Gimpl::CovShiftForward(U[nu],nu,
+							 Gimpl::CovShiftForward(U[mu],mu,
+										 Gimpl::CovShiftIdentityBackward(U[nu], nu))));
+  } else {
+    nu=-1-nu_p;
+    plaq = Gimpl::CovShiftBackward(U[mu],mu,
+				  Gimpl::CovShiftBackward(U[nu],nu,
+							 Gimpl::CovShiftForward(U[mu],mu,
+										 Gimpl::CovShiftIdentityForward(U[nu], nu))));
+  }
+}
 
 
 
