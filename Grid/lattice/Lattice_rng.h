@@ -440,7 +440,7 @@ public:
 	_grid->GlobalCoorToGlobalIndex(gcoor,gidx);
 
 	_grid->GlobalCoorToRankIndex(rank,o_idx,i_idx,gcoor);
-#if 1
+#if 0
 	assert(rank == _grid->ThisRank() );
 #else
 // 
