@@ -136,14 +136,49 @@ public:
     Runner(S);
   }
 
+
+//Use the checkpointer to initialize the RNGs and the gauge field, writing the resulting gauge field into U.
+//This is called automatically by Run but may be useful elsewhere, e.g. for integrator tuning experiments
+   void initializeGaugeFieldAndRNGs(Field &U){
+     if(!Resources.haveRNGs()) Resources.AddRNGs();
+
+    if (Parameters.StartingType == "HotStart") {
+      // Hot start
+      Resources.SeedFixedIntegers();
+      Implementation::HotConfiguration(Resources.GetParallelRNG(), U);
+    } else if (Parameters.StartingType == "ColdStart") {
+      // Cold start
+      Resources.SeedFixedIntegers();
+      Implementation::ColdConfiguration(Resources.GetParallelRNG(), U);
+    } else if (Parameters.StartingType == "TepidStart") {
+      // Tepid start
+      Resources.SeedFixedIntegers();
+      Implementation::TepidConfiguration(Resources.GetParallelRNG(), U);
+    } else if (Parameters.StartingType == "CheckpointStart") {
+      // CheckpointRestart
+      Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U,
+						     Resources.GetSerialRNG(),
+						     Resources.GetParallelRNG());
+    } else {
+      // others
+      std::cout << GridLogError << "Unrecognized StartingType\n";
+      std::cout
+	<< GridLogError
+	<< "Valid [HotStart, ColdStart, TepidStart, CheckpointStart]\n";
+      exit(1);
+    }
+  }
   //////////////////////////////////////////////////////////////////
 
-//private:
+private:
   template <class SmearingPolicy>
   void Runner(SmearingPolicy &Smearing) {
     GridCartesian *UGrid = Resources.GetCartesian();
-    Resources.AddRNGs();
+//    Resources.AddRNGs();
     Field U(UGrid);
+
+    initializeGaugeFieldAndRNGs(U);
+
     std::cout << GridLogMessage << "UGrid= " <<UGrid << std::endl;
     GridCartesian *UGrid_f(NULL);
     UGrid_f = Resources.GetCartesianF();
@@ -196,36 +231,9 @@ public:
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
 #endif
 
-//Use the checkpointer to initialize the RNGs and the gauge field, writing the resulting gauge field into U.
-//This is called automatically by Run but may be useful elsewhere, e.g. for integrator tuning experiments
-   void initializeGaugeFieldAndRNGs(Field &U){
-     if(!Resources.haveRNGs()) Resources.AddRNGs();
+    // Sets the momentum filter
+    MDynamics.setMomentumFilter(*(Resources.GetMomentumFilter()));
 
-    if (Parameters.StartingType == "HotStart") {
-      // Hot start
-      Resources.SeedFixedIntegers();
-      Implementation::HotConfiguration(Resources.GetParallelRNG(), U);
-    } else if (Parameters.StartingType == "ColdStart") {
-      // Cold start
-      Resources.SeedFixedIntegers();
-      Implementation::ColdConfiguration(Resources.GetParallelRNG(), U);
-    } else if (Parameters.StartingType == "TepidStart") {
-      // Tepid start
-      Resources.SeedFixedIntegers();
-      Implementation::TepidConfiguration(Resources.GetParallelRNG(), U);
-    } else if (Parameters.StartingType == "CheckpointStart") {
-      // CheckpointRestart
-      Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U,
-						     Resources.GetSerialRNG(),
-						     Resources.GetParallelRNG());
-    } else {
-      // others
-      std::cout << GridLogError << "Unrecognized StartingType\n";
-      std::cout
-	<< GridLogError
-	<< "Valid [HotStart, ColdStart, TepidStart, CheckpointStart]\n";
-      exit(1);
-    }
 
     Smearing.set_Field(U);
 
@@ -237,6 +245,9 @@ public:
     // Run it
     HMC.evolve();
   }
+
+
+
 };
 
 // These are for gauge fields, default integrator MinimumNorm2

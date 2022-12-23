@@ -1,76 +1,76 @@
-/*************************************************************************************
+	/*************************************************************************************
 
-Grid physics library, www.github.com/paboyle/Grid
+	Grid physics library, www.github.com/paboyle/Grid
 
-Source file: ./lib/qcd/hmc/integrators/Integrator.h
+	Source file: ./lib/qcd/hmc/integrators/Integrator.h
 
-Copyright (C) 2015
+	Copyright (C) 2015
 
-Author: Azusa Yamaguchi <ayamaguc@staffmail.ed.ac.uk>
-Author: Peter Boyle <paboyle@ph.ed.ac.uk>
-Author: Guido Cossu <cossu@post.kek.jp>
-Author: Chulwoo Jung <chulwoo@bnl.gov>
+	Author: Azusa Yamaguchi <ayamaguc@staffmail.ed.ac.uk>
+	Author: Peter Boyle <paboyle@ph.ed.ac.uk>
+	Author: Guido Cossu <cossu@post.kek.jp>
+	Author: Chulwoo Jung <chulwoo@bnl.gov>
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
+	This program is free software; you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation; either version 2 of the License, or
+	(at your option) any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+	You should have received a copy of the GNU General Public License along
+	with this program; if not, write to the Free Software Foundation, Inc.,
+	51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-See the full license in the file "LICENSE" in the top level distribution
-directory
-*************************************************************************************/
-			   /*  END LEGAL */
-			   //--------------------------------------------------------------------
+	See the full license in the file "LICENSE" in the top level distribution
+	directory
+	*************************************************************************************/
+				   /*  END LEGAL */
+				   //--------------------------------------------------------------------
 #ifndef INTEGRATOR_INCLUDED
 #define INTEGRATOR_INCLUDED
 
 #include <memory>
 
-NAMESPACE_BEGIN(Grid);
+	NAMESPACE_BEGIN(Grid);
 
-class IntegratorParameters: Serializable {
-public:
-  GRID_SERIALIZABLE_CLASS_MEMBERS(IntegratorParameters,
-				  std::string, name,      // name of the integrator
-				  unsigned int, MDsteps,  // number of outer steps
-				  RealD, RMHMCTol,
-				  RealD, RMHMCCGTol,
-				  RealD, trajL)           // trajectory length
+	class IntegratorParameters: Serializable {
+	public:
+	  GRID_SERIALIZABLE_CLASS_MEMBERS(IntegratorParameters,
+					  std::string, name,      // name of the integrator
+					  unsigned int, MDsteps,  // number of outer steps
+					  RealD, RMHMCTol,
+					  RealD, RMHMCCGTol,
+					  RealD, trajL)           // trajectory length
 
-  IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
-  : MDsteps(MDsteps_),
-    trajL(trajL_),RMHMCTol(1e-8),RMHMCCGTol(1e-8) {};
+	  IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
+	  : MDsteps(MDsteps_),
+	    trajL(trajL_),RMHMCTol(1e-8),RMHMCCGTol(1e-8) {};
 
-  template <class ReaderClass, typename std::enable_if<isReader<ReaderClass>::value, int >::type = 0 >
-  IntegratorParameters(ReaderClass & Reader)
-  {
-    std::cout << GridLogMessage << "Reading integrator\n";
-    read(Reader, "Integrator", *this);
-  }
+	  template <class ReaderClass, typename std::enable_if<isReader<ReaderClass>::value, int >::type = 0 >
+	  IntegratorParameters(ReaderClass & Reader)
+	  {
+	    std::cout << GridLogMessage << "Reading integrator\n";
+	    read(Reader, "Integrator", *this);
+	  }
 
-  void print_parameters() const {
-    std::cout << GridLogMessage << "[Integrator] Type               : " << name << std::endl;
-    std::cout << GridLogMessage << "[Integrator] Trajectory length  : " << trajL << std::endl;
-    std::cout << GridLogMessage << "[Integrator] Number of MD steps : " << MDsteps << std::endl;
-    std::cout << GridLogMessage << "[Integrator] Step size          : " << trajL/MDsteps << std::endl;
-  }
-};
+	  void print_parameters() const {
+	    std::cout << GridLogMessage << "[Integrator] Type               : " << name << std::endl;
+	    std::cout << GridLogMessage << "[Integrator] Trajectory length  : " << trajL << std::endl;
+	    std::cout << GridLogMessage << "[Integrator] Number of MD steps : " << MDsteps << std::endl;
+	    std::cout << GridLogMessage << "[Integrator] Step size          : " << trajL/MDsteps << std::endl;
+	  }
+	};
 
-/*! @brief Class for Molecular Dynamics management */
-template <class FieldImplementation_, class SmearingPolicy, class RepresentationPolicy>
-class Integrator {
-protected:
-  typedef FieldImplementation_ FieldImplementation;
-  typedef typename FieldImplementation::Field MomentaField;  //for readability
+	/*! @brief Class for Molecular Dynamics management */
+	template <class FieldImplementation_, class SmearingPolicy, class RepresentationPolicy>
+	class Integrator {
+	protected:
+	  typedef FieldImplementation_ FieldImplementation;
+	  typedef typename FieldImplementation::Field MomentaField;  //for readability
   typedef typename FieldImplementation::Field Field;
 
   int levels;  // number of integration levels
@@ -83,7 +83,18 @@ protected:
   RepresentationPolicy Representations;
   IntegratorParameters Params;
 
+  //Filters allow the user to manipulate the conjugate momentum, for example to freeze links in DDHMC
+  //It is applied whenever the momentum is updated / refreshed
+  //The default filter does nothing
+  MomentumFilterBase<MomentaField> const* MomFilter;
+
   const ActionSet<Field, RepresentationPolicy> as;
+
+  //Get a pointer to a shared static instance of the "do-nothing" momentum filter to serve as a default
+  static MomentumFilterBase<MomentaField> const* getDefaultMomFilter(){
+    static MomentumFilterNone<MomentaField> filter;
+    return &filter;
+  }
 
   void update_P(Field& U, int level, double ep) 
   {
@@ -651,7 +662,7 @@ public:
 
     std::cout << GridLogIntegrator << "Integrator initial action\n";
 
-    RealD H = - FieldImplementation::FieldSquareNorm(P)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
+    RealD H = - FieldImplementation::FieldSquareNorm(P.Mom)/HMC_MOMENTUM_DENOMINATOR; // - trace (P*P)/denom
 
     RealD Hterm;
 

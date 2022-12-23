@@ -52,16 +52,6 @@
 
 NAMESPACE_BEGIN(Grid);
 
-// These can move into a params header and be given MacroMagic serialisation
-struct DefaultImplParams {
-  Coordinate dirichlet; // Blocksize of dirichlet BCs
-  int  partialDirichlet;
-  DefaultImplParams()  {
-    dirichlet.resize(0);
-    partialDirichlet=0;
-  };
-};
-
 ///////////////////////////////////////////////////////////////////
 // Gather for when there *is* need to SIMD split with compression
 ///////////////////////////////////////////////////////////////////
@@ -69,7 +59,6 @@ struct DefaultImplParams {
 void Gather_plane_table_compute (GridBase *grid,int dimension,int plane,int cbmask,
 				 int off,std::vector<std::pair<int,int> > & table);
 
-/*
 template<class vobj,class cobj,class compressor>
 void Gather_plane_simple_table (commVector<std::pair<int,int> >& table,const Lattice<vobj> &rhs,cobj *buffer,compressor &compress, int off,int so)   __attribute__((noinline));
 
@@ -114,7 +103,6 @@ void Gather_plane_exchange_table(commVector<std::pair<int,int> >& table,const La
   });
   rhs_v.ViewClose();
 }
-*/
 
 struct StencilEntry {
 #ifdef GRID_CUDA
@@ -145,18 +133,8 @@ class CartesianStencilAccelerator {
   int           _osites;
   StencilVector _directions;
   StencilVector _distances;
-  ///////////////////////////////////////////////////
-  // If true, this is FULLY communicated per face
-  // Otherwise will either be full or partial dirichlet
-  ///////////////////////////////////////////////////
-  StencilVector _comms_send; 
-  StencilVector _comms_recv; // this is FULLY communicated per face
-  ///////////////////////////////////////////////////
-  // If true, this is partially communicated per face
-  ///////////////////////////////////////////////////
-  StencilVector _comms_partial_send; 
-  StencilVector _comms_partial_recv;
-  //
+  StencilVector _comms_send;
+  StencilVector _comms_recv;
   StencilVector _comm_buf_size;
   StencilVector _permute_type;
   StencilVector same_node;
@@ -203,7 +181,7 @@ class CartesianStencilAccelerator {
 template<class vobj,class cobj,class Parameters>
 class CartesianStencilView : public CartesianStencilAccelerator<vobj,cobj,Parameters>
 {
-public:
+ private:
   int *closed;
   StencilEntry *cpu_ptr;
   ViewMode      mode;
@@ -238,6 +216,7 @@ class CartesianStencil : public CartesianStencilAccelerator<vobj,cobj,Parameters
 public:
 
   typedef typename cobj::vector_type vector_type;
+  typedef typename cobj::scalar_type scalar_type;
   typedef typename cobj::scalar_object scalar_object;
   typedef const CartesianStencilView<vobj,cobj,Parameters> View_type;
   typedef typename View_type::StencilVector StencilVector;
@@ -251,26 +230,19 @@ public:
     Integer from_rank;
     Integer do_send;
     Integer do_recv;
-    Integer xbytes;
-    Integer rbytes;
+    Integer bytes;
   };
   struct Merge {
-    static constexpr int Nsimd = vobj::Nsimd();
     cobj * mpointer;
     Vector<scalar_object *> rpointers;
     Vector<cobj *> vpointers;
     Integer buffer_size;
     Integer type;
-    Integer partial; // partial dirichlet BCs
-    Coordinate dims;
   };
   struct Decompress {
-    static constexpr int Nsimd = vobj::Nsimd();
     cobj * kernel_p;
     cobj * mpi_p;
     Integer buffer_size;
-    Integer partial; // partial dirichlet BCs
-    Coordinate dims;
   };
   struct CopyReceiveBuffer {
     void * from_p;
@@ -281,8 +253,7 @@ public:
     Integer direction;
     Integer OrthogPlane;
     Integer DestProc;
-    Integer xbytes;
-    Integer rbytes;
+    Integer bytes;
     Integer lane;
     Integer cb;
     void *recv_buf;
@@ -307,7 +278,6 @@ public:
   }
 
   int face_table_computed;
-  int partialDirichlet;
   std::vector<commVector<std::pair<int,int> > > face_table ;
   Vector<int> surface_list;
 
@@ -396,7 +366,7 @@ public:
 					Packets[i].to_rank,Packets[i].do_send,
 					Packets[i].recv_buf,
 					Packets[i].from_rank,Packets[i].do_recv,
-					Packets[i].xbytes,Packets[i].rbytes,i);
+					Packets[i].bytes,i);
     }
   }
 
@@ -532,9 +502,7 @@ public:
     }
   }
   
-  Integer CheckForDuplicate(Integer direction, Integer OrthogPlane, Integer DestProc, void *recv_buf,Integer lane,
-			    Integer xbytes,Integer rbytes,
-			    Integer cb)
+  Integer CheckForDuplicate(Integer direction, Integer OrthogPlane, Integer DestProc, void *recv_buf,Integer lane,Integer bytes,Integer cb)
   {
     CachedTransfer obj;
     obj.direction   = direction;
@@ -542,22 +510,19 @@ public:
     obj.DestProc    = DestProc;
     obj.recv_buf    = recv_buf;
     obj.lane        = lane;
-    obj.xbytes      = xbytes;
-    obj.rbytes      = rbytes;
+    obj.bytes       = bytes;
     obj.cb          = cb;
 
     for(int i=0;i<CachedTransfers.size();i++){
       if (   (CachedTransfers[i].direction  ==direction)
 	   &&(CachedTransfers[i].OrthogPlane==OrthogPlane)
 	   &&(CachedTransfers[i].DestProc   ==DestProc)
-	   &&(CachedTransfers[i].xbytes      ==xbytes)
-	   &&(CachedTransfers[i].rbytes      ==rbytes)
+	   &&(CachedTransfers[i].bytes      ==bytes)
 	   &&(CachedTransfers[i].lane       ==lane)
 	   &&(CachedTransfers[i].cb         ==cb)
 	     ){
-	// FIXME worry about duplicate with partial compression
-	// Wont happen as DWF has no duplicates, but...
-	AddCopy(CachedTransfers[i].recv_buf,recv_buf,rbytes);
+
+	AddCopy(CachedTransfers[i].recv_buf,recv_buf,bytes);
 	return 1;
       }
     }
@@ -568,7 +533,7 @@ public:
   void AddPacket(void *xmit,void * rcv,
 		 Integer to, Integer do_send,
 		 Integer from, Integer do_recv,
-		 Integer xbytes,Integer rbytes){
+		 Integer bytes){
     Packet p;
     p.send_buf = xmit;
     p.recv_buf = rcv;
@@ -576,16 +541,11 @@ public:
     p.from_rank= from;
     p.do_send  = do_send;
     p.do_recv  = do_recv;
-    p.xbytes    = xbytes;
-    p.rbytes    = rbytes;
-    //    if (do_send) std::cout << GridLogMessage << " MPI packet to   "<<to<< " of size "<<xbytes<<std::endl;
-    //    if (do_recv) std::cout << GridLogMessage << " MPI packet from "<<from<< " of size "<<xbytes<<std::endl;
+    p.bytes    = bytes;
     Packets.push_back(p);
   }
   void AddDecompress(cobj *k_p,cobj *m_p,Integer buffer_size,std::vector<Decompress> &dv) {
     Decompress d;
-    d.partial  = this->partialDirichlet;
-    d.dims     = _grid->_fdimensions;
     d.kernel_p = k_p;
     d.mpi_p    = m_p;
     d.buffer_size = buffer_size;
@@ -593,8 +553,6 @@ public:
   }
   void AddMerge(cobj *merge_p,Vector<cobj *> &rpointers,Integer buffer_size,Integer type,std::vector<Merge> &mv) {
     Merge m;
-    m.partial  = this->partialDirichlet;
-    m.dims     = _grid->_fdimensions;
     m.type     = type;
     m.mpointer = merge_p;
     m.vpointers= rpointers;
@@ -614,10 +572,21 @@ public:
   void CommsMerge(decompressor decompress,std::vector<Merge> &mm,std::vector<Decompress> &dd)
   {
     for(int i=0;i<mm.size();i++){
-      decompressor::MergeFace(decompress,mm[i]);
+      auto mp = &mm[i].mpointer[0];
+      auto vp0= &mm[i].vpointers[0][0];
+      auto vp1= &mm[i].vpointers[1][0];
+      auto type= mm[i].type;
+      accelerator_forNB(o,mm[i].buffer_size/2,vobj::Nsimd(),{
+	  decompress.Exchange(mp,vp0,vp1,type,o);
+      });
     }
+
     for(int i=0;i<dd.size();i++){
-      decompressor::DecompressFace(decompress,dd[i]);
+      auto kp = dd[i].kernel_p;
+      auto mp = dd[i].mpi_p;
+      accelerator_forNB(o,dd[i].buffer_size,1,{
+	decompress.Decompress(kp,mp,o);
+      });
     }
   }
   ////////////////////////////////////////
@@ -676,8 +645,6 @@ public:
       int block = dirichlet_block[dimension];
       this->_comms_send[ii] = comm_dim;
       this->_comms_recv[ii] = comm_dim;
-      this->_comms_partial_send[ii] = 0;
-      this->_comms_partial_recv[ii] = 0;
       if ( block && comm_dim ) {
 	assert(abs(displacement) < ld );
 	// Quiesce communication across block boundaries
@@ -698,10 +665,6 @@ public:
 	  if ( ( (ld*(pc+1) ) % block ) == 0 ) this->_comms_send[ii] = 0;
 	  if ( ( (ld*pc     ) % block ) == 0 ) this->_comms_recv[ii] = 0;
 	}
-	if ( partialDirichlet ) {
-	  this->_comms_partial_send[ii] = !this->_comms_send[ii];
-	  this->_comms_partial_recv[ii] = !this->_comms_recv[ii];
-	}
       }
     }
   }
@@ -710,7 +673,7 @@ public:
 		   int checkerboard,
 		   const std::vector<int> &directions,
 		   const std::vector<int> &distances,
-		   Parameters p=Parameters())
+		   Parameters p)
   {
     face_table_computed=0;
     _grid    = grid;
@@ -729,7 +692,7 @@ public:
     this->same_node.resize(npoints);
 
     if ( p.dirichlet.size() ==0 ) p.dirichlet.resize(grid->Nd(),0);
-    partialDirichlet = p.partialDirichlet;
+
     DirichletBlock(p.dirichlet); // comms send/recv set up
 
     _unified_buffer_size=0;
@@ -865,7 +828,7 @@ public:
     GridBase *grid=_grid;
     const int Nsimd = grid->Nsimd();
 
-    int comms_recv      = this->_comms_recv[point] || this->_comms_partial_recv[point] ;
+    int comms_recv      = this->_comms_recv[point];
     int fd              = _grid->_fdimensions[dimension];
     int ld              = _grid->_ldimensions[dimension];
     int rd              = _grid->_rdimensions[dimension];
@@ -1051,11 +1014,10 @@ public:
   int Gather(const Lattice<vobj> &rhs,int dimension,int shift,int cbmask,compressor & compress,int &face_idx, int point)
   {
     typedef typename cobj::vector_type vector_type;
+    typedef typename cobj::scalar_type scalar_type;
 
-    int comms_send   = this->_comms_send[point];
-    int comms_recv   = this->_comms_recv[point];
-    int comms_partial_send   = this->_comms_partial_send[point] ;
-    int comms_partial_recv   = this->_comms_partial_recv[point] ;
+    int comms_send   = this->_comms_send[point] ;
+    int comms_recv   = this->_comms_recv[point] ;
 
     assert(rhs.Grid()==_grid);
     //	  conformable(_grid,rhs.Grid());
@@ -1086,17 +1048,7 @@ public:
 	if (cbmask != 0x3) words=words>>1;
 
 	int bytes =  words * compress.CommDatumSize();
-	int xbytes;
-	int rbytes;
 
-	if ( comms_send ) xbytes = bytes; // Full send
-	else if ( comms_partial_send ) xbytes = bytes/compressor::PartialCompressionFactor(_grid);
-	else xbytes = 0; // full dirichlet
-
-	if ( comms_recv ) rbytes = bytes;
-	else if ( comms_partial_recv ) rbytes = bytes/compressor::PartialCompressionFactor(_grid);
-	else rbytes = 0;
-	
 	int so  = sx*rhs.Grid()->_ostride[dimension]; // base offset for start of plane
 	int comm_off = u_comm_offset;
 
@@ -1109,48 +1061,49 @@ public:
 	assert (xmit_to_rank   != _grid->ThisRank());
 	assert (recv_from_rank != _grid->ThisRank());
 
-	if ( !face_table_computed ) {
-	  face_table.resize(face_idx+1);
-	  std::vector<std::pair<int,int> >  face_table_host ;
-	  Gather_plane_table_compute ((GridBase *)_grid,dimension,sx,cbmask,comm_off,face_table_host);
-	  //	  std::cout << "bytes expect "<< bytes << " " << face_table_host.size()* compress.CommDatumSize()<<std::endl;
+	if( comms_send ) {
+
+	  if ( !face_table_computed ) {
+	    face_table.resize(face_idx+1);
+	    std::vector<std::pair<int,int> >  face_table_host ;
+	    Gather_plane_table_compute ((GridBase *)_grid,dimension,sx,cbmask,comm_off,face_table_host);
 	    face_table[face_idx].resize(face_table_host.size());
 	    acceleratorCopyToDevice(&face_table_host[0],
 				    &face_table[face_idx][0],
 				    face_table[face_idx].size()*sizeof(face_table_host[0]));
+	  }
+
+
+	  if ( compress.DecompressionStep() ) {
+	    recv_buf=u_simd_recv_buf[0];
+	  } else {
+	    recv_buf=this->u_recv_buf_p;
+	  }
+
+	  send_buf = this->u_send_buf_p; // Gather locally, must send
+	
+	  ////////////////////////////////////////////////////////
+	  // Gather locally
+	  ////////////////////////////////////////////////////////
+	  assert(send_buf!=NULL);
+	  Gather_plane_simple_table(face_table[face_idx],rhs,send_buf,compress,comm_off,so);
 	}
 
+	int duplicate = CheckForDuplicate(dimension,sx,comm_proc,(void *)&recv_buf[comm_off],0,bytes,cbmask);
+	if ( (!duplicate) ) { // Force comms for now
 
-	if ( (compress.DecompressionStep()&&comms_recv) || comms_partial_recv ) {
-	  recv_buf=u_simd_recv_buf[0];
-	} else {
-	  recv_buf=this->u_recv_buf_p;
-	}
-
-	////////////////////////////////////////////////////////
-	// Gather locally
-	////////////////////////////////////////////////////////
-	send_buf = this->u_send_buf_p; // Gather locally, must send
-	assert(send_buf!=NULL);
-
-	//	std::cout << " GatherPlaneSimple partial send "<< comms_partial_send<<std::endl;
-	compressor::Gather_plane_simple(face_table[face_idx],rhs,send_buf,compress,comm_off,so,comms_partial_send);
-
-        int duplicate = CheckForDuplicate(dimension,sx,comm_proc,(void *)&recv_buf[comm_off],0,xbytes,rbytes,cbmask);
-	if ( !duplicate ) { // Force comms for now
-	  
 	  ///////////////////////////////////////////////////////////
 	  // Build a list of things to do after we synchronise GPUs
 	  // Start comms now???
 	  ///////////////////////////////////////////////////////////
 	  AddPacket((void *)&send_buf[comm_off],
 		    (void *)&recv_buf[comm_off],
-		    xmit_to_rank, comms_send|comms_partial_send,
-		    recv_from_rank, comms_recv|comms_partial_recv,
-		    xbytes,rbytes);
+		    xmit_to_rank, comms_send,
+		    recv_from_rank, comms_recv,
+		    bytes);
 	}
-
-	if ( (compress.DecompressionStep() && comms_recv) || comms_partial_recv ) {
+	
+	if ( compress.DecompressionStep()  && comms_recv ) {
 	  AddDecompress(&this->u_recv_buf_p[comm_off],
 			&recv_buf[comm_off],
 			words,Decompressions);
@@ -1158,6 +1111,7 @@ public:
 	
 	u_comm_offset+=words;
 	face_idx++;
+
       }
     }
     return 0;
@@ -1170,10 +1124,8 @@ public:
 
     const int maxl =2;// max layout in a direction
 
-    int comms_send   = this->_comms_send[point];
-    int comms_recv   = this->_comms_recv[point];
-    int comms_partial_send   = this->_comms_partial_send[point] ;
-    int comms_partial_recv   = this->_comms_partial_recv[point] ;
+    int comms_send   = this->_comms_send[point] ;
+    int comms_recv   = this->_comms_recv[point] ;
 
     int fd = _grid->_fdimensions[dimension];
     int rd = _grid->_rdimensions[dimension];
@@ -1203,11 +1155,6 @@ public:
 
     int datum_bytes = compress.CommDatumSize();
     int bytes = (reduced_buffer_size*datum_bytes)/simd_layout;
-
-    // how many bytes on wire : partial dirichlet or dirichlet may set to < bytes
-    int xbytes; 
-    int rbytes; 
-    
     assert(bytes*simd_layout == reduced_buffer_size*datum_bytes);
 
     Vector<cobj *> rpointers(maxl);
@@ -1237,37 +1184,22 @@ public:
 	if ( !face_table_computed ) {
 	  face_table.resize(face_idx+1);
 	  std::vector<std::pair<int,int> >  face_table_host ;
-
+				
 	  Gather_plane_table_compute ((GridBase *)_grid,dimension,sx,cbmask,comm_off,face_table_host);
 	  face_table[face_idx].resize(face_table_host.size());
 	  acceleratorCopyToDevice(&face_table_host[0],
 				  &face_table[face_idx][0],
 				  face_table[face_idx].size()*sizeof(face_table_host[0]));
-
 	}
 
-	
-	if ( comms_send ) xbytes = bytes;
-	else if ( comms_partial_send ) xbytes = bytes/compressor::PartialCompressionFactor(_grid);
-	else xbytes = 0;
-
-	if ( comms_recv ) rbytes = bytes;
-	else if ( comms_partial_recv ) rbytes = bytes/compressor::PartialCompressionFactor(_grid);
-	else rbytes = 0;
-
-	// Gathers SIMD lanes for send and merge
-	// Different faces can be full comms or partial comms with  multiple ranks per node
-	if ( comms_send || comms_recv||comms_partial_send||comms_partial_recv ) {
-
-	  int partial = partialDirichlet;
-	  compressor::Gather_plane_exchange(face_table[face_idx],rhs,
-					    spointers,dimension,sx,cbmask,
-					    compress,permute_type,partial );
+	if ( comms_send || comms_recv ) {
+	  Gather_plane_exchange_table(face_table[face_idx],rhs,spointers,dimension,sx,cbmask,compress,permute_type);
 	}
 	face_idx++;
 
-	//spointers[0] -- low simd coor
-	//spointers[1] -- high simd coor
+	//spointers[0] -- low
+	//spointers[1] -- high
+
 	for(int i=0;i<maxl;i++){
 
 	  int my_coor  = rd*i + x;            // self explanatory
@@ -1292,16 +1224,13 @@ public:
 	    _grid->ShiftedRanks(dimension,nbr_proc,xmit_to_rank,recv_from_rank);
 
 	    rpointers[i] = rp;
-	    
-	    int duplicate = CheckForDuplicate(dimension,sx,nbr_proc,(void *)rp,i,xbytes,rbytes,cbmask);
+
+	    int duplicate = CheckForDuplicate(dimension,sx,nbr_proc,(void *)rp,i,bytes,cbmask);
 	    if ( !duplicate  ) { 
-	      if ( (bytes != rbytes) && (rbytes!=0) ){
-		acceleratorMemSet(rp,0,bytes); // Zero prefill comms buffer to zero
-	      }
 	      AddPacket((void *)sp,(void *)rp,
-			xmit_to_rank,comms_send|comms_partial_send,
-			recv_from_rank,comms_recv|comms_partial_recv,
-			xbytes,rbytes);
+			xmit_to_rank,comms_send,
+			recv_from_rank,comms_recv,
+			bytes);
 	    }
 
 	  } else {
@@ -1311,7 +1240,7 @@ public:
 	  }
 	}
 
-	if ( comms_recv|comms_partial_recv ) {
+	if ( comms_recv ) {
 	  AddMerge(&this->u_recv_buf_p[comm_off],rpointers,reduced_buffer_size,permute_type,Mergers);
 	}
 
