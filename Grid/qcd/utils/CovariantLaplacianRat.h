@@ -2,11 +2,11 @@
 
 Grid physics library, www.github.com/paboyle/Grid
 
-Source file: ./lib/qcd/action/scalar/CovariantLaplacian.h
+Source file: ./lib/qcd/action/scalar/CovariantLaplacianRat.h
 
 Copyright (C) 2016
 
-Author: Guido Cossu <guido.cossu@ed.ac.uk>
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

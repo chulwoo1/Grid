@@ -97,11 +97,11 @@ struct HMCparameters: Serializable {
 	
 template <class IntegratorType>
 class HybridMonteCarlo {
-private:
+public:
   const HMCparameters Params;
 
   typedef typename IntegratorType::Field Field;
-  typedef typename IntegratorType::FieldImplementation FieldImplementation;
+//  typedef typename IntegratorType::FieldImplementation FieldImplementation;
   typedef std::vector< HmcObservable<Field> * > ObsListType;
   
   //pass these from the resource manager

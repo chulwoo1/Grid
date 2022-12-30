@@ -67,6 +67,19 @@ struct LaplacianParams : Serializable {
 const std::vector<int> directions4D   ({Xdir,Ydir,Zdir,Tdir,Xdir,Ydir,Zdir,Tdir});
 const std::vector<int> displacements4D({1,1,1,1,-1,-1,-1,-1});
 
+// I know, dumb..
+struct CartesianLaplaceParam{
+     int num;
+//struct GparityWilsonImplParams {
+//  Coordinate twists; //mu=Nd-1 is assumed to be the time direction and a twist value of 1 indicates antiperiodic BCs
+  Coordinate dirichlet; // Blocksize of dirichlet BCs
+  int  partialDirichlet;
+  CartesianLaplaceParam(int i=0):num(i){
+//  GparityWilsonImplParams() : twists(Nd, 0) {
+    dirichlet.resize(0);
+    partialDirichlet=0;
+  };
+};
 template<class Gimpl,class Field> class CovariantAdjointLaplacianStencil : public SparseMatrixBase<Field>
 {
 public:
@@ -78,7 +91,7 @@ public:
   template <typename vtype> using iImplDoubledGaugeField = iVector<iScalar<iMatrix<vtype, Nc> >, Nds>;
   typedef iImplDoubledGaugeField<Simd> SiteDoubledGaugeField;
   typedef Lattice<SiteDoubledGaugeField> DoubledGaugeField;
-  typedef CartesianStencil<siteObject, siteObject, int> StencilImpl;
+  typedef CartesianStencil<siteObject, siteObject, CartesianLaplaceParam > StencilImpl;
 
   GridBase *grid;
   StencilImpl Stencil;
@@ -87,13 +100,14 @@ public:
 
   CovariantAdjointLaplacianStencil( GridBase *_grid)
     : grid(_grid),
-      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+//      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Stencil    (grid,8,Even,directions4D,displacements4D,CartesianLaplaceParam(0) ),
       Uds(grid){}
 
   CovariantAdjointLaplacianStencil(GaugeField &Umu)
     :
       grid(Umu.Grid()),
-      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Stencil    (grid,8,Even,directions4D,displacements4D,CartesianLaplaceParam(0)),
       Uds(grid)
   { GaugeImport(Umu); }
 
@@ -172,6 +186,7 @@ public:
 
 	coalescedWrite(out[ss], res,lane);
     });
+    acceleratorSynchroniseAll();
   };
   virtual void  Mdag (const Field &in, Field &out) { M(in,out);}; // Laplacian is hermitian
   virtual  void Mdiag    (const Field &in, Field &out)                  {assert(0);}; // Unimplemented need only for multigrid
@@ -202,7 +217,6 @@ class LaplacianAdjointField: public Metric<typename Impl::Field> {
   LaplacianParams param;
   MultiShiftFunction PowerHalf;    
   MultiShiftFunction PowerInvHalf;    
-//template<class Gimpl,class Field> class CovariantAdjointLaplacianStencil : public SparseMatrixBase<Field>
   CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField> LapStencil;
 
 public:
@@ -278,7 +292,7 @@ public:
 
     GaugeLinkField tmp(in.Grid());
     GaugeLinkField tmp2(in.Grid());
-#if 0
+#if 1
     std::vector<GaugeLinkField> sum(in.Grid(),Nd);
     std::vector<GaugeLinkField> sum2(in.Grid(),Nd);
     std::vector<GaugeLinkField> in_nu(in.Grid(),Nd);

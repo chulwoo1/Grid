@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
   
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-  //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
+//  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
     typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
