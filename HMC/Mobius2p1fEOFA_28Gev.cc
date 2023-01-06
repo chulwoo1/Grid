@@ -170,9 +170,9 @@ int main(int argc, char **argv) {
   
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-  //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
+//  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+//    typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
   HMCparameters HMCparams;
@@ -228,14 +228,16 @@ int main(int argc, char **argv) {
   const int Ls      = 12;
   Real beta         = 2.31;
   Real light_mass   = 0.00054;
-  Real strange_mass = 0.02144;
+//  Real strange_mass = 0.02144;
+  Real strange_mass = 0.02132; //96I/64I
   Real pv_mass      = 1.0;
   RealD M5  = 1.8;
   RealD b   = 1.5; 
   RealD c   = 0.5;
 
   // Copied from paper
-  std::vector<Real> hasenbusch({ 0.006, 0.028, 0.1, 0.28, 0.6 }); // Paper values from F1 incorrect run
+//  std::vector<Real> hasenbusch({ 0.006, 0.028, 0.1, 0.28, 0.6 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108, 0.25, 0.51 }); // 96I/64I 0.07fm
   //  std::vector<Real> hasenbusch({ 0.004, 0.016, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run 120-130
   //  std::vector<Real> hasenbusch({ 0.004, 0.015, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run 110-120
   //  std::vector<Real> hasenbusch({ 0.005, 0.017, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run
@@ -273,7 +275,7 @@ int main(int argc, char **argv) {
   FermionActionF::ImplParams ParamsF(boundary);
   
   double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-12;
+  double DerivativeStoppingCondition = 1e-8;
   double MaxCGIterations = 30000;
 
   ////////////////////////////////////

@@ -173,8 +173,8 @@ int main(int argc, char **argv) {
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+//    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
   HMCparameters HMCparams;
@@ -300,7 +300,7 @@ int main(int argc, char **argv) {
   OneFlavourRationalParams OFRp;
   OFRp.lo       = 0.99; // How do I know this on F1?
   OFRp.hi       = 20;
-  OFRp.MaxIter  = 10000;
+  OFRp.MaxIter  = 100000;
   OFRp.tolerance= 1.0e-12;
   OFRp.degree   = 12;
   OFRp.precision= 50;
