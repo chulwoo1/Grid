@@ -277,7 +277,7 @@ int main(int argc, char **argv) {
   
   double ActionStoppingCondition     = 1e-12;
   double DerivativeStoppingCondition = 1e-10;
-  double MaxCGIterations = 30000;
+  double MaxCGIterations = 100000;
 
   ////////////////////////////////////
   // Collect actions
@@ -321,7 +321,7 @@ int main(int argc, char **argv) {
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
-  const int MX_inner = 5000;
+  const int MX_inner = 10000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
