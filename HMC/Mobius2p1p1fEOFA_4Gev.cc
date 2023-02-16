@@ -174,8 +174,8 @@ int main(int argc, char **argv) {
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
 //    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
   HMCparameters HMCparams;
 #if 1
@@ -479,6 +479,9 @@ int main(int argc, char **argv) {
   std::vector<LinearOperatorD *> LinOpD;
   std::vector<LinearOperatorF *> LinOpF; 
 
+  std::vector<double> DerivativeStoppingConditionLoose (light_den.size(), 1e-9);
+  DerivativeStoppingConditionLoose[0]=1e-7;
+  DerivativeStoppingConditionLoose[1]=1e-8;
   for(int h=0;h<light_den.size();h++){
 
     std::cout << GridLogMessage << " 2f quotient Action  "<< light_num[h] << " / " << light_den[h]<< std::endl;
@@ -490,14 +493,13 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     // Mixed precision CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    double DerivativeStoppingConditionLoose = 1e-10;
 
     DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*GridPtrF,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 
-    double conv  = DerivativeStoppingCondition;
-    if (h<3) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
+//    double conv  = DerivativeStoppingCondition;
+    double conv= DerivativeStoppingConditionLoose[h]; // Relax on first two hasenbusch factors
     MPCG.push_back(new MxPCG(conv,
 			     MX_inner,
 			     MaxCGIterations,

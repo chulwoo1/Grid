@@ -277,7 +277,7 @@ int main(int argc, char **argv) {
   
   double ActionStoppingCondition     = 1e-12;
   double DerivativeStoppingCondition = 1e-9;
-  double MaxCGIterations = 30000;
+  double MaxCGIterations = 100000;
 
   ////////////////////////////////////
   // Collect actions
@@ -321,7 +321,7 @@ int main(int argc, char **argv) {
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
-  const int MX_inner = 5000;
+  const int MX_inner = 10000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
@@ -479,6 +479,9 @@ int main(int argc, char **argv) {
   std::vector<LinearOperatorD *> LinOpD;
   std::vector<LinearOperatorF *> LinOpF; 
 
+  
+  std::vector<  double> DerivativeStoppingConditionLoose (light_den.size(),1e-9);
+  DerivativeStoppingConditionLoose[0]=1e-7;
   for(int h=0;h<light_den.size();h++){
 
     std::cout << GridLogMessage << " 2f quotient Action  "<< light_num[h] << " / " << light_den[h]<< std::endl;
@@ -490,14 +493,12 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     // Mixed precision CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    double DerivativeStoppingConditionLoose = 1e-10;
 
     DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*GridPtrF,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 
-    double conv  = DerivativeStoppingCondition;
-    if (h<3) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
+    double conv  = DerivativeStoppingConditionLoose[h];
     MPCG.push_back(new MxPCG(conv,
 			     MX_inner,
 			     MaxCGIterations,

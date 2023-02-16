@@ -263,19 +263,27 @@ int main (int argc, char ** argv)
 
   std::vector<int> seeds4({1,2,3,4});
   std::vector<int> seeds5({5,6,7,8});
-  GridParallelRNG          RNG5(FGridF);  RNG5.SeedFixedIntegers(seeds5);
-  GridParallelRNG          RNG4(UGrid);  RNG4.SeedFixedIntegers(seeds4);
+  GridSerialRNG           sRNG5; 
+//  sRNG5.SeedFixedIntegers(seeds5);
+  GridParallelRNG          RNG5(FGridF);  
+// RNG5.SeedFixedIntegers(seeds5);
+//  GridParallelRNG          RNG4(UGrid);  RNG4.SeedFixedIntegers(seeds4);
   // ypj [note] why seed RNG5 again? bug? In this case, run with a default seed().
-  GridParallelRNG          RNG5rb(FrbGridF);  RNG5rb.SeedFixedIntegers(seeds5);
+//  GridParallelRNG          RNG5rb(FrbGridF);  RNG5rb.SeedFixedIntegers(seeds5);
+//
+  FieldMetaData header;
+  NerscIO::readRNGState(sRNG5, RNG5, header, "rng");
+
 
   LatticeGaugeField Umu(UGrid); 
   std::vector<LatticeColourMatrix> U(4,UGrid);
   LatticeGaugeFieldF UmuF(UGridF); 
   std::vector<LatticeColourMatrix> UF(4,UGridF);
   
-  if ( JP.gaugefile.compare("Hot") == 0 ) {
-    SU3::HotConfiguration(RNG4, Umu);
-  } else {
+//  if ( JP.gaugefile.compare("Hot") == 0 ) {
+//    SU3::HotConfiguration(RNG4, Umu);
+//  } else 
+  {
     FieldMetaData header;
     NerscIO::readConfiguration(Umu,header,JP.gaugefile);
     // ypj [fixme] additional checks for the loaded configuration?
@@ -373,29 +381,36 @@ int main (int argc, char ** argv)
   std::vector<RealD> eval(JP.Nm);
   
   std::vector<FermionField> src(JP.Nu,FrbGridF);
-if (0)
+#if 1
 {
 // in case RNG is too slow
-  std::cout << GridLogMessage << "Using RNG5"<<std::endl;
+  std::cout << GridLogMessage << "Using sRNG5"<<std::endl;
   FermionField src_tmp(FGrid);
   for ( int i=0; i<JP.Nu; ++i ){
-//    gaussian(RNG5,src_tmp);
+#if 1
+    gaussian(sRNG5,src_tmp);
+#else
      ComplexD rnd;
      RealD re;
      fillScalar(re,RNG5._gaussian[0],RNG5._generators[0]);
     std::cout << i <<" / "<< JP.Nm  <<" re "<< re  << std::endl;
 // printf("%d / %d re %e\n",i,FGrid->_processor,re);
     src_tmp=re;
+#endif
     pickCheckerboard(Odd,src[i],src_tmp);
   }
-  RNG5.Report();
-} else {
+//  sRNG5.Report();
+} 
+#else
+
+{
   std::cout << GridLogMessage << "Using RNG5rb"<<std::endl;
   for ( int i=0; i<JP.Nu; ++i )
     gaussian(RNG5rb,src[i]);
   RNG5rb.Report();
 
 }
+#endif
   
   std::vector<FermionField> evec(JP.Nm,FrbGridF);
   for(int i=0;i<1;++i){

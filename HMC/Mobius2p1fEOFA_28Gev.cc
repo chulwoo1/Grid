@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
 //  double QuoDerivativeStoppingCondition = 1e-10;
   double EOFAActionStoppingCondition     = 1e-12;
   double EOFADerivativeStoppingCondition = 1e-10;
-  double MaxCGIterations = 30000;
+  double MaxCGIterations = 300000;
 
   ////////////////////////////////////
   // Collect actions
@@ -321,7 +321,7 @@ int main(int argc, char **argv) {
   ConjugateGradient<FermionField>      ActionCG(EOFAActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(EOFADerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
-  const int MX_inner = 50000;
+  const int MX_inner = 5000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
@@ -456,6 +456,7 @@ int main(int argc, char **argv) {
   std::vector<LinearOperatorF *> LinOpF; 
 
   ConjugateGradient<FermionField>      QuoActionCG(QuoActionStoppingCondition,MaxCGIterations);
+
 //  double DerivativeStoppingConditionLoose = 3e-7;
   std::vector<double> DerivativeStoppingConditionLoose (n_hasenbusch+1,1e-9);
   DerivativeStoppingConditionLoose[0]=1e-7;
