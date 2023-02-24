@@ -87,13 +87,13 @@ public:
 
   CovariantAdjointLaplacianStencil( GridBase *_grid)
     : grid(_grid),
-      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Stencil    (grid,8,Even,directions4D,displacements4D,(0) ),
       Uds(grid){}
 
   CovariantAdjointLaplacianStencil(GaugeField &Umu)
     :
       grid(Umu.Grid()),
-      Stencil    (grid,8,Even,directions4D,displacements4D,0),
+      Stencil    (grid,8,Even,directions4D,displacements4D,(0) ),
       Uds(grid)
   { GaugeImport(Umu); }
 
@@ -120,7 +120,8 @@ public:
     ///////////////////////////////////
     // Arithmetic expressions
     ///////////////////////////////////
-    auto st = Stencil.View(AcceleratorRead);
+//    auto st = Stencil.View(AcceleratorRead);
+    autoView(st ,Stencil,AcceleratorRead);
     auto buf = st.CommBuf();
 
     autoView( in     , _in    , AcceleratorRead);

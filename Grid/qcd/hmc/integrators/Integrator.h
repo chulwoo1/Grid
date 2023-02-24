@@ -132,12 +132,16 @@ protected:
       double start_force = usecond();
       as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
 
-      std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
-      if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
+      if (as[level].actions.at(a)->is_smeared) {
+      	std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
+	Smearer.smeared_force(force);
+      }
+      Real force_abs = std::sqrt(norm2(force)/U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "["<<level<<"]["<<a<<"] Force average (before projectForce): " << force_abs << std::endl;
       force = FieldImplementation::projectForce(force); // Ta for gauge fields
       double end_force = usecond();
-      Real force_abs = std::sqrt(norm2(force)/U.Grid()->gSites());
-      std::cout << GridLogIntegrator << "["<<level<<"]["<<a<<"] Force average: " << force_abs << std::endl;
+      force_abs = std::sqrt(norm2(force)/U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "["<<level<<"]["<<a<<"] Force average (after projectForce): " << force_abs << std::endl;
       Mom -= force * ep* HMC_MOMENTUM_DENOMINATOR;; 
       double end_full = usecond();
       double time_full  = (end_full - start_full) / 1e3;

@@ -81,9 +81,10 @@ public:
       LatticeCoordinate(coor, mu);
 
       U = PeekIndex<LorentzIndex>(Umu, mu);
-//      tmp = where(coor == Lmu, phase * U, U);
-//      PokeIndex<LorentzIndex>(Ub, tmp, mu);
-      PokeIndex<LorentzIndex>(Ub, U, mu);
+      tmp = where(coor == Lmu, phase * U, U);
+      PokeIndex<LorentzIndex>(Ub, tmp, mu);
+//      PokeIndex<LorentzIndex>(Ub, U, mu);
+//      PokeIndex<LorentzIndex>(Umu, tmp, mu);
 
     }
   };
@@ -96,6 +97,9 @@ public:
     RealD vol = Ub.Grid()->gSites();
     RealD action = beta * (1.0 - plaq) * (Nd * (Nd - 1.0)) * vol * 0.5;
     std::cout << GridLogMessage << "[WilsonGaugeAction] dH: " << action-lastG << std::endl;
+    RealD plaq_o = WilsonLoops<Gimpl>::avgPlaquette(U);
+    RealD action_o = beta * (1.0 - plaq_o) * (Nd * (Nd - 1.0)) * vol * 0.5;
+    std::cout << GridLogMessage << "[WilsonGaugeAction] U: " << action_o <<" Ub: "<< action  << std::endl;
     lastG=action;
     return action;
   };

@@ -53,6 +53,7 @@ struct HMCparameters: Serializable {
                                   bool, MetropolisTest,
                                   Integer, NoMetropolisUntil,
                                   std::string, StartingType,
+				  Integer, SW,
 				  RealD, Kappa,
                                   IntegratorParameters, MD)
 
