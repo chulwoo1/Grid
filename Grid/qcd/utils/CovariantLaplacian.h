@@ -313,7 +313,7 @@ public:
       LapStencil.M(in_nu,sum);
       out_nu +=  a1*  1. / (double(4 * Nd)) * sum;
       LapStencil.M(sum,sum2);
-      out_nu +=  a2* ( 1. / (double(4 * Nd)))^2 * sum;
+      out_nu +=  a2* ( 1. / (double(4 * Nd)))^2 * sum2;
 //      out_nu += (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
       PokeIndex<LorentzIndex>(out, out_nu, nu);
     }
