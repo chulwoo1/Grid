@@ -27,6 +27,7 @@ directory
 *************************************************************************************/
 			   /*  END LEGAL */
 #pragma once 
+#define MIXED_CG
 
 NAMESPACE_BEGIN(Grid);
 
@@ -180,6 +181,9 @@ public:
     GaugeField temp2(left.Grid());
     std::vector<GaugeField> MinvMom(par.order,left.Grid());
 
+//    std::vector<GaugeField> prev_solns;
+    ChronoForecast<LaplacianAdjointField<Impl>, GaugeField> Forecast;
+
 
     ConjugateGradient<GaugeField> CG(1.0e-8,10000,false);
     ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000,false);
@@ -194,32 +198,41 @@ public:
 
     GMom = par.offset * right;
     for(int i =0;i<par.order;i++){
+    GaugeField Gtemp2(left.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-//    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
-//    MixedCG.InnerTolerance=par.tolerance;
-    GaugeField Gtemp2(left.Grid());
-//    MixedCG(right,MinvMom[i]);
+//    MinvMom[i] = Forecast(QuadOp, right, prev_solns);
+#ifndef MIXED_CG
     CG(QuadOp,right,MinvMom[i]);
+#else
+    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
+    MixedCG.InnerTolerance=par.tolerance;
+    MixedCG(right,MinvMom[i]);
+#endif
+//    prev_solns.push_back(MinvMom[i]);
     
     GMom += par.a0[i]*MinvMom[i]; 
     HermOp.HermOp(MinvMom[i],Gtemp2);
     GMom += par.a1[i]*Gtemp2; 
     }
     for(int i =0;i<par.order;i++){
-    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
-    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-//    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
-//    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp(left.Grid());
     GaugeField Gtemp2(left.Grid());
+    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
+    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
 
-//    Solver(QuadOp,GMom,MinvGMom);
-//    MixedCG(GMom,MinvGMom);
+//    MinGMom = Forecast(QuadOp, GMom, prev_solns);
+#ifndef MIXED_CG
     CG(QuadOp,GMom,MinvGMom);
     Laplacian.M(MinvGMom, LMinvGMom);
-//    MixedCG(right,MinvMom[i]);
     CG(QuadOp,right,MinvMom[i]);
+#else
+    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
+    MixedCG.InnerTolerance=par.tolerance;
+    MixedCG(GMom,MinvGMom);
+    Laplacian.M(MinvGMom, LMinvGMom);
+    MixedCG(right,MinvMom[i]);
+#endif
 
     Laplacian.M(MinvMom[i], LMinvMom);
     Laplacian.M(MinvMom[i], AMinvMom);
@@ -280,14 +293,17 @@ public:
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
 
     for(int i =0;i<par.order;i++){
-    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
-    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-//    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
-//    MixedCG.InnerTolerance=par.tolerance;
     GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
-//    MixedCG(P,Gtemp);
+    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
+    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
+#ifndef MIXED_CG
     CG(QuadOp,P,Gtemp);
+#else
+    MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
+    MixedCG.InnerTolerance=par.tolerance;
+    MixedCG(P,Gtemp);
+#endif
     Gp += par.a0[i]*Gtemp; 
     HermOp.HermOp(Gtemp,Gtemp2);
     Gp += par.a1[i]*Gtemp2; 
@@ -327,5 +343,6 @@ private:
 //  RealD kappa;
   std::vector<GaugeLinkField> U;
 };
+#undef MIXED_CG
 
 NAMESPACE_END(Grid);
