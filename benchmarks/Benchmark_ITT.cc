@@ -658,7 +658,8 @@ int main (int argc, char ** argv)
   int do_comms =1;
 
   int sel=4;
-  std::vector<int> L_list({8,12,16,24,32});
+//  std::vector<int> L_list({8,12,16,24,32});
+  std::vector<int> L_list({8,16,24,32});
   int selm1=sel-1;
 
   std::vector<double> wilson;

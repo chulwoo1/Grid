@@ -27,7 +27,7 @@ directory
 *************************************************************************************/
 			   /*  END LEGAL */
 #pragma once 
-#define MIXED_CG
+#undef MIXED_CG
 
 NAMESPACE_BEGIN(Grid);
 
@@ -167,7 +167,6 @@ public:
     GaugeField LMinvMom(left.Grid());
 
     GaugeField GMom(left.Grid());
-    GaugeField MinvGMom(left.Grid());
     GaugeField LMinvGMom(left.Grid());
 
     GaugeField AGMom(left.Grid());
@@ -180,9 +179,10 @@ public:
     GaugeField temp(left.Grid());
     GaugeField temp2(left.Grid());
     std::vector<GaugeField> MinvMom(par.order,left.Grid());
+    std::vector<GaugeField> MinvGMom(par.order,left.Grid());
+//    GaugeField MinvGMom(left.Grid());
 
-//    std::vector<GaugeField> prev_solns;
-    ChronoForecast<LaplacianAdjointField<Impl>, GaugeField> Forecast;
+    std::vector<GaugeField> prev_solns;
 
 
     ConjugateGradient<GaugeField> CG(1.0e-8,10000,false);
@@ -193,7 +193,7 @@ public:
     Laplacian.ImportGauge(Usav);
     LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
-//    HermitianLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> HermOpF(Laplacian);
+//    ChronoForecast<LaplacianAdjointField<Impl>, GaugeField> Forecast;
     
 
     GMom = par.offset * right;
@@ -201,7 +201,8 @@ public:
     GaugeField Gtemp2(left.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-//    MinvMom[i] = Forecast(QuadOp, right, prev_solns);
+    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
+    MinvMom[i] = Forecast(QuadOp, right, prev_solns);
 #ifndef MIXED_CG
     CG(QuadOp,right,MinvMom[i]);
 #else
@@ -209,7 +210,7 @@ public:
     MixedCG.InnerTolerance=par.tolerance;
     MixedCG(right,MinvMom[i]);
 #endif
-//    prev_solns.push_back(MinvMom[i]);
+    prev_solns.push_back(MinvMom[i]);
     
     GMom += par.a0[i]*MinvMom[i]; 
     HermOp.HermOp(MinvMom[i],Gtemp2);
@@ -220,19 +221,21 @@ public:
     GaugeField Gtemp2(left.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
+    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
 
-//    MinGMom = Forecast(QuadOp, GMom, prev_solns);
+    MinvGMom[i] = Forecast(QuadOp, GMom, prev_solns);
 #ifndef MIXED_CG
-    CG(QuadOp,GMom,MinvGMom);
+    CG(QuadOp,GMom,MinvGMom[i]);
     Laplacian.M(MinvGMom, LMinvGMom);
     CG(QuadOp,right,MinvMom[i]);
 #else
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
     MixedCG.InnerTolerance=par.tolerance;
-    MixedCG(GMom,MinvGMom);
-    Laplacian.M(MinvGMom, LMinvGMom);
+    MixedCG(GMom,MinvGMom[i]);
+    Laplacian.M(MinvGMom[i], LMinvGMom);
     MixedCG(right,MinvMom[i]);
 #endif
+    prev_solns.push_back(MinvGMom[i]);
 
     Laplacian.M(MinvMom[i], LMinvMom);
     Laplacian.M(MinvMom[i], AMinvMom);
@@ -240,9 +243,9 @@ public:
     AMinvMom += par.a0[i]*MinvMom[i];
 
     Laplacian.M(AMinvMom,LMinvAMom);
-    Laplacian.M(MinvGMom,temp);
+    Laplacian.M(MinvGMom[i],temp);
     MinvAGMom = par.a1[i]*temp;
-    MinvAGMom += par.a0[i]*MinvGMom;
+    MinvAGMom += par.a0[i]*MinvGMom[i];
     Laplacian.M(MinvAGMom,LMinvAGMom);
 
 
@@ -250,13 +253,13 @@ public:
 //    RealD coef=1;
     std::cout<<GridLogMessage << "coef =  "<< coef <<std::endl;
     Laplacian.MDeriv(GMom,MinvMom[i],temp); der += coef*2*par.a1[i]*temp;
-    Laplacian.MDeriv(left,MinvGMom,temp); der += coef*2*par.a1[i]*temp;
+    Laplacian.MDeriv(left,MinvGMom[i],temp); der += coef*2*par.a1[i]*temp;
     Laplacian.MDeriv(LMinvAGMom,MinvMom[i],temp); der += coef*-2.*par.b2*temp;
-    Laplacian.MDeriv(LMinvAMom,MinvGMom,temp); der += coef*-2.*par.b2*temp;
+    Laplacian.MDeriv(LMinvAMom,MinvGMom[i],temp); der += coef*-2.*par.b2*temp;
     Laplacian.MDeriv(MinvAGMom,LMinvMom,temp); der += coef*-2.*par.b2*temp;
     Laplacian.MDeriv(AMinvMom,LMinvGMom,temp); der += coef*-2.*par.b2*temp;
     Laplacian.MDeriv(MinvAGMom,MinvMom[i],temp); der += coef*-2.*par.b1[i]*temp;
-    Laplacian.MDeriv(AMinvMom,MinvGMom,temp); der += coef*-2.*par.b1[i]*temp;
+    Laplacian.MDeriv(AMinvMom,MinvGMom[i],temp); der += coef*-2.*par.b1[i]*temp;
 
     }
   }
@@ -291,21 +294,30 @@ public:
     Laplacian.ImportGauge(Usav);
     LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
+    std::vector<GaugeField> Gtemp(par.order,P.Grid());
+    std::vector<GaugeField> prev_solns;
+//    ChronoForecast<LaplacianAdjointField<Impl>, GaugeField> Forecast;
+
 
     for(int i =0;i<par.order;i++){
-    GaugeField Gtemp(P.Grid());
+//    GaugeField Gtemp(P.Grid());
     GaugeField Gtemp2(P.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
+    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
+
+    Gtemp[i] = Forecast(QuadOp, P, prev_solns);
 #ifndef MIXED_CG
-    CG(QuadOp,P,Gtemp);
+    CG(QuadOp,P,Gtemp[i]);
 #else
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
     MixedCG.InnerTolerance=par.tolerance;
-    MixedCG(P,Gtemp);
+    MixedCG(P,Gtemp[i]);
 #endif
-    Gp += par.a0[i]*Gtemp; 
-    HermOp.HermOp(Gtemp,Gtemp2);
+    prev_solns.push_back(Gtemp[i]);
+
+    Gp += par.a0[i]*Gtemp[i]; 
+    HermOp.HermOp(Gtemp[i],Gtemp2);
     Gp += par.a1[i]*Gtemp2; 
     }
     P = Gp;
@@ -329,8 +341,6 @@ public:
   }
 
   void Minv(const GaugeField& in, GaugeField& inverted){
-//    HermitianLinearOperator<LaplacianAdjointRat<Impl>,GaugeField> HermOp(*this);
-//    Solver(HermOp, in, inverted);
       inverted = in;
       MInvSquareRoot(inverted);
       MInvSquareRoot(inverted);

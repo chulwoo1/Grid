@@ -36,11 +36,12 @@ NAMESPACE_BEGIN(Grid);
 // Abstract base class.
 // Takes a matrix (Mat), a source (phi), and a vector of Fields (chi)
 // and returns a forecasted solution to the system D*psi = phi (psi).
-template<class Matrix, class Field>
+// Changing to operator
+template<class LinearOperatorBase, class Field>
 class Forecast
 {
 public:
-  virtual Field operator()(Matrix &Mat, const Field& phi, const std::vector<Field>& chi) = 0;
+  virtual Field operator()(LinearOperatorBase &Mat, const Field& phi, const std::vector<Field>& chi) = 0;
 };
 
 // Implementation of Brower et al.'s chronological inverter (arXiv:hep-lat/9509012),
@@ -83,8 +84,10 @@ public:
     // Perform sparse matrix multiplication and construct rhs
     for(int i=0; i<degree; i++){
       b[i] = innerProduct(v[i],phi);
-      Mat.M(v[i],Mv);
-      Mat.Mdag(Mv,MdagMv[i]);
+//      Mat.M(v[i],Mv);
+//      Mat.Mdag(Mv,MdagMv[i]);
+      Mat.HermOp(v[i],MdagMv[i]);
+//      Mat.Mdag(Mv,MdagMv[i]);
       G[i][i] = innerProduct(v[i],MdagMv[i]);
     }
 
