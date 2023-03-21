@@ -667,12 +667,20 @@ int main (int argc, char ** argv)
   std::vector<double> staggered;
 
   int Ls=1;
-#if 0
+#if 1
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   std::cout<<GridLogMessage << " Wilson dslash 4D vectorised" <<std::endl;
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   for(int l=0;l<L_list.size();l++){
     wilson.push_back(Benchmark::DWF(Ls,L_list[l]));
+  }
+
+  std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+  std::cout<<GridLogMessage << " Improved Staggered dslash 4D vectorised" <<std::endl;
+  std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+  for(int l=0;l<L_list.size();l++){
+    double result = Benchmark::Staggered(L_list[l]) ;
+    staggered.push_back(result);
   }
 #endif
 
@@ -683,14 +691,6 @@ int main (int argc, char ** argv)
   for(int l=0;l<L_list.size();l++){
     double result = Benchmark::DWF(Ls,L_list[l]) ;
     dwf4.push_back(result);
-  }
-
-  std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-  std::cout<<GridLogMessage << " Improved Staggered dslash 4D vectorised" <<std::endl;
-  std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-  for(int l=0;l<L_list.size();l++){
-    double result = Benchmark::Staggered(L_list[l]) ;
-    staggered.push_back(result);
   }
 
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;

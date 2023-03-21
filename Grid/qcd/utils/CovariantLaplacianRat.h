@@ -182,7 +182,6 @@ public:
     std::vector<GaugeField> MinvGMom(par.order,left.Grid());
 //    GaugeField MinvGMom(left.Grid());
 
-    std::vector<GaugeField> prev_solns;
 
 
     ConjugateGradient<GaugeField> CG(1.0e-8,10000,false);
@@ -193,6 +192,8 @@ public:
     Laplacian.ImportGauge(Usav);
     LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
+
+    std::vector<GaugeField> prev_solns;
     ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
     
 
@@ -281,7 +282,7 @@ public:
   }
 
 
-  void MSquareRootInt(LaplacianRatParams &par, GaugeField& P){
+  void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector<GaugeField> & prev_solns ){
     GaugeField Gp(P.Grid());
 //    GaugeField Gp_f(grid_f);
     Gp = par.offset * P;
@@ -294,7 +295,7 @@ public:
     LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
     std::vector<GaugeField> Gtemp(par.order,P.Grid());
-    std::vector<GaugeField> prev_solns;
+//    std::vector<GaugeField> prev_solns;
     ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
 
 
@@ -322,26 +323,34 @@ public:
   }
 
   void MSquareRoot(GaugeField& P){
-    MSquareRootInt(Mparam,P);
+    std::vector<GaugeField> prev_solns;
+    MSquareRootInt(Mparam,P,prev_solns);
     std::cout <<GridLogDebug << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void MInvSquareRoot(GaugeField& P){
-    MSquareRootInt(Gparam,P);
+    std::vector<GaugeField> prev_solns;
+    MSquareRootInt(Gparam,P,prev_solns);
     std::cout <<GridLogDebug << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void M(const GaugeField& in, GaugeField& out) {
       out = in;
-      MSquareRoot(out);
-      MSquareRoot(out);
+      std::vector<GaugeField> prev_solns;
+      MSquareRootInt(Mparam,out,prev_solns);
+      MSquareRootInt(Mparam,out,prev_solns);
+//      MSquareRoot(out,prev_solns);
+//      MSquareRoot(out,prev_solns);
       std::cout <<GridLogDebug << "M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
   void Minv(const GaugeField& in, GaugeField& inverted){
       inverted = in;
-      MInvSquareRoot(inverted);
-      MInvSquareRoot(inverted);
+      std::vector<GaugeField> prev_solns;
+      MSquareRootInt(Gparam,inverted,prev_solns);
+      MSquareRootInt(Gparam,inverted,prev_solns);
+//      MInvSquareRoot(inverted,prev_solns);
+//      MInvSquareRoot(inverted,prev_solns);
       std::cout <<GridLogDebug << "Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
   }
 
