@@ -193,7 +193,7 @@ public:
     Laplacian.ImportGauge(Usav);
     LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
-//    ChronoForecast<LaplacianAdjointField<Impl>, GaugeField> Forecast;
+    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
     
 
     GMom = par.offset * right;
@@ -201,7 +201,6 @@ public:
     GaugeField Gtemp2(left.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
     MinvMom[i] = Forecast(QuadOp, right, prev_solns);
 #ifndef MIXED_CG
     CG(QuadOp,right,MinvMom[i]);
@@ -221,12 +220,11 @@ public:
     GaugeField Gtemp2(left.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
 
     MinvGMom[i] = Forecast(QuadOp, GMom, prev_solns);
 #ifndef MIXED_CG
     CG(QuadOp,GMom,MinvGMom[i]);
-    Laplacian.M(MinvGMom, LMinvGMom);
+    Laplacian.M(MinvGMom[i], LMinvGMom);
     CG(QuadOp,right,MinvMom[i]);
 #else
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
@@ -251,7 +249,7 @@ public:
 
     RealD coef=0.5;
 //    RealD coef=1;
-    std::cout<<GridLogMessage << "coef =  "<< coef <<std::endl;
+    std::cout<<GridLogMessage << "coef =  force contraction"<< coef <<std::endl;
     Laplacian.MDeriv(GMom,MinvMom[i],temp); der += coef*2*par.a1[i]*temp;
     Laplacian.MDeriv(left,MinvGMom[i],temp); der += coef*2*par.a1[i]*temp;
     Laplacian.MDeriv(LMinvAGMom,MinvMom[i],temp); der += coef*-2.*par.b2*temp;
@@ -260,6 +258,7 @@ public:
     Laplacian.MDeriv(AMinvMom,LMinvGMom,temp); der += coef*-2.*par.b2*temp;
     Laplacian.MDeriv(MinvAGMom,MinvMom[i],temp); der += coef*-2.*par.b1[i]*temp;
     Laplacian.MDeriv(AMinvMom,MinvGMom[i],temp); der += coef*-2.*par.b1[i]*temp;
+    std::cout<<GridLogMessage << "coef =  force contraction done "<< coef <<std::endl;
 
     }
   }
@@ -296,7 +295,7 @@ public:
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
     std::vector<GaugeField> Gtemp(par.order,P.Grid());
     std::vector<GaugeField> prev_solns;
-//    ChronoForecast<LaplacianAdjointField<Impl>, GaugeField> Forecast;
+    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
 
 
     for(int i =0;i<par.order;i++){
@@ -304,7 +303,6 @@ public:
     GaugeField Gtemp2(P.Grid());
     QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
-    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
 
     Gtemp[i] = Forecast(QuadOp, P, prev_solns);
 #ifndef MIXED_CG
