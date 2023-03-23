@@ -112,54 +112,6 @@ public:
     std::cout <<GridLogDebug << "ImportGauge:norm2(_U) = "<<" "<<total<<std::endl;
   }
 
-#if 0
-  void Lap(const GaugeField& in, GaugeField& out) {
-    // in is an antihermitian matrix
-    // test
-    //GaugeField herm = in + adj(in);
-    //std::cout << "AHermiticity: " << norm2(herm) << std::endl;
-
-   
-    GaugeLinkField tmp(in.Grid());
-    GaugeLinkField tmp2(in.Grid());
-    GaugeLinkField sum(in.Grid());
-
-    RealD kappa=1.;
-    for (int nu = 0; nu < Nd; nu++) {
-      sum = Zero();
-      GaugeLinkField in_nu = PeekIndex<LorentzIndex>(in, nu);
-      GaugeLinkField out_nu(out.Grid());
-      for (int mu = 0; mu < Nd; mu++) {
-        tmp = U[mu] * Cshift(in_nu, mu, +1) * adj(U[mu]);
-        tmp2 = adj(U[mu]) * in_nu * U[mu];
-        sum += tmp + Cshift(tmp2, mu, -1) - 2.0 * in_nu;
-      }
-      out_nu = (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
-      PokeIndex<LorentzIndex>(out, out_nu, nu);
-    }
-  }
-
-  // separating this temporarily
-  void LapDeriv(const GaugeField& left, const GaugeField& right,
-              GaugeField& der) {
-    // in is anti-hermitian
-    RealD kappa=1.;
-    RealD factor = -kappa / (double(4 * Nd));
-
-    for (int mu = 0; mu < Nd; mu++) {
-      GaugeLinkField der_mu(der.Grid());
-      der_mu = Zero();
-      for (int nu = 0; nu < Nd; nu++) {
-        GaugeLinkField left_nu = PeekIndex<LorentzIndex>(left, nu);
-        GaugeLinkField right_nu = PeekIndex<LorentzIndex>(right, nu);
-        der_mu += U[mu] * Cshift(left_nu, mu, 1) * adj(U[mu]) * right_nu;
-        der_mu += U[mu] * Cshift(right_nu, mu, 1) * adj(U[mu]) * left_nu;
-      }
-      PokeIndex<LorentzIndex>(der, -factor * der_mu, mu);
-    }
-    std::cout <<GridLogDebug << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
-  }
-#endif
 
   // separating this temporarily
   void MDerivInt(LaplacianRatParams &par, const GaugeField& left, const GaugeField& right,
