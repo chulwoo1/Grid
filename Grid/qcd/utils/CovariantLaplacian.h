@@ -274,6 +274,7 @@ public:
 //    std::cout << GridLogDebug <<"M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
+#if 0
   void Quad(const GaugeField& in, GaugeField& out,RealD a0,RealD a1,RealD a2) {
 
     GaugeLinkField tmp(in.Grid());
@@ -319,6 +320,7 @@ public:
     }
 #endif
   }
+#endif
 
   void MDeriv(const GaugeField& in, GaugeField& der) {
     // in is anti-hermitian
