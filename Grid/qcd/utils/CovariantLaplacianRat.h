@@ -91,7 +91,7 @@ public:
   GaugeFieldF UsavF;
 
 	  LaplacianAdjointRat(GridBase* _grid, GridBase* _grid_f, OperatorFunction<GaugeField>& S, LaplacianRatParams& gpar, LaplacianRatParams& mpar)
-    : grid(_grid),grid_f(_grid_f), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid), UsavF(_grid_f)  {
+    : grid(_grid),grid_f(_grid_f), LapStencil(grid), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid), UsavF(_grid_f)  {
 //    std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     this->triv=0;
         
@@ -128,7 +128,7 @@ public:
 //      }
       PokeIndex<LorentzIndex>(der, -factor * der_mu, mu);
     }
-    std::cout << GridLogDebug <<"MDerivLink: Kappa= "<< kappa << " norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout << GridLogDebug <<"MDerivLink:  norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   void MDerivInt(LaplacianRatParams &par, const GaugeField& left, const GaugeField& right,
@@ -136,6 +136,9 @@ public:
 
 // get rid of this please
     RealD fac =  - 1. / (double(4 * Nd)) ;
+    RealD coef=0.5;
+//    RealD coef=1;
+    LapStencil.GaugeImport(Usav);
 
 for (int nu=0;nu<Nd;nu++){
     GaugeLinkField right_nu = PeekIndex<LorentzIndex>(right, nu);
@@ -154,23 +157,22 @@ for (int nu=0;nu<Nd;nu++){
     GaugeLinkField temp(left.Grid());
     GaugeLinkField temp2(left.Grid());
     std::vector<GaugeLinkField> MinvMom(par.order,left.Grid());
-    GaugeField MinvGMom(left.Grid());
+    GaugeLinkField MinvGMom(left.Grid());
     GaugeLinkField Gtemp(left.Grid());
     GaugeLinkField Gtemp2(left.Grid());
 
 
-    ConjugateGradient<GaugeField> CG(1.0e-8,10000,false);
-    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000,false);
+    ConjugateGradient<GaugeLinkField> CG(par.tolerance,10000,false);
+//    ConjugateGradient<GaugeFieldF> CG_f(par.tolerance,10000,false);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 //    LaplacianAdjointField<Impl> Laplacian(left.Grid(), CG, LapPar, 1.,false);
 //    LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
 //    Laplacian.ImportGauge(Usav);
 //    LaplacianF.ImportGauge(UsavF);
-    LapStencil.ImportGauge(Usav);
 //    HermitianLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename GaugeLinkField>,GaugeLinkField> HermOp(LapStencil);
 
-    std::vector<GaugeLinkField> prev_solns;
-    ChronoForecast< QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename GaugeLinkField>,GaugeLinkField> , GaugeLinkField> Forecast;
+//    std::vector<GaugeLinkField> prev_solns;
+//    ChronoForecast< QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,GaugeLinkField>,GaugeLinkField> , GaugeLinkField> Forecast;
     
 
     GMom = par.offset * right_nu;
@@ -189,7 +191,7 @@ for (int nu=0;nu<Nd;nu++){
     GMom += par.a0[i]*MinvMom[i]; 
 //    HermOp.HermOp(MinvMom[i],Gtemp2);
     LapStencil.M(MinvMom[i],Gtemp2);
-    GMom += par.a1[i]*fact*Gtemp2; 
+    GMom += par.a1[i]*fac*Gtemp2; 
     }
     for(int i =0;i<par.order;i++){
 //    QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeLinkField> QuadOp(Laplacian,par.b0[i],par.b1[i],par.b2);
@@ -226,17 +228,16 @@ for (int nu=0;nu<Nd;nu++){
     LapStencil.M(MinvAGMom, Gtemp2); LMinvAGMom=fac*Gtemp2;
 
 
-    RealD coef=0.5;
-//    RealD coef=1;
+    GaugeField tempDer(left.Grid());
     std::cout<<GridLogMessage << "coef =  force contraction"<< coef <<std::endl;
-    MDerivLink(GMom,MinvMom[i],temp); der += coef*2*par.a1[i]*temp;
-    MDerivLink(left_nu,MinvGMom,temp); der += coef*2*par.a1[i]*temp;
-    MDerivLink(LMinvAGMom,MinvMom[i],temp); der += coef*-2.*par.b2*temp;
-    MDerivLink(LMinvAMom,MinvGMom,temp); der += coef*-2.*par.b2*temp;
-    MDerivLink(MinvAGMom,LMinvMom,temp); der += coef*-2.*par.b2*temp;
-    MDerivLink(AMinvMom,LMinvGMom,temp); der += coef*-2.*par.b2*temp;
-    MDerivLink(MinvAGMom,MinvMom[i],temp); der += coef*-2.*par.b1[i]*temp;
-    MDerivLink(AMinvMom,MinvGMom,temp); der += coef*-2.*par.b1[i]*temp;
+    MDerivLink(GMom,MinvMom[i],tempDer); der += coef*2*par.a1[i]*tempDer;
+    MDerivLink(left_nu,MinvGMom,tempDer); der += coef*2*par.a1[i]*tempDer;
+    MDerivLink(LMinvAGMom,MinvMom[i],tempDer); der += coef*-2.*par.b2*tempDer;
+    MDerivLink(LMinvAMom,MinvGMom,tempDer); der += coef*-2.*par.b2*tempDer;
+    MDerivLink(MinvAGMom,LMinvMom,tempDer); der += coef*-2.*par.b2*tempDer;
+    MDerivLink(AMinvMom,LMinvGMom,tempDer); der += coef*-2.*par.b2*tempDer;
+    MDerivLink(MinvAGMom,MinvMom[i],tempDer); der += coef*-2.*par.b1[i]*tempDer;
+    MDerivLink(AMinvMom,MinvGMom,tempDer); der += coef*-2.*par.b1[i]*tempDer;
 
     }
 }
@@ -263,23 +264,23 @@ for (int nu=0;nu<Nd;nu++){
 
   void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector<GaugeLinkField> & prev_solns ){
 
-    RealD factor = -1. / (double(4 * Nd));
+    RealD fac = -1. / (double(4 * Nd));
     LapStencil.GaugeImport(Usav);
 for(int nu=0; nu<Nd;nu++){
     GaugeLinkField P_nu = PeekIndex<LorentzIndex>(P, nu);
     GaugeLinkField Gp(P.Grid());
     Gp = par.offset * P_nu;
-    ConjugateGradient<GaugeField> CG(par.tolerance,10000);
-    ConjugateGradient<GaugeFieldF> CG_f(1.0e-8,10000);
+    ConjugateGradient<GaugeLinkField> CG(par.tolerance,10000);
+//    ConjugateGradient<GaugeLinkFieldF> CG_f(1.0e-8,10000);
 //   LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 //    LaplacianAdjointField<Impl> Laplacian(P.Grid(), CG, LapPar, 1.,false);
 //    LaplacianAdjointField<ImplF> LaplacianF(grid_f, CG_f, LapPar, 1.,false);
 //    Laplacian.ImportGauge(Usav);
 //    LaplacianF.ImportGauge(UsavF);
 //    HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
-    std::vector<GaugeLinkField> Gtemp(par.order,P.Grid());
+//    std::vector<GaugeLinkField> Gtemp(par.order,P.Grid());
 //    std::vector<GaugeLinkField> prev_solns;
-    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeLinkField> , GaugeLinkField> Forecast;
+//    ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeLinkField> , GaugeLinkField> Forecast;
 
     GaugeLinkField Gtemp(P.Grid());
     GaugeLinkField Gtemp2(P.Grid());
@@ -290,7 +291,7 @@ for(int nu=0; nu<Nd;nu++){
     QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
 
 #ifndef MIXED_CG
-    CG(QuadOp,P,Gtemp);
+    CG(QuadOp,P_nu,Gtemp);
 #else
     QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LaplacianF,par.b0[i],par.b1[i],par.b2);
     MixedPrecisionConjugateGradient<GaugeField,GaugeFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
@@ -332,7 +333,7 @@ for(int nu=0; nu<Nd;nu++){
 
   void Minv(const GaugeField& in, GaugeField& inverted){
       inverted = in;
-      std::vector<GaugeField> prev_solns;
+      std::vector<GaugeLinkField> prev_solns;
       MSquareRootInt(Gparam,inverted,prev_solns);
       MSquareRootInt(Gparam,inverted,prev_solns);
 //      MInvSquareRoot(inverted,prev_solns);
