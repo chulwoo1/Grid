@@ -142,8 +142,11 @@ NAMESPACE_BEGIN(Grid);
       ////////////////////////////////////////////////////////////////////////////////////
       // Make a mixed precision conjugate gradient
       ////////////////////////////////////////////////////////////////////////////////////
-      MixedPrecisionConjugateGradient<FieldD,FieldF> MPCG(Tolerance,MaxInnerIterations,MaxOuterIterations,SinglePrecGrid5,LinOpF,LinOpD);
-      std::cout << GridLogMessage << "Calling mixed precision Conjugate Gradient" <<std::endl;
+//      MixedPrecisionConjugateGradient<FieldD,FieldF> MPCG(Tolerance,MaxInnerIterations,MaxOuterIterations,SinglePrecGrid5,LinOpF,LinOpD);
+//      std::cout << GridLogMessage << "Calling mixed precision Conjugate Gradient" <<std::endl;
+      RealD delta=0.1;
+      ConjugateGradientReliableUpdate<FieldD,FieldF> MPCG(Tolerance,MaxInnerIterations*MaxOuterIterations,delta,SinglePrecGrid5,LinOpF,LinOpD,false); // do not fail on non-covergence
+      std::cout << GridLogMessage << "Calling Conjugate Gradient w/ Reliable update" <<std::endl;
       MPCG(src,psi);
     }
   };
