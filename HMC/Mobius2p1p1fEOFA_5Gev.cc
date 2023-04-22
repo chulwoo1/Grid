@@ -173,8 +173,8 @@ int main(int argc, char **argv) {
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
   HMCparameters HMCparams;
@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
   RealD c   = 1.0;
 
   // Copied from paper
-  std::vector<Real> hasenbusch({ 0.003, 0.0116, 0.036, 0.85 , 0.22, 0.51 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch({ 0.003, 0.0116, 0.036, 0.085 , 0.22, 0.51 }); // Paper values from F1 incorrect run
   std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
 
 //  RealD eofa_mass=0.05 ;
