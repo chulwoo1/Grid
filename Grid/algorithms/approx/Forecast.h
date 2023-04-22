@@ -55,13 +55,13 @@ public:
   Field operator()(Matrix &Mat, const Field& phi, const std::vector<Field>& prev_solns)
   {
     int degree = prev_solns.size();
+    std::cout << GridLogMessage << "ChronoForecast: degree= " << degree << std::endl;
     Field chi(phi); // forecasted solution
 
     // Trivial cases
     if(degree == 0){ chi = Zero(); return chi; }
     else if(degree == 1){ return prev_solns[0]; }
 
-    //    RealD dot;
     ComplexD xp;
     Field r(phi); // residual
     Field Mv(phi);
@@ -87,7 +87,6 @@ public:
 //      Mat.M(v[i],Mv);
 //      Mat.Mdag(Mv,MdagMv[i]);
       Mat.HermOp(v[i],MdagMv[i]);
-//      Mat.Mdag(Mv,MdagMv[i]);
       G[i][i] = innerProduct(v[i],MdagMv[i]);
     }
 

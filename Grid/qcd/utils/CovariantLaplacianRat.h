@@ -140,6 +140,8 @@ public:
 //    RealD coef=1;
     LapStencil.GaugeImport(Usav);
 
+    std::vector<GaugeLinkField> prev_solns;
+
 for (int nu=0;nu<Nd;nu++){
     GaugeLinkField right_nu = PeekIndex<LorentzIndex>(right, nu);
     GaugeLinkField left_nu = PeekIndex<LorentzIndex>(left, nu);
@@ -168,7 +170,6 @@ for (int nu=0;nu<Nd;nu++){
 //    ConjugateGradient<GaugeFieldF> CG_f(par.tolerance,10000,false);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
-    std::vector<GaugeLinkField> prev_solns;
     ChronoForecast< QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,GaugeLinkField>,GaugeLinkField> , GaugeLinkField> Forecast;
 
     GMom = par.offset * right_nu;
@@ -264,7 +265,6 @@ for(int nu=0; nu<Nd;nu++){
     ConjugateGradient<GaugeLinkField> CG(par.tolerance,10000);
 //    ConjugateGradient<GaugeLinkFieldF> CG_f(1.0e-8,10000);
 
-//    std::vector<GaugeLinkField> prev_solns;
     ChronoForecast< QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> , GaugeLinkField> Forecast;
 
     GaugeLinkField Gtemp(P.Grid());
@@ -310,8 +310,6 @@ for(int nu=0; nu<Nd;nu++){
       std::vector<GaugeLinkField> prev_solns;
       MSquareRootInt(Mparam,out,prev_solns);
       MSquareRootInt(Mparam,out,prev_solns);
-//      MSquareRoot(out,prev_solns);
-//      MSquareRoot(out,prev_solns);
       std::cout <<GridLogDebug << "M:norm2(out) = "<<norm2(out)<<std::endl;
   }
 
@@ -320,8 +318,6 @@ for(int nu=0; nu<Nd;nu++){
       std::vector<GaugeLinkField> prev_solns;
       MSquareRootInt(Gparam,inverted,prev_solns);
       MSquareRootInt(Gparam,inverted,prev_solns);
-//      MInvSquareRoot(inverted,prev_solns);
-//      MInvSquareRoot(inverted,prev_solns);
       std::cout <<GridLogDebug << "Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
   }
 

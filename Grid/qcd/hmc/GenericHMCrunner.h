@@ -193,8 +193,6 @@ private:
     std::cout << GridLogMessage << " b1= " << mpar.b1 <<std::endl;
     std::cout << GridLogMessage << " b2= " << mpar.b2 <<std::endl;
     LaplacianAdjointRat<Implementation, ImplementationF> Laplacian(UGrid, UGrid_f,CG, gpar, mpar);
-//    Laplacian.RMHMCCGTol=Parameters.MD.RMHMCCGTol;
-//    Laplacian.RMHMCTol=Parameters.MD.RMHMCTol;
     std::cout << GridLogMessage << " RMHMCCGTol= " << Parameters.MD.RMHMCCGTol <<std::endl;
     std::cout << GridLogMessage << " RMHMCTol= " << Parameters.MD.RMHMCTol <<std::endl;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing, Laplacian);
