@@ -115,7 +115,7 @@ public:
 
   // separating this temporarily
   void MDerivInt(LaplacianRatParams &par, const GaugeField& left, const GaugeField& right,
-              GaugeField& der) {
+              GaugeField& der, std::vector< std::vector<GaugeField> > & prev_solns ) {
     GaugeField LMinvMom(left.Grid());
 
     GaugeField GMom(left.Grid());
@@ -145,7 +145,7 @@ public:
     LaplacianF.ImportGauge(UsavF);
     HermitianLinearOperator<LaplacianAdjointField<Impl>,GaugeField> HermOp(Laplacian);
 
-    std::vector<GaugeField> prev_solns;
+//    std::vector<GaugeField> prev_solns;
     ChronoForecast< QuadLinearOperator<LaplacianAdjointField<Impl>,GaugeField> , GaugeField> Forecast;
     
 
@@ -234,7 +234,7 @@ public:
   }
 
 
-  void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector<GaugeField> & prev_solns ){
+  void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector< std::vector<GaugeField> > & prev_solns ){
     GaugeField Gp(P.Grid());
 //    GaugeField Gp_f(grid_f);
     Gp = par.offset * P;
