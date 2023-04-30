@@ -2,11 +2,11 @@
 
 Grid physics library, www.github.com/paboyle/Grid
 
-Source file: ./lib/qcd/action/scalar/CovariantLaplacian.h
+Source file: ./lib/qcd/action/scalar/CovariantLaplacianRat.h
 
-Copyright (C) 2016
+Copyright (C) 2021
 
-Author: Guido Cossu <guido.cossu@ed.ac.uk>
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -89,9 +89,14 @@ public:
   typedef typename ImplF::Field GaugeFieldF;
   GaugeField Usav;
   GaugeFieldF UsavF;
+  std::vector< std::vector<GaugeLinkField> > prev_solnsM;
+  std::vector< std::vector<GaugeLinkField> > prev_solnsMinv;
+  std::vector< std::vector<GaugeLinkField> > prev_solnsMDeriv;
+  std::vector< std::vector<GaugeLinkField> > prev_solnsMinvDeriv;
 
 	  LaplacianAdjointRat(GridBase* _grid, GridBase* _grid_f, OperatorFunction<GaugeField>& S, LaplacianRatParams& gpar, LaplacianRatParams& mpar)
-    : grid(_grid),grid_f(_grid_f), LapStencil(grid), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid), UsavF(_grid_f)  {
+    : grid(_grid),grid_f(_grid_f), LapStencil(grid), U(Nd, _grid), Solver(S), Gparam(gpar), Mparam(mpar),Usav(_grid), UsavF(_grid_f),
+      prev_solnsM(4),prev_solnsMinv(4),prev_solnsMDeriv(4),prev_solnsMinvDeriv(4) {
 //    std::cout<<GridLogMessage << "Generating degree "<<param.degree<<" for x^(1/2)"<<std::endl;
     this->triv=0;
         
@@ -132,15 +137,13 @@ public:
   }
 
   void MDerivInt(LaplacianRatParams &par, const GaugeField& left, const GaugeField& right,
-              GaugeField& der) {
+              GaugeField& der ,  std::vector< std::vector<GaugeLinkField> >& prev_solns ) {
 
 // get rid of this please
     RealD fac =  - 1. / (double(4 * Nd)) ;
     RealD coef=0.5;
-//    RealD coef=1;
     LapStencil.GaugeImport(Usav);
 
-    std::vector<GaugeLinkField> prev_solns;
 
 for (int nu=0;nu<Nd;nu++){
     GaugeLinkField right_nu = PeekIndex<LorentzIndex>(right, nu);
@@ -176,7 +179,7 @@ for (int nu=0;nu<Nd;nu++){
 
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
-    MinvMom[i] = Forecast(QuadOp, right_nu, prev_solns);
+    MinvMom[i] = Forecast(QuadOp, right_nu, prev_solns[nu]);
 #ifndef MIXED_CG
     CG(QuadOp,right_nu,MinvMom[i]);
 #else
@@ -185,7 +188,7 @@ for (int nu=0;nu<Nd;nu++){
     MixedCG.InnerTolerance=par.tolerance;
     MixedCG(right_nu,MinvMom[i]);
 #endif
-    prev_solns.push_back(MinvMom[i]);
+    prev_solns[nu].push_back(MinvMom[i]);
     
     GMom += par.a0[i]*MinvMom[i]; 
     LapStencil.M(MinvMom[i],Gtemp2);
@@ -194,7 +197,7 @@ for (int nu=0;nu<Nd;nu++){
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
 
-    MinvGMom = Forecast(QuadOp, GMom, prev_solns);
+    MinvGMom = Forecast(QuadOp, GMom, prev_solns[nu]);
 #ifndef MIXED_CG
     CG(QuadOp,GMom,MinvGMom);
     LapStencil.M(MinvGMom, Gtemp2); LMinvGMom=fac*Gtemp2;
@@ -207,7 +210,7 @@ for (int nu=0;nu<Nd;nu++){
     Laplacian.M(MinvGMom, LMinvGMom);
     MixedCG(right_nu,MinvMom[i]);
 #endif
-    prev_solns.push_back(MinvGMom);
+    prev_solns[nu].push_back(MinvGMom);
 
     LapStencil.M(MinvMom[i], Gtemp2); LMinvMom=fac*Gtemp2;
     AMinvMom = par.a1[i]*LMinvMom;
@@ -242,19 +245,21 @@ for (int nu=0;nu<Nd;nu++){
 
   void MDeriv(const GaugeField& left, const GaugeField& right,
               GaugeField& der) {
+
     der=Zero();
-    MDerivInt(Mparam, left, right, der);
+    MDerivInt(Mparam, left, right, der,prev_solnsMDeriv );
     std::cout <<GridLogDebug << "MDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
   void MinvDeriv(const GaugeField& in, GaugeField& der) {
+    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
     der=Zero();
-    MDerivInt(Gparam, in, in, der);
+    MDerivInt(Gparam, in, in, der,prev_solnsMinvDeriv);
     std::cout <<GridLogDebug << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
 
-  void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector<GaugeLinkField> & prev_solns ){
+  void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector< std::vector<GaugeLinkField> > & prev_solns ){
 
     RealD fac = -1. / (double(4 * Nd));
     LapStencil.GaugeImport(Usav);
@@ -274,7 +279,7 @@ for(int nu=0; nu<Nd;nu++){
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
 
-    Gtemp = Forecast(QuadOp, P_nu, prev_solns);
+    Gtemp = Forecast(QuadOp, P_nu, prev_solns[nu]);
 #ifndef MIXED_CG
     CG(QuadOp,P_nu,Gtemp);
 #else
@@ -283,7 +288,7 @@ for(int nu=0; nu<Nd;nu++){
     MixedCG.InnerTolerance=par.tolerance;
     MixedCG(P,Gtemp[i]);
 #endif
-    prev_solns.push_back(Gtemp);
+    prev_solns[nu].push_back(Gtemp);
 
     Gp += par.a0[i]*Gtemp; 
     LapStencil.M(Gtemp,Gtemp2);
@@ -294,20 +299,20 @@ for(int nu=0; nu<Nd;nu++){
   }
 
   void MSquareRoot(GaugeField& P){
-    std::vector<GaugeLinkField> prev_solns;
-    MSquareRootInt(Mparam,P,prev_solns);
+//    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
+    MSquareRootInt(Mparam,P,prev_solnsM);
     std::cout <<GridLogDebug << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void MInvSquareRoot(GaugeField& P){
-    std::vector<GaugeLinkField> prev_solns;
-    MSquareRootInt(Gparam,P,prev_solns);
+//    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
+    MSquareRootInt(Gparam,P,prev_solnsMinv);
     std::cout <<GridLogDebug << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void M(const GaugeField& in, GaugeField& out) {
       out = in;
-      std::vector<GaugeLinkField> prev_solns;
+      std::vector< std::vector<GaugeLinkField> > prev_solns(4);
       MSquareRootInt(Mparam,out,prev_solns);
       MSquareRootInt(Mparam,out,prev_solns);
       std::cout <<GridLogDebug << "M:norm2(out) = "<<norm2(out)<<std::endl;
@@ -315,7 +320,7 @@ for(int nu=0; nu<Nd;nu++){
 
   void Minv(const GaugeField& in, GaugeField& inverted){
       inverted = in;
-      std::vector<GaugeLinkField> prev_solns;
+      std::vector< std::vector<GaugeLinkField> > prev_solns(4);
       MSquareRootInt(Gparam,inverted,prev_solns);
       MSquareRootInt(Gparam,inverted,prev_solns);
       std::cout <<GridLogDebug << "Minv:norm2(inverted) = "<<norm2(inverted)<<std::endl;
