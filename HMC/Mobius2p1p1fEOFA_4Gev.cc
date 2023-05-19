@@ -34,7 +34,6 @@ directory
 #define MIXED_PRECISION
 #endif
 // second level EOFA
-#define EOFA_S
 #undef EOFA_H
 
 NAMESPACE_BEGIN(Grid);
@@ -164,10 +163,8 @@ int main(int argc, char **argv) {
   typedef WilsonImplR FermionImplPolicy;
   typedef MobiusFermionR FermionAction;
   typedef MobiusFermionF FermionActionF;
-#ifdef EOFA_S
   typedef MobiusEOFAFermionR FermionEOFAAction;
   typedef MobiusEOFAFermionF FermionEOFAActionF;
-#endif
   typedef typename FermionAction::FermionField FermionField;
   typedef typename FermionActionF::FermionField FermionFieldF;
 
@@ -176,7 +173,11 @@ int main(int argc, char **argv) {
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
+<<<<<<< HEAD
 //  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+=======
+    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+>>>>>>> a6d70d3be7a4f0a1320689ceb70f7608f2f6e7af
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
@@ -215,8 +216,11 @@ int main(int argc, char **argv) {
   CheckpointerParameters CPparams;
   CPparams.config_prefix = "ckpoint_EODWF_lat";
   CPparams.rng_prefix    = "ckpoint_EODWF_rng";
+<<<<<<< HEAD
 //  CPparams.config_prefix = "ckpoint_lat";
 //  CPparams.rng_prefix    = "ckpoint_rng";
+=======
+>>>>>>> a6d70d3be7a4f0a1320689ceb70f7608f2f6e7af
   CPparams.saveInterval  = 1;
   CPparams.format        = "IEEE64BIG";
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
@@ -233,18 +237,27 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
+<<<<<<< HEAD
   Real beta         = 5.98;
+=======
+  Real beta         = 5.96;
+  std::cout << GridLogMessage << " beta  "<< beta << std::endl;
+>>>>>>> a6d70d3be7a4f0a1320689ceb70f7608f2f6e7af
   Real light_mass   = 0.0003;
-  Real strange_mass = 0.01378;
-  Real charm_mass = 0.188;
+  Real strange_mass = 0.0146;
+  Real charm_mass = 0.183;
   Real pv_mass    = 1.0;
   RealD M5  = 1.4;
-  RealD b   = 2.0;
+  RealD b   = 2.0; 
   RealD c   = 1.0;
 
   // Copied from paper
   std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
+<<<<<<< HEAD
   std::vector<Real> hasenbusch2({ 0.31 }); // Paper values from F1 incorrect run
+=======
+  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
+>>>>>>> a6d70d3be7a4f0a1320689ceb70f7608f2f6e7af
 
 //  RealD eofa_mass=0.05 ;
 
@@ -267,63 +280,47 @@ int main(int argc, char **argv) {
   auto FGridF     = SpaceTimeGrid::makeFiveDimGrid(Ls,GridPtrF);
   auto FrbGridF   = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls,GridPtrF);
 
-#if 0
 //  IwasakiGaugeActionR GaugeAction(beta);
   WilsonGaugeActionR GaugeAction(beta);
-#else
-  std::vector<Complex> boundaryG = {1,1,1,0};
-  WilsonGaugeActionR::ImplParams ParamsG(boundaryG);
-  WilsonGaugeActionR GaugeAction(beta,ParamsG);
-#endif
-  // These lines are unecessary if BC are all periodic
 
   // temporarily need a gauge field
   LatticeGaugeField U(GridPtr);
   LatticeGaugeFieldF UF(GridPtrF);
 
   // These lines are unecessary if BC are all periodic
-//  std::vector<Complex> boundary = {1,1,1,-1};
-  std::vector<Complex> boundary = {1,1,1,0};
+  std::vector<Complex> boundary = {1,1,1,-1};
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
   double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-8;
+  double DerivativeStoppingCondition = 1e-10;
   double MaxCGIterations = 30000;
 
   ////////////////////////////////////
   // Collect actions
   ////////////////////////////////////
   ActionLevel<HMCWrapper::Field> Level1(1);
-  ActionLevel<HMCWrapper::Field> Level2(4);
+  ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
 
   ////////////////////////////////////
   // Strange action
   ////////////////////////////////////
   typedef SchurDiagMooeeOperator<FermionActionF,FermionFieldF> LinearOperatorF;
   typedef SchurDiagMooeeOperator<FermionAction ,FermionField > LinearOperatorD;
-  typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusFermionD,MobiusFermionF,LinearOperatorD,LinearOperatorF> MxPCG;
-
-#ifdef EOFA_S
   typedef SchurDiagMooeeOperator<FermionEOFAActionF,FermionFieldF> LinearOperatorEOFAF;
   typedef SchurDiagMooeeOperator<FermionEOFAAction ,FermionField > LinearOperatorEOFAD;
-  typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusEOFAFermionD,MobiusEOFAFermionF,LinearOperatorEOFAD,LinearOperatorEOFAF> MxPCG_EOFA;
-#endif
 
-  const int MX_inner = 50000;
-  ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
-  ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
+  typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusFermionD,MobiusFermionF,LinearOperatorD,LinearOperatorF> MxPCG;
+  typedef MixedPrecisionConjugateGradientOperatorFunction<MobiusEOFAFermionD,MobiusEOFAFermionF,LinearOperatorEOFAD,LinearOperatorEOFAF> MxPCG_EOFA;
 
   // DJM: setup for EOFA ratio (Mobius)
-#ifdef EOFA_S
   OneFlavourRationalParams OFRp;
   OFRp.lo       = 0.99; // How do I know this on F1?
   OFRp.hi       = 20;
-  OFRp.MaxIter  = 10000;
+  OFRp.MaxIter  = 100000;
   OFRp.tolerance= 1.0e-12;
   OFRp.degree   = 12;
   OFRp.precision= 50;
-
 
   
   MobiusEOFAFermionR Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , strange_mass, strange_mass, charm_mass, 0.0, -1, M5, b, c);
@@ -338,7 +335,10 @@ int main(int argc, char **argv) {
   MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *GridPtrF, *GridRBPtrF, charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
 #endif
 
+  ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
+  ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
+  const int MX_inner = 5000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
@@ -457,7 +457,6 @@ int main(int argc, char **argv) {
 	 OFRp, true);
   Level1.push_back(&EOFA);
 #endif
-#endif
 
   ////////////////////////////////////
   // up down action
@@ -508,7 +507,7 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     // Mixed precision CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    double DerivativeStoppingConditionLoose = 3e-7;
+    double DerivativeStoppingConditionLoose = 1e-10;
 
     DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*GridPtrF,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));

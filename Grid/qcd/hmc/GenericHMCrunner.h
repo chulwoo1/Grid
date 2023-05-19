@@ -167,7 +167,7 @@ private:
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
 //#include "DBW2_3.h.inc"
 //#include "Wilson10_3.h.inc"
-#include "g_x3_1.h.inc"
+#include "g_x3_2.h.inc"
 //#include "g_x3_2_sym.h.inc"
 //#include "Wilson64_2.h.inc"
 //#include "Wilson64.h.inc"
