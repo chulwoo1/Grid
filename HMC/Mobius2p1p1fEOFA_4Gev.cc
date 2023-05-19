@@ -176,9 +176,9 @@ int main(int argc, char **argv) {
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
 
   HMCparameters HMCparams;
 #if 1
@@ -213,10 +213,10 @@ int main(int argc, char **argv) {
   TheHMC.Resources.AddFourDimGrid("gauge"); // use default simd lanes decomposition
   
   CheckpointerParameters CPparams;
-//  CPparams.config_prefix = "ckpoint_EODWF_lat";
-//  CPparams.rng_prefix    = "ckpoint_EODWF_rng";
-  CPparams.config_prefix = "ckpoint_lat";
-  CPparams.rng_prefix    = "ckpoint_rng";
+  CPparams.config_prefix = "ckpoint_EODWF_lat";
+  CPparams.rng_prefix    = "ckpoint_EODWF_rng";
+//  CPparams.config_prefix = "ckpoint_lat";
+//  CPparams.rng_prefix    = "ckpoint_rng";
   CPparams.saveInterval  = 1;
   CPparams.format        = "IEEE64BIG";
   TheHMC.Resources.LoadNerscCheckpointer(CPparams);
@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.965;
+  Real beta         = 5.98;
   Real light_mass   = 0.0003;
   Real strange_mass = 0.01378;
   Real charm_mass = 0.188;
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
   RealD c   = 1.0;
 
   // Copied from paper
-  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.6 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
   std::vector<Real> hasenbusch2({ 0.31 }); // Paper values from F1 incorrect run
 
 //  RealD eofa_mass=0.05 ;
