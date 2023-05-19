@@ -28,6 +28,10 @@ directory
 			   /*  END LEGAL */
 #pragma once 
 #undef MIXED_CG
+//enable/disable push_back
+#undef USE_CHRONO 
+
+#include <roctracer/roctx.h>
 
 NAMESPACE_BEGIN(Grid);
 
@@ -179,7 +183,9 @@ for (int nu=0;nu<Nd;nu++){
 
     for(int i =0;i<par.order;i++){
     QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
+#if USE_CHRONO
     MinvMom[i] = Forecast(QuadOp, right_nu, prev_solns[nu]);
+#endif
 #ifndef MIXED_CG
     CG(QuadOp,right_nu,MinvMom[i]);
 #else
@@ -188,7 +194,9 @@ for (int nu=0;nu<Nd;nu++){
     MixedCG.InnerTolerance=par.tolerance;
     MixedCG(right_nu,MinvMom[i]);
 #endif
+#if USE_CHRONO
     prev_solns[nu].push_back(MinvMom[i]);
+#endif
     
     GMom += par.a0[i]*MinvMom[i]; 
     LapStencil.M(MinvMom[i],Gtemp2);
@@ -210,7 +218,9 @@ for (int nu=0;nu<Nd;nu++){
     Laplacian.M(MinvGMom, LMinvGMom);
     MixedCG(right_nu,MinvMom[i]);
 #endif
+#if USE_CHRONO
     prev_solns[nu].push_back(MinvGMom);
+#endif
 
     LapStencil.M(MinvMom[i], Gtemp2); LMinvMom=fac*Gtemp2;
     AMinvMom = par.a1[i]*LMinvMom;
@@ -224,7 +234,8 @@ for (int nu=0;nu<Nd;nu++){
 
 
     GaugeField tempDer(left.Grid());
-    std::cout<<GridLogMessage << "coef =  force contraction"<< coef <<std::endl;
+    std::cout<<GridLogMessage << "force contraction "<< i <<std::endl;
+    roctxRangePushA("RMHMC force contraction");
     MDerivLink(GMom,MinvMom[i],tempDer); der += coef*2*par.a1[i]*tempDer;
     MDerivLink(left_nu,MinvGMom,tempDer); der += coef*2*par.a1[i]*tempDer;
     MDerivLink(LMinvAGMom,MinvMom[i],tempDer); der += coef*-2.*par.b2*tempDer;
@@ -233,10 +244,13 @@ for (int nu=0;nu<Nd;nu++){
     MDerivLink(AMinvMom,LMinvGMom,tempDer); der += coef*-2.*par.b2*tempDer;
     MDerivLink(MinvAGMom,MinvMom[i],tempDer); der += coef*-2.*par.b1[i]*tempDer;
     MDerivLink(AMinvMom,MinvGMom,tempDer); der += coef*-2.*par.b1[i]*tempDer;
+    std::cout<<GridLogMessage << "coef =  force contraction "<< i << "done "<< coef <<std::endl;
+    roctxRangePop();
 
     }
 }
-    std::cout<<GridLogMessage << "coef =  force contraction done "<< coef <<std::endl;
+
+//  exit(-42);
   }
 
   void MDeriv(const GaugeField& in, GaugeField& der) {
@@ -288,7 +302,9 @@ for(int nu=0; nu<Nd;nu++){
     MixedCG.InnerTolerance=par.tolerance;
     MixedCG(P,Gtemp[i]);
 #endif
+#if USE_CHRONO
     prev_solns[nu].push_back(Gtemp);
+#endif
 
     Gp += par.a0[i]*Gtemp; 
     LapStencil.M(Gtemp,Gtemp2);
@@ -299,14 +315,14 @@ for(int nu=0; nu<Nd;nu++){
   }
 
   void MSquareRoot(GaugeField& P){
-//    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
-    MSquareRootInt(Mparam,P,prev_solnsM);
+    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
+    MSquareRootInt(Mparam,P,prev_solns);
     std::cout <<GridLogDebug << "MSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 
   void MInvSquareRoot(GaugeField& P){
-//    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
-    MSquareRootInt(Gparam,P,prev_solnsMinv);
+    std::vector< std::vector<GaugeLinkField> > prev_solns(4);
+    MSquareRootInt(Gparam,P,prev_solns);
     std::cout <<GridLogDebug << "MInvSquareRoot:norm2(P) = "<<norm2(P)<<std::endl;
   }
 

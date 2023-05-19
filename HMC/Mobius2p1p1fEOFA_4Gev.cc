@@ -35,6 +35,8 @@ directory
 #endif
 // second level EOFA
 #undef EOFA_H
+#define USE_OBC
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -172,11 +174,6 @@ int main(int argc, char **argv) {
   
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-  //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-    typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-
   HMCparameters HMCparams;
 #if 1
   {
@@ -198,6 +195,17 @@ int main(int argc, char **argv) {
     HMCparams.MD.trajL         = 1.0;
   }
 #endif
+
+  //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
+//    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
+#ifdef DO_IMPLICIT
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+  HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
+#else
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+  HMCparams.MD.name          =std::string("ForceGradient");
+#endif
+
   std::cout << GridLogMessage<< HMCparams <<std::endl;
   HMCWrapper TheHMC(HMCparams);
   TheHMC.ReadCommandLine(argc, argv);
@@ -239,6 +247,7 @@ int main(int argc, char **argv) {
   RealD c   = 1.0;
 
   // Copied from paper
+//  std::vector<Real> hasenbusch({ 0.045 }); // Paper values from F1 incorrect run
   std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
   std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
 
@@ -263,20 +272,31 @@ int main(int argc, char **argv) {
   auto FGridF     = SpaceTimeGrid::makeFiveDimGrid(Ls,GridPtrF);
   auto FrbGridF   = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls,GridPtrF);
 
+
+#ifndef USE_OBC
 //  IwasakiGaugeActionR GaugeAction(beta);
   WilsonGaugeActionR GaugeAction(beta);
+#else
+  std::vector<Complex> boundaryG = {1,1,1,0};
+  WilsonGaugeActionR::ImplParams ParamsG(boundaryG);
+  WilsonGaugeActionR GaugeAction(beta,ParamsG);
+#endif
 
   // temporarily need a gauge field
   LatticeGaugeField U(GridPtr);
   LatticeGaugeFieldF UF(GridPtrF);
 
   // These lines are unecessary if BC are all periodic
+#ifndef USE_OBC
   std::vector<Complex> boundary = {1,1,1,-1};
+#else
+  std::vector<Complex> boundary = {1,1,1,0};
+#endif
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-10;
+  double ActionStoppingCondition     = 1e-8;
+  double DerivativeStoppingCondition = 1e-6;
   double MaxCGIterations = 30000;
 
   ////////////////////////////////////
