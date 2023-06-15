@@ -9,6 +9,7 @@ Copyright (C) 2015-2016
 Author: Peter Boyle <pabobyle@ph.ed.ac.uk>
 Author: Guido Cossu
 Author: David Murphy
+Author: Chulwoo Jung <chulwoo@bnl.gov>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,8 +36,8 @@ directory
 #endif
 // second level EOFA
 #undef EOFA_H
-#define USE_OBC
-#undef DO_IMPLICIT
+#undef USE_OBC
+#define DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -236,11 +237,11 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.96;
+  Real beta         = 5.983;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
-  Real light_mass   = 0.0003;
-  Real strange_mass = 0.0146;
-  Real charm_mass = 0.183;
+  Real light_mass   = 0.00049;
+  Real strange_mass = 0.0158;
+  Real charm_mass = 0.191;
   Real pv_mass    = 1.0;
   RealD M5  = 1.4;
   RealD b   = 2.0; 
