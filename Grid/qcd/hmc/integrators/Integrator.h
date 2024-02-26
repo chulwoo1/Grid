@@ -159,6 +159,8 @@ public:
       Field& Us = Smearer.get_U(as[level].actions.at(a)->is_smeared);
       double start_force = usecond();
       as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
+						  
+      auto name = as[level].actions.at(a)->action_name();
 
       std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
       if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
