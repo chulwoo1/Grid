@@ -764,12 +764,23 @@ public:
     for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
       int first_step = (stp == 0);
       int last_step = (stp == Params.MDsteps - 1);
-      this->step(U, 0, first_step, last_step);
-      if (traj>=0){
-        std::string file("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileU("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::ifstream fsU(fileU);
+      std::ifstream fsM(fileM);
+      if ( fsU.good() && fsM.good() ) {
+	fsU.close();fsM.close();
+	std::string config;
+	FieldMetaData header;
+        NerscIO::readConfiguration(U,header,fileU);
+        NerscIO::readConfiguration(P.Mom,header,fileM);
+      } else {
+	fsU.close();fsM.close();
+        this->step(U, 0, first_step, last_step);
         int precision32 = 0;
         int tworow      = 0;
-        NerscIO::writeConfiguration(U,file,tworow,precision32);
+        NerscIO::writeConfiguration(U,fileU,tworow,precision32);
+        NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
       }
     }
 
