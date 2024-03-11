@@ -770,10 +770,6 @@ public:
       std::ifstream fsM(fileM);
       if ( fsU.good() && fsM.good() ) {
 	fsU.close();fsM.close();
-	std::string config;
-	FieldMetaData header;
-        NerscIO::readConfiguration(U,header,fileU);
-        NerscIO::readConfiguration(P.Mom,header,fileM);
       } else {
 	fsU.close();fsM.close();
         this->step(U, 0, first_step, last_step);
@@ -781,6 +777,12 @@ public:
         int tworow      = 0;
         NerscIO::writeConfiguration(U,fileU,tworow,precision32);
         NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
+      }
+      {
+	std::string config;
+	FieldMetaData header;
+        NerscIO::readConfiguration(U,header,fileU);
+        NerscIO::readConfiguration(P.Mom,header,fileM);
       }
     }
 
