@@ -248,6 +248,8 @@ public:
                    ObsListType _Obs, Field &_U)
     : Params(_Pams), TheIntegrator(_Int), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U),traj_num(0) {}
   ~HybridMonteCarlo(){};
+  static int fnum;
+  static int FieldNum(){return fnum++;}
 
   void evolve(void) {
     Real DeltaH;
