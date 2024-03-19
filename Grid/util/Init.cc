@@ -90,6 +90,10 @@ int GridThread::_threads =1;
 int GridThread::_hyperthreads=1;
 int GridThread::_cores=1;
 
+int traj_num=0;
+int field_num=0;
+
+
 
 const Coordinate &GridDefaultLatt(void)     {return Grid_default_latt;};
 const Coordinate &GridDefaultMpi(void)      {return Grid_default_mpi;};

@@ -67,6 +67,9 @@ void GridParseLayout(char **argv,int argc,
 
 void printHash(void);
 
+extern int traj_num;
+extern int field_num;
+inline int FieldNum(){return field_num++;}
 
 NAMESPACE_END(Grid);
 

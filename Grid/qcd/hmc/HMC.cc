@@ -1,5 +1,6 @@
 #include <Grid/Grid.h>
 
 namespace Grid{
-int HybridMonteCarlo:fnum=0;
+//int traj_num=0;
+//int field_num=0;
 }

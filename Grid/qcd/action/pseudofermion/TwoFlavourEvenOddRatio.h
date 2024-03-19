@@ -28,8 +28,64 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
     /*  END LEGAL */
 #ifndef QCD_PSEUDOFERMION_TWO_FLAVOUR_EVEN_ODD_RATIO_H
 #define QCD_PSEUDOFERMION_TWO_FLAVOUR_EVEN_ODD_RATIO_H
+//#include<Grid/Grid.h>
+//#include<Grid/parallelIO/MetaData.h>
 
 NAMESPACE_BEGIN(Grid);
+
+// PLEASE FIX 
+template<class vobj> static std::string getFormatStringLocal (void)
+{
+  std::string format;
+  typedef typename getPrecision<vobj>::real_scalar_type stype;
+  if ( sizeof(stype) == sizeof(float) ) {
+    format = std::string("IEEE32BIG");
+  }
+  if ( sizeof(stype) == sizeof(double) ) {
+    format = std::string("IEEE64BIG");
+  }
+  return format;
+}
+
+template <class fobj, class sobj>
+struct PFUnmunger {
+  typedef typename getPrecision<fobj>::real_scalar_type fobj_stype;
+  typedef typename getPrecision<sobj>::real_scalar_type sobj_stype;
+
+  void operator()(sobj &in, fobj &out) {
+    // take word by word and transform accoding to the status
+    fobj_stype *out_buffer = (fobj_stype *)&out;
+    sobj_stype *in_buffer = (sobj_stype *)&in;
+    size_t fobj_words = sizeof(out) / sizeof(fobj_stype);
+    size_t sobj_words = sizeof(in) / sizeof(sobj_stype);
+    assert(fobj_words == sobj_words);
+
+    for (unsigned int word = 0; word < sobj_words; word++)
+      out_buffer[word] = in_buffer[word];  // type conversion on the fly
+
+  }
+};
+
+template <class fobj, class sobj>
+struct PFMunger {
+  typedef typename getPrecision<fobj>::real_scalar_type fobj_stype;
+  typedef typename getPrecision<sobj>::real_scalar_type sobj_stype;
+
+  void operator()(fobj &in, sobj &out) {
+    // take word by word and transform accoding to the status
+    fobj_stype *in_buffer = (fobj_stype *)&in;
+    sobj_stype *out_buffer = (sobj_stype *)&out;
+    size_t fobj_words = sizeof(in) / sizeof(fobj_stype);
+    size_t sobj_words = sizeof(out) / sizeof(sobj_stype);
+    assert(fobj_words == sobj_words);
+
+    for (unsigned int word = 0; word < sobj_words; word++)
+      out_buffer[word] = in_buffer[word];  // type conversion on the fly
+
+  }
+};
+
+
 
     ///////////////////////////////////////
     // Two flavour ratio
@@ -136,6 +192,29 @@ NAMESPACE_BEGIN(Grid);
 	std::cout << " TwoFlavourRefresh: Heatbath solver "<<std::endl;
         Vpc.Mpc(tmp,PhiOdd);            
 	std::cout << " TwoFlavourRefresh: Mpc "<<std::endl;
+
+#if 1
+	{
+	 int fnum=Grid::FieldNum();
+	 std::string fileO("./PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+//         emptyUserRecord record;
+         uint32_t nersc_csum;
+         uint32_t scidac_csuma;
+         uint32_t scidac_csumb;
+         typedef typename FermionField::vector_object  vobj;
+         typedef typename FermionField::scalar_object  sobj;
+
+         PFMunger<sobj,sobj> munge;
+         std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+
+         BinaryIO::writeLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, 0, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+
+         std::cout << GridLogMessage << " PhiOdd "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+
+
+	}
+#endif
 
         // Even det factors
         DenOp.MooeeDag(etaEven,tmp);

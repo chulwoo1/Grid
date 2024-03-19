@@ -42,6 +42,7 @@ directory
 #include <string>
 #include <list>
 
+//#include <Grid/qcd/action/ActionBase.h>
 #include <Grid/qcd/hmc/integrators/Integrator.h>
 #include <Grid/qcd/hmc/integrators/Integrator_algorithm.h>
 
@@ -112,7 +113,6 @@ private:
   IntegratorType &TheIntegrator;
   ObsListType Observables;
 
-  int traj_num;
 
   /////////////////////////////////////////////////////////
   // Metropolis step
@@ -145,6 +145,7 @@ private:
   RealD evolve_hmc_step(Field &U) {
 
     GridBase *Grid = U.Grid();
+    Grid::field_num=0;//reset counter
 
     if(Params.PerformRandomShift){
 #if 0
@@ -204,7 +205,7 @@ private:
 
     std::cout << GridLogMessage << "--------------------------------------------------\n";
     std::cout << GridLogMessage << " Molecular Dynamics evolution ";
-    TheIntegrator.integrate(U,traj_num);
+    TheIntegrator.integrate(U,Grid::traj_num);
     std::cout << GridLogMessage << "--------------------------------------------------\n";
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,10 +247,11 @@ public:
   HybridMonteCarlo(HMCparameters _Pams, IntegratorType &_Int,
                    GridSerialRNG &_sRNG, GridParallelRNG &_pRNG, 
                    ObsListType _Obs, Field &_U)
-    : Params(_Pams), TheIntegrator(_Int), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U),traj_num(0) {}
+    : Params(_Pams), TheIntegrator(_Int), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U) {}
   ~HybridMonteCarlo(){};
-  static int fnum;
-  static int FieldNum(){return fnum++;}
+//  static int traj_num;
+//  static int field_num;
+//  static int FieldNum(){return field_num++;}
 
   void evolve(void) {
     Real DeltaH;
@@ -266,7 +268,7 @@ public:
     
 
       std::cout << GridLogHMC << "-- # Trajectory = " << traj << "\n";
-      traj_num=traj;
+      Grid::traj_num=traj;
       if (traj < Params.StartTrajectory + Params.NoMetropolisUntil) {
       	std::cout << GridLogHMC << "-- Thermalization" << std::endl;
       }

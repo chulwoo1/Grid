@@ -127,6 +127,10 @@ public:
   virtual std::string action_name()    = 0;                             // return the action name
   virtual std::string LogParameters()  = 0;                             // prints action parameters
   virtual ~Action(){}
+//  static int traj_num;
+//  static int field_num;
+//  static int FieldNum(){return field_num++;}
+
 };
 
 template <class GaugeField >
