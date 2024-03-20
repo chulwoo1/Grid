@@ -147,6 +147,57 @@ class EmptyAction : public Action <GaugeField>
   virtual std::string LogParameters()  { return std::string("No parameters");};
 };
 
+template<class vobj> static std::string getFormatStringLocal (void)
+{
+  std::string format;
+  typedef typename getPrecision<vobj>::real_scalar_type stype;
+  if ( sizeof(stype) == sizeof(float) ) {
+    format = std::string("IEEE32BIG");
+  }
+  if ( sizeof(stype) == sizeof(double) ) {
+    format = std::string("IEEE64BIG");
+  }
+  return format;
+}
+
+template <class fobj, class sobj>
+struct PFUnmunger {
+  typedef typename getPrecision<fobj>::real_scalar_type fobj_stype;
+  typedef typename getPrecision<sobj>::real_scalar_type sobj_stype;
+
+  void operator()(sobj &in, fobj &out) {
+    // take word by word and transform accoding to the status
+    fobj_stype *out_buffer = (fobj_stype *)&out;
+    sobj_stype *in_buffer = (sobj_stype *)&in;
+    size_t fobj_words = sizeof(out) / sizeof(fobj_stype);
+    size_t sobj_words = sizeof(in) / sizeof(sobj_stype);
+    assert(fobj_words == sobj_words);
+
+    for (unsigned int word = 0; word < sobj_words; word++)
+      out_buffer[word] = in_buffer[word];  // type conversion on the fly
+
+  }
+};
+
+template <class fobj, class sobj>
+struct PFMunger {
+  typedef typename getPrecision<fobj>::real_scalar_type fobj_stype;
+  typedef typename getPrecision<sobj>::real_scalar_type sobj_stype;
+
+  void operator()(fobj &in, sobj &out) {
+    // take word by word and transform accoding to the status
+    fobj_stype *in_buffer = (fobj_stype *)&in;
+    sobj_stype *out_buffer = (sobj_stype *)&out;
+    size_t fobj_words = sizeof(in) / sizeof(fobj_stype);
+    size_t sobj_words = sizeof(out) / sizeof(sobj_stype);
+    assert(fobj_words == sobj_words);
+
+    for (unsigned int word = 0; word < sobj_words; word++)
+      out_buffer[word] = in_buffer[word];  // type conversion on the fly
+
+  }
+};
+
 
 
 NAMESPACE_END(Grid);

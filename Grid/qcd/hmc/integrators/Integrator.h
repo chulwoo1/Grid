@@ -761,6 +761,7 @@ public:
       t_P[level] = 0;
     }
 
+    bool if_checkpoint=false;
     for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
       int first_step = (stp == 0);
       int last_step = (stp == Params.MDsteps - 1);
@@ -769,6 +770,7 @@ public:
       std::ifstream fsU(fileU);
       std::ifstream fsM(fileM);
       if ( fsU.good() && fsM.good() ) {
+	if_checkpoint=true;
 	fsU.close();fsM.close();
       } else {
 	fsU.close();fsM.close();
@@ -786,15 +788,26 @@ public:
       }
     }
 
+    FieldImplementation::Project(U);
     // Check the clocks all match on all levels
-    for (int level = 0; level < as.size(); ++level) {
+    for (int level = 0; level < as.size(); ++level) 
+    if(!if_checkpoint){
       assert(fabs(t_U - t_P[level]) < 1.0e-6);  // must be the same
       std::cout << GridLogIntegrator << " times[" << level << "]= " << t_P[level] << " " << t_U << std::endl;
     }
 
-    FieldImplementation::Project(U);
     // and that we indeed got to the end of the trajectory
-    assert(fabs(t_U - Params.trajL) < 1.0e-6);
+    if(if_checkpoint){
+       t_U = Params.trajL;
+       for (int level = 0; level < as.size(); ++level) 
+          t_P[level] = t_U ;
+    } else {
+       for (int level = 0; level < as.size(); ++level) {
+          assert(fabs(t_U - t_P[level]) < 1.0e-6);  // must be the same
+          std::cout << GridLogIntegrator << " times[" << level << "]= " << t_P[level] << " " << t_U << std::endl;
+       }
+       assert(fabs(t_U - Params.trajL) < 1.0e-6);
+    }
 
   }
 

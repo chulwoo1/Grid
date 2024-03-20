@@ -33,6 +33,7 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 
 NAMESPACE_BEGIN(Grid);
 
+#if 0
 // PLEASE FIX 
 template<class vobj> static std::string getFormatStringLocal (void)
 {
@@ -84,6 +85,7 @@ struct PFMunger {
 
   }
 };
+#endif
 
 
 
@@ -193,10 +195,13 @@ struct PFMunger {
         Vpc.Mpc(tmp,PhiOdd);            
 	std::cout << " TwoFlavourRefresh: Mpc "<<std::endl;
 
+
+        // Even det factors
+        DenOp.MooeeDag(etaEven,tmp);
+        NumOp.MooeeInvDag(tmp,PhiEven);
 #if 1
 	{
 	 int fnum=Grid::FieldNum();
-	 std::string fileO("./PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
 //         emptyUserRecord record;
          uint32_t nersc_csum;
          uint32_t scidac_csuma;
@@ -207,18 +212,19 @@ struct PFMunger {
          PFMunger<sobj,sobj> munge;
          std::string format = getFormatStringLocal<typename FermionField::vector_object>();
 
+	 std::string fileO("./PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
          BinaryIO::writeLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, 0, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
+         std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
 
-         std::cout << GridLogMessage << " PhiOdd "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+	 std::string fileE("./PhiEven."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+         BinaryIO::writeLatticeObject<vobj,sobj>(PhiEven,fileE,munge, 0, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+         std::cout << GridLogMessage << " PhiEven "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
 
 
 	}
 #endif
-
-        // Even det factors
-        DenOp.MooeeDag(etaEven,tmp);
-        NumOp.MooeeInvDag(tmp,PhiEven);
 	std::cout << " TwoFlavourRefresh: Mee "<<std::endl;
 
 	RefreshAction = norm2(etaEven)+norm2(etaOdd);

@@ -241,6 +241,26 @@ NAMESPACE_BEGIN(Grid);
         Rop.Omega(tmp[1], tmp[0], 1, 1);
         spProj(tmp[0], tmp[1], 1, Rop.Ls);
         Phi = Phi + tmp[1];
+#if 1
+	{
+	 int fnum=Grid::FieldNum();
+//         emptyUserRecord record;
+         uint32_t nersc_csum;
+         uint32_t scidac_csuma;
+         uint32_t scidac_csumb;
+         typedef typename FermionField::vector_object  vobj;
+         typedef typename FermionField::scalar_object  sobj;
+
+         PFMunger<sobj,sobj> munge;
+         std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+
+	 std::string fileO("./PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+         BinaryIO::writeLatticeObject<vobj,sobj>(Phi,fileO,munge, 0, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+         std::cout << GridLogMessage << " PhiEOFA"<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+
+	}
+#endif
 
         // Reset shift coefficients for energy and force evals
 	heatbathRefreshShiftCoefficients(0, 0.0);
