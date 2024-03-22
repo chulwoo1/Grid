@@ -195,6 +195,9 @@ struct PFMunger {
 
         if ( fsO.good() && fsE.good() ) {
           fsO.close();fsE.close();
+	  // setting checkerboard
+          pickCheckerboard(Even,PhiEven,eta);
+          pickCheckerboard(Odd,PhiOdd,eta);
 	} else {
           fsO.close();fsE.close();
 
