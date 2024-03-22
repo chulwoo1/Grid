@@ -198,6 +198,33 @@ struct PFMunger {
   }
 };
 
+static uint64_t writeHeader(const uint32_t size, const uint32_t checksum, const std::string &format, const std::string &file){
+  std::ofstream fout(file,std::ios::out|std::ios::in);
+  fout.seekp(0,std::ios::beg);
+  fout << std::setw(10) << size << std::endl;
+  fout << std::hex << std::setw(10) << checksum << std::endl;
+  fout << format << std::endl;
+  return fout.tellp();
+}
+
+static uint64_t readHeader(uint32_t &size, uint32_t &checksum, std::string &format, const std::string &file){
+  std::ifstream fin(file);
+  std::string line;
+  getline(fin,line);
+  {
+    std::stringstream ss; ss <<line ; ss >> size;
+  }
+  getline(fin,line);
+  {
+    std::stringstream ss; ss <<line ; ss >> std::hex >> checksum;
+  }
+  getline(fin,format);
+  removeWhitespace(format);
+
+  return fin.tellg();
+}
+
+
 
 
 NAMESPACE_END(Grid);

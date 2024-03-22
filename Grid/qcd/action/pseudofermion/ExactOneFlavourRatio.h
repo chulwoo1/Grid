@@ -186,8 +186,20 @@ NAMESPACE_BEGIN(Grid);
         // \Phi = ( \alpha_{0} + \sum_{k=1}^{N_{p}} \alpha_{l} * \gamma_{l} ) * \eta
         RealD N(PowerNegHalf.norm);
         for(int k=0; k<param.degree; ++k){ N += PowerNegHalf.residues[k] / ( 1.0 + PowerNegHalf.poles[k] ); }
-        Phi = eta * N;
 
+	int fnum=Grid::FieldNum();
+	std::string fileO("./PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+        std::ifstream fsO(fileO);
+
+        GridBase* grid = Phi.Grid();
+
+if ( fsO.good() ) {
+          fsO.close();
+} else {
+          fsO.close();
+
+
+        Phi = eta * N;
         // LH terms:
         // \Phi = \Phi + k \sum_{k=1}^{N_{p}} P_{-} \Omega_{-}^{\dagger} ( H(mf)
         //          - \gamma_{l} \Delta_{-}(mf,mb) P_{-} )^{-1} \Omega_{-} P_{-} \eta
@@ -241,7 +253,7 @@ NAMESPACE_BEGIN(Grid);
         Rop.Omega(tmp[1], tmp[0], 1, 1);
         spProj(tmp[0], tmp[1], 1, Rop.Ls);
         Phi = Phi + tmp[1];
-#if 1
+#if 0
 	{
 	 int fnum=Grid::FieldNum();
 //         emptyUserRecord record;
@@ -261,6 +273,55 @@ NAMESPACE_BEGIN(Grid);
 
 	}
 #endif
+
+	{
+           uint32_t nersc_csum;
+           uint32_t scidac_csuma;
+           uint32_t scidac_csumb;
+           typedef typename FermionField::vector_object  vobj;
+           typedef typename FermionField::scalar_object  sobj;
+  
+           PFMunger<sobj,sobj> munge;
+           std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+
+	   uint64_t offset; //leave 64 bits for header
+           if ( grid->IsBoss() ) {
+	     std::ofstream fout(fileO,std::ios::out);
+             offset = writeHeader(1, 0, format, fileO);
+           }
+           grid->Broadcast(0,(void *)&offset,sizeof(offset)); //use as a barrier
+
+  
+           BinaryIO::writeLatticeObject<vobj,sobj>(Phi,fileO,munge, offset, format,
+                                                     nersc_csum,scidac_csuma,scidac_csumb);
+           std::cout << GridLogMessage << " Phi"<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+
+
+	}
+}
+
+	{
+         uint32_t nersc_csum;
+         uint32_t scidac_csuma;
+         uint32_t scidac_csumb;
+         typedef typename FermionField::vector_object  vobj;
+         typedef typename FermionField::scalar_object  sobj;
+
+         PFUnmunger<sobj,sobj> munge;
+
+	 uint32_t hdr_checksum, hdr_size;
+         std::string format;
+         uint64_t offset = readHeader(hdr_size, hdr_checksum, format, fileO);
+         std::cout << "Data offset read " << offset << std::endl;
+         std::cout << "Data size read " << hdr_size << std::endl;
+//         assert(data.size() == hdr_size);
+//         std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+
+         BinaryIO::readLatticeObject<vobj,sobj>(Phi,fileO,munge, offset, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+         std::cout << GridLogMessage << " PhiEOFA "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+
+	}
 
         // Reset shift coefficients for energy and force evals
 	heatbathRefreshShiftCoefficients(0, 0.0);

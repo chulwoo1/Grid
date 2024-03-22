@@ -185,50 +185,102 @@ struct PFMunger {
         SchurDifferentiableOperator<Impl> Vpc(NumOp);
 
 	std::cout << " TwoFlavourRefresh: Diff ops "<<std::endl;
+
+	int fnum=Grid::FieldNum();
+	std::string fileO("./PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+	std::string fileE("./PhiEven."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+        std::ifstream fsO(fileO);
+        std::ifstream fsE(fileE);
+	GridBase* grid = PhiEven.Grid();
+
+        if ( fsO.good() && fsE.good() ) {
+          fsO.close();fsE.close();
+	} else {
+          fsO.close();fsE.close();
+
         // Odd det factors
-        Mpc.MpcDag(etaOdd,PhiOdd);
-	std::cout << " TwoFlavourRefresh: MpcDag "<<std::endl;
-        tmp=Zero();
-	std::cout << " TwoFlavourRefresh: Zero() guess "<<std::endl;
-        HeatbathSolver(Vpc,PhiOdd,tmp);
-	std::cout << " TwoFlavourRefresh: Heatbath solver "<<std::endl;
-        Vpc.Mpc(tmp,PhiOdd);            
-	std::cout << " TwoFlavourRefresh: Mpc "<<std::endl;
+          Mpc.MpcDag(etaOdd,PhiOdd);
+  	std::cout << " TwoFlavourRefresh: MpcDag "<<std::endl;
+          tmp=Zero();
+  	std::cout << " TwoFlavourRefresh: Zero() guess "<<std::endl;
+          HeatbathSolver(Vpc,PhiOdd,tmp);
+  	std::cout << " TwoFlavourRefresh: Heatbath solver "<<std::endl;
+          Vpc.Mpc(tmp,PhiOdd);            
+  	std::cout << " TwoFlavourRefresh: Mpc "<<std::endl;
+  
+  
+          // Even det factors
+          DenOp.MooeeDag(etaEven,tmp);
+          NumOp.MooeeInvDag(tmp,PhiEven);
+  
+  
+  //         emptyUserRecord record;
+           uint32_t nersc_csum;
+           uint32_t scidac_csuma;
+           uint32_t scidac_csumb;
+           typedef typename FermionField::vector_object  vobj;
+           typedef typename FermionField::scalar_object  sobj;
+  
+           PFMunger<sobj,sobj> munge;
+           std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+
+	   uint64_t offset; //leave 64 bits for header
+           if ( grid->IsBoss() ) {
+	     std::ofstream fout(fileO,std::ios::out);
+             offset = writeHeader(1, 0, format, fileO);
+           }
+           grid->Broadcast(0,(void *)&offset,sizeof(offset)); //use as a barrier
+
+  
+           BinaryIO::writeLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, offset, format,
+                                                     nersc_csum,scidac_csuma,scidac_csumb);
+           std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+
+           if ( grid->IsBoss() ) {
+	     std::ofstream fout(fileE,std::ios::out);
+             offset = writeHeader(1, 0, format, fileE);
+           }
+           grid->Broadcast(0,(void *)&offset,sizeof(offset)); //use as a barrier
+  
+           BinaryIO::writeLatticeObject<vobj,sobj>(PhiEven,fileE,munge, offset, format,
+                                                     nersc_csum,scidac_csuma,scidac_csumb);
+           std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
 
 
-        // Even det factors
-        DenOp.MooeeDag(etaEven,tmp);
-        NumOp.MooeeInvDag(tmp,PhiEven);
-#if 1
+	}
+
 	{
-	 int fnum=Grid::FieldNum();
-//         emptyUserRecord record;
          uint32_t nersc_csum;
          uint32_t scidac_csuma;
          uint32_t scidac_csumb;
          typedef typename FermionField::vector_object  vobj;
          typedef typename FermionField::scalar_object  sobj;
 
-         PFMunger<sobj,sobj> munge;
-         std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+         PFUnmunger<sobj,sobj> munge;
 
-	 std::string fileO("./PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
-         BinaryIO::writeLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, 0, format,
+	 uint32_t hdr_checksum, hdr_size;
+         std::string format;
+         uint64_t offset = readHeader(hdr_size, hdr_checksum, format, fileO);
+         std::cout << "Data offset read " << offset << std::endl;
+         std::cout << "Data size read " << hdr_size << std::endl;
+//         assert(data.size() == hdr_size);
+//         std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+
+         BinaryIO::readLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
          std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
 
-	 std::string fileE("./PhiEven."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
-         BinaryIO::writeLatticeObject<vobj,sobj>(PhiEven,fileE,munge, 0, format,
+         offset = readHeader(hdr_size, hdr_checksum, format, fileE);
+         BinaryIO::readLatticeObject<vobj,sobj>(PhiEven,fileE,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
-         std::cout << GridLogMessage << " PhiEven "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+         std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
 
 
 	}
-#endif
 	std::cout << " TwoFlavourRefresh: Mee "<<std::endl;
 
 	RefreshAction = norm2(etaEven)+norm2(etaOdd);
-	std::cout << " refresh " <<action_name()<< " action "<<RefreshAction<<std::endl;
+	std::cout  << std::setprecision(14) << " refresh " <<action_name()<< " action "<<RefreshAction<<std::endl;
       };
 
       //////////////////////////////////////////////////////
@@ -249,12 +301,16 @@ struct PFMunger {
         FermionField X(NumOp.FermionRedBlackGrid());
         FermionField Y(NumOp.FermionRedBlackGrid());
 
+	std::cout  << std::setprecision(14) << " PhiOdd " <<norm2(PhiOdd)<<std::endl;
         Vpc.MpcDag(PhiOdd,Y);           // Y= Vdag phi
+	std::cout  << std::setprecision(14) << " Y " <<norm2(Y)<<std::endl;
         X=Zero();
         ActionSolver(Mpc,Y,X);          // X= (MdagM)^-1 Vdag phi
+	std::cout  << std::setprecision(14) << " X " <<norm2(X)<<std::endl;
         //Mpc.Mpc(X,Y);                   // Y=  Mdag^-1 Vdag phi
         // Multiply by Ydag
         RealD action = real(innerProduct(Y,X));
+	std::cout  << std::setprecision(14) << " X Y " << action <<std::endl;
 
         //RealD action = norm2(Y);
 
@@ -262,10 +318,14 @@ struct PFMunger {
         // Only really clover term that creates this. Leave the EE portion as a future to do to make most
         // rapid progresss on DWF for now.
         //
+	std::cout  << std::setprecision(14) << " PhiEven " <<norm2(PhiEven)<<std::endl;
         NumOp.MooeeDag(PhiEven,X);
+	std::cout  << std::setprecision(14) << " X " <<norm2(X)<<std::endl;
         DenOp.MooeeInvDag(X,Y);
+	std::cout  << std::setprecision(14) << " Y " <<norm2(Y)<<std::endl;
         action = action + norm2(Y);
 
+	std::cout  << std::setprecision(14) << " S " <<action_name()<< " action "<<action<<std::endl;
         return action;
       };
 
