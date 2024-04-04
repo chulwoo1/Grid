@@ -27,7 +27,7 @@ directory
 *************************************************************************************/
 			   /*  END LEGAL */
 #pragma once 
-#define MIXED_CG
+//#define MIXED_CG
 //enable/disable push_back
 #undef USE_CHRONO 
 
@@ -211,7 +211,7 @@ public:
 #if USE_CHRONO
         MinvMom[i] = Forecast(QuadOp, right_nu, prev_solns[nu]);
 #endif
-#ifndef MIXED_CG
+#ifndef COV_LAP_MIXED_CG
         CG(QuadOp,right_nu,MinvMom[i]);
 #else
         QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
@@ -232,11 +232,12 @@ public:
         QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
     
         MinvGMom = Forecast(QuadOp, GMom, prev_solns[nu]);
-    #ifndef MIXED_CG
+//    #ifndef MIXED_CG
+#ifndef COV_LAP_MIXED_CG
         CG(QuadOp,GMom,MinvGMom);
         LapStencil.M(MinvGMom, Gtemp2); LMinvGMom=fac*Gtemp2;
         CG(QuadOp,right_nu,MinvMom[i]);
-    #else
+#else
         QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
     //    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],par.b1[i],par.b2);
         MixedPrecisionConjugateGradient<GaugeLinkField,GaugeLinkFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
@@ -245,7 +246,7 @@ public:
         LapStencil.M(MinvGMom, Gtemp2); LMinvGMom=fac*Gtemp2;
     //    Laplacian.M(MinvGMom, LMinvGMom);
         MixedCG(right_nu,MinvMom[i]);
-    #endif
+#endif
 #if USE_CHRONO
         prev_solns[nu].push_back(MinvGMom);
 #endif
@@ -343,18 +344,18 @@ public:
         QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
     
         Gtemp = Forecast(QuadOp, P_nu, prev_solns[nu]);
-    #ifndef MIXED_CG
+#ifndef COV_LAP_MIXED_CG
         CG(QuadOp,P_nu,Gtemp);
-    #else
+#else
         QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
     //    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeFieldF> QuadOpF(LapStencilF,par.b0[i],par.b1[i],par.b2);
         MixedPrecisionConjugateGradient<GaugeLinkField,GaugeLinkFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
         MixedCG.InnerTolerance=par.tolerance;
         MixedCG(P_nu,Gtemp);
-    #endif
-    #if USE_CHRONO
+#endif
+#if USE_CHRONO
         prev_solns[nu].push_back(Gtemp);
-    #endif
+#endif
     
         Gp += par.a0[i]*Gtemp; 
         LapStencil.M(Gtemp,Gtemp2);
@@ -398,6 +399,6 @@ public:
 private:
   std::vector<GaugeLinkField> U;
 };
-#undef MIXED_CG
+//#undef MIXED_CG
 
 NAMESPACE_END(Grid);
