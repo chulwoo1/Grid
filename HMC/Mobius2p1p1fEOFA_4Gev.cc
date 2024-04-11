@@ -598,6 +598,15 @@ int main(int argc, char **argv) {
     gpar.b2 *= 16.*16.;
     mpar.b2 *= 16.*16.;
 
+    for(int i=0;i<2;i++){
+       gpar.offset *=10.;
+       gpar.a1[i] *=10.;
+       gpar.a0[i] *=10.;
+       mpar.offset *=0.1;
+       mpar.a1[i] *=0.1;
+       mpar.a0[i] *=0.1;
+    }
+
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
 
