@@ -769,22 +769,35 @@ public:
       std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsU(fileU);
       std::ifstream fsM(fileM);
-      if ( fsU.good() && fsM.good() ) {
+      std::string fileAF("./auxF."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::ifstream fsAF(fileAF);
+      std::ifstream fsAM(fileAM);
+//  MomentaField AuxMom;
+//  MomentaField AuxField;
+      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
 	if_checkpoint=true;
 	fsU.close();fsM.close();
+	fsAF.close();fsAM.close();
       } else {
 	fsU.close();fsM.close();
+	fsAF.close();fsAM.close();
         this->step(U, 0, first_step, last_step);
         int precision32 = 0;
         int tworow      = 0;
         NerscIO::writeConfiguration(U,fileU,tworow,precision32);
         NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
+        NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
+        NerscIO::writeConfiguration(P.AuxMom,fileAM,tworow,precision32);
       }
+//      if ( if_checkpoint )
       {
 	std::string config;
 	FieldMetaData header;
         NerscIO::readConfiguration(U,header,fileU);
         NerscIO::readConfiguration(P.Mom,header,fileM);
+        NerscIO::readConfiguration(P.AuxField,header,fileAF);
+        NerscIO::readConfiguration(P.AuxMom,header,fileAM);
       }
     }
 
