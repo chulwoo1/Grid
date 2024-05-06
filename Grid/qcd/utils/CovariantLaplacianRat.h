@@ -27,7 +27,7 @@ directory
 *************************************************************************************/
 			   /*  END LEGAL */
 #pragma once 
-#define MIXED_CG
+#undef MIXED_CG
 //enable/disable push_back
 #undef USE_CHRONO 
 

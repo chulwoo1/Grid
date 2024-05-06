@@ -691,29 +691,56 @@ public:
     for (int level = 0; level < as.size(); ++level) {
       t_P[level] = 0;
     }
-
+    bool if_checkpoint=false;
     for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
       int first_step = (stp == 0);
       int last_step = (stp == Params.MDsteps - 1);
-      this->step(U, 0, first_step, last_step);
-      if (traj>=0){
-        std::string file("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileU("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::ifstream fsU(fileU);
+      std::ifstream fsM(fileM);
+      std::string fileAF("./auxF."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::ifstream fsAF(fileAF);
+      std::ifstream fsAM(fileAM);
+      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+        if_checkpoint=true;
+        fsU.close();fsM.close();
+        fsAF.close();fsAM.close();
+      } else {
+        fsU.close();fsM.close();
+        fsAF.close();fsAM.close();
+        this->step(U, 0, first_step, last_step);
         int precision32 = 0;
         int tworow      = 0;
-        NerscIO::writeConfiguration(U,file,tworow,precision32);
+        NerscIO::writeConfiguration(U,fileU,tworow,precision32);
+        NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
+        NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
+        NerscIO::writeConfiguration(P.AuxMom,fileAM,tworow,precision32);
+      }
+      {
+        std::string config;
+        FieldMetaData header;
+        NerscIO::readConfiguration(U,header,fileU);
+        NerscIO::readConfiguration(P.Mom,header,fileM);
+        NerscIO::readConfiguration(P.AuxField,header,fileAF);
+        NerscIO::readConfiguration(P.AuxMom,header,fileAM);
       }
     }
-
-    // Check the clocks all match on all levels
-    for (int level = 0; level < as.size(); ++level) {
-      assert(fabs(t_U - t_P[level]) < 1.0e-6);  // must be the same
-      std::cout << GridLogIntegrator << " times[" << level << "]= " << t_P[level] << " " << t_U << std::endl;
-    }
-
+    
     FieldImplementation::Project(U);
     // and that we indeed got to the end of the trajectory
-    assert(fabs(t_U - Params.trajL) < 1.0e-6);
-
+    if(if_checkpoint){
+       t_U = Params.trajL;
+       for (int level = 0; level < as.size(); ++level)
+          t_P[level] = t_U ;
+    } else {
+       for (int level = 0; level < as.size(); ++level) {
+          assert(fabs(t_U - t_P[level]) < 1.0e-6);  // must be the same
+          std::cout << GridLogIntegrator << " times[" << level << "]= " << t_P[level] << " " << t_U << std::endl;
+       }
+       assert(fabs(t_U - Params.trajL) < 1.0e-6);
+    }
   }
 
 };
