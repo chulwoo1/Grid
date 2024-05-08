@@ -108,10 +108,11 @@ public:
   // created Nd new fields
   // hide these in the metric?
   //typedef Lattice<iVector<iScalar<iMatrix<vComplex, Nc> >, Nd/2 > > AuxiliaryMomentaType;
+  bool AuxDynamic;
   MomentaField AuxMom;
   MomentaField AuxField;
 
-  GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid){}
+  GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid),AuxDynamic(true){}
 
   // Correct
   void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG){
@@ -128,12 +129,13 @@ public:
     if (1) {
       // Auxiliary momenta
       // do nothing if trivial, so hide in the metric
-      MomentaField AuxMomTemp(Mom.Grid());
+//      MomentaField AuxMomTemp(Mom.Grid());
       Implementation::generate_momenta(AuxMom, sRNG,pRNG);
+      if(this->AuxDynamic)
       Implementation::generate_momenta(AuxField, sRNG,pRNG);
       // Modify the distribution with the metric
       // Aux^dag M Aux
-      M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
+      M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMom
     }
   }
 
@@ -169,9 +171,11 @@ public:
         // hide in the operators
         auto inv_mu = PeekIndex<LorentzIndex>(inv, mu);
         auto am_mu = PeekIndex<LorentzIndex>(AuxMom, mu);
-        auto af_mu = PeekIndex<LorentzIndex>(AuxField, mu);
         Hloc += trace(am_mu * inv_mu);
+      if(this->AuxDynamic){
+        auto af_mu = PeekIndex<LorentzIndex>(AuxField, mu);
         Hloc2 += trace(af_mu * af_mu);
+      }
       }
     }
     auto Htmp2 = TensorRemove(sum(Hloc))-Htmp1;
@@ -201,13 +205,12 @@ public:
 
   void AuxiliaryFieldsDerivative(MomentaField& der){
     der = Zero();
-//    if(!M.Trivial()) 
+//    if(this->AuxDynamic)
     {
       // Auxiliary fields
       MomentaField der_temp(der.Grid());
       MomentaField X(der.Grid());
       X=Zero();
-      //M.M(AuxMom, X); // X = M Aux
       // Two derivative terms
       // the Mderiv need separation of left and right terms
     std::cout << GridLogIntegrator << " AuxiliaryFieldsDerivative:norm(AuxMom)= " << std::sqrt(norm2(AuxMom)) << std::endl;
@@ -232,16 +235,17 @@ public:
   }
 
   void update_auxiliary_momenta(RealD ep){
+    //skip if not dynamic
+    if(this->AuxDynamic) {
       std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
       std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
-    {
       AuxMom -= ep * AuxField * HMC_MOMENTUM_DENOMINATOR;
       std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
     }
   }
 
   void update_auxiliary_fields(RealD ep){
-//    if(!M.Trivial()) 
+    if(this->AuxDynamic)
     {
       MomentaField tmp(AuxMom.Grid());
       MomentaField tmp2(AuxMom.Grid());
