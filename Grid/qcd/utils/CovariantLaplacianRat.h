@@ -27,7 +27,7 @@ directory
 *************************************************************************************/
 			   /*  END LEGAL */
 #pragma once 
-#undef MIXED_CG
+//#define MIXED_CG
 //enable/disable push_back
 #undef USE_CHRONO 
 
@@ -194,7 +194,7 @@ public:
     #if USE_CHRONO
         MinvMom[i] = Forecast(QuadOp, right_nu, prev_solns[nu]);
     #endif
-    #ifndef MIXED_CG
+    #ifndef COV_LAP_MIXED_CG
         CG(QuadOp,right_nu,MinvMom[i]);
     #else
         QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
@@ -215,7 +215,7 @@ public:
         QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
     
         MinvGMom = Forecast(QuadOp, GMom, prev_solns[nu]);
-    #ifndef MIXED_CG
+    #ifndef COV_LAP_MIXED_CG
         CG(QuadOp,GMom,MinvGMom);
         LapStencil.M(MinvGMom, Gtemp2); LMinvGMom=fac*Gtemp2;
         CG(QuadOp,right_nu,MinvMom[i]);
@@ -307,7 +307,7 @@ public:
         QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
     
         Gtemp = Forecast(QuadOp, P_nu, prev_solns[nu]);
-    #ifndef MIXED_CG
+    #ifndef COV_LAP_MIXED_CG
         CG(QuadOp,P_nu,Gtemp);
     #else
         QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
@@ -362,6 +362,6 @@ public:
 private:
   std::vector<GaugeLinkField> U;
 };
-#undef MIXED_CG
+//#undef MIXED_CG
 
 NAMESPACE_END(Grid);

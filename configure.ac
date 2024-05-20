@@ -321,6 +321,19 @@ AC_ARG_WITH([hdf5],
     [AM_CXXFLAGS="-I$with_hdf5/include $AM_CXXFLAGS"]
     [AM_LDFLAGS="-L$with_hdf5/lib $AM_LDFLAGS"])
 
+############### Mixed precision for Covariant Laplace
+AC_ARG_ENABLE([lap-MixedCG],
+    [AS_HELP_STRING([--enable-lap-MixedCG=yes|no],[use Mixed precision for Covariant Laplace])],
+    [ac_LAP_MIXED_CG=${enable_lap_MixedCG}], [ac_LAP_MIXED_CG=yes])
+case ${ac_LAP_MIXED_CG} in
+    yes)
+      AC_DEFINE([COV_LAP_MIXED_CG],[1],[Mixed precision for Covariant Laplace]);;
+    no);;
+    *)
+      AC_MSG_ERROR(["Unsupported option ${ac_LAP_MIXED_CG}"]);;
+esac
+
+
 
 ############### Checks for library functions
 CXXFLAGS_CPY=$CXXFLAGS
