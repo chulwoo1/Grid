@@ -248,6 +248,7 @@ struct PFMunger {
            BinaryIO::writeLatticeObject<vobj,sobj>(PhiEven,fileE,munge, offset, format,
                                                      nersc_csum,scidac_csuma,scidac_csumb);
            std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+	   std::cout << std::dec <<std::endl;
 
 
 	}
@@ -277,6 +278,7 @@ struct PFMunger {
          BinaryIO::readLatticeObject<vobj,sobj>(PhiEven,fileE,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
          std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+	 std::cout << std::dec <<std::endl;
 
 
 	}

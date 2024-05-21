@@ -44,6 +44,34 @@ Gamma::Algebra Gmu [] = {
 };
 
 void Benchmark(int Ls, Coordinate Dirichlet);
+void Laplace();
+
+struct controls {
+  int Opt;
+  int CommsOverlap;
+  Grid::CartesianCommunicator::CommunicatorPolicy_t CommsAsynch;
+};
+
+struct time_statistics{
+  double mean;
+  double err;
+  double min;
+  double max;
+
+  void statistics(std::vector<double> v){
+      double sum = std::accumulate(v.begin(), v.end(), 0.0);
+      mean = sum / v.size();
+
+      std::vector<double> diff(v.size());
+      std::transform(v.begin(), v.end(), diff.begin(), [=](double x) { return x - mean; });
+      double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+      err = std::sqrt(sq_sum / (v.size()*(v.size() - 1)));
+
+      auto result = std::minmax_element(v.begin(), v.end());
+      min = *result.first;
+      max = *result.second;
+}
+};
 
 int main (int argc, char ** argv)
 {
@@ -70,6 +98,7 @@ int main (int argc, char ** argv)
   std::cout << GridLogMessage<< "++++++++++++++++++++++++++++++++++++++++++++++++" <<std::endl;
   
   Benchmark(Ls,Dirichlet);
+  Laplace();
 
   //////////////////
   // Domain decomposed
@@ -445,3 +474,190 @@ void Benchmark(int Ls, Coordinate Dirichlet)
   assert(norm2(src_e)<1.0e-4);
   assert(norm2(src_o)<1.0e-4);
 }
+
+void Laplace()
+  {
+    double mflops;
+    double mflops_best = 0;
+    double mflops_worst= 0;
+    std::vector<double> mflops_all;
+
+    ///////////////////////////////////////////////////////
+    // Set/Get the layout & grid size
+    ///////////////////////////////////////////////////////
+    int threads = GridThread::GetThreads();
+    Coordinate mpi = GridDefaultMpi(); assert(mpi.size()==4);
+//    Coordinate local({L,L,L,L});
+//    Coordinate latt4({local[0]*mpi[0],local[1]*mpi[1],local[2]*mpi[2],local[3]*mpi[3]});
+    Coordinate latt4 = GridDefaultLatt();
+    GridLogLayout();
+    
+    GridCartesian         * TmpGrid   = SpaceTimeGrid::makeFourDimGrid(latt4,
+								       GridDefaultSimd(Nd,vComplex::Nsimd()),
+								       GridDefaultMpi());
+    uint64_t NP = TmpGrid->RankCount();
+    uint64_t NN = TmpGrid->NodeCount();
+//    NN_global=NN;
+    uint64_t SHM=NP/NN;
+
+
+    ///////// Welcome message ////////////
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+//    std::cout<<GridLogMessage << "Benchmark Laplace on "<<L<<"^4 local volume "<<std::endl;
+    std::cout<<GridLogMessage << "* Global volume  : "<<GridCmdVectorIntToString(latt4)<<std::endl;
+    std::cout<<GridLogMessage << "* ranks          : "<<NP  <<std::endl;
+    std::cout<<GridLogMessage << "* nodes          : "<<NN  <<std::endl;
+    std::cout<<GridLogMessage << "* ranks/node     : "<<SHM <<std::endl;
+    std::cout<<GridLogMessage << "* ranks geom     : "<<GridCmdVectorIntToString(mpi)<<std::endl;
+    std::cout<<GridLogMessage << "* Using "<<threads<<" threads"<<std::endl;
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+
+    ///////// Lattice Init ////////////
+    GridCartesian         * FGrid   = SpaceTimeGrid::makeFourDimGrid(latt4, GridDefaultSimd(Nd,vComplexF::Nsimd()),GridDefaultMpi());
+    GridRedBlackCartesian * FrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(FGrid);
+    
+    ///////// RNG Init ////////////
+    std::vector<int> seeds4({1,2,3,4});
+    GridParallelRNG          RNG4(FGrid);  RNG4.SeedFixedIntegers(seeds4);
+    std::cout << GridLogMessage << "Initialised RNGs" << std::endl;
+
+    RealD mass=0.1;
+    RealD c1=9.0/8.0;
+    RealD c2=-1.0/24.0;
+    RealD u0=1.0;
+
+    typedef LatticeGaugeFieldF Gauge;
+    
+    Gauge Umu(FGrid);  SU<Nc>::HotConfiguration(RNG4,Umu); 
+
+    typedef typename PeriodicGimplF::LinkField GaugeLinkFieldF;
+
+    ///////// Source preparation ////////////
+    GaugeLinkFieldF src   (FGrid); random(RNG4,src);
+    GaugeLinkFieldF r_eo  (FGrid);
+  
+    {
+
+      const int num_cases = 1;
+      std::string fmt("G/O/C  ");
+      
+      controls Cases [] = {
+	{  StaggeredKernelsStatic::OptGeneric   ,  StaggeredKernelsStatic::CommsAndCompute  ,CartesianCommunicator::CommunicatorPolicyConcurrent  },
+      }; 
+
+      for(int c=0;c<num_cases;c++) {
+        CovariantAdjointLaplacianStencil<PeriodicGimplF,typename PeriodicGimplF::LinkField> LapStencilF(FGrid);
+        QuadLinearOperator<CovariantAdjointLaplacianStencil<PeriodicGimplF,typename PeriodicGimplF::LinkField>,PeriodicGimplF::LinkField> QuadOpF(LapStencilF,c2,c1,1.);
+        LapStencilF.GaugeImport(Umu);
+	
+
+	StaggeredKernelsStatic::Comms = Cases[c].CommsOverlap;
+	StaggeredKernelsStatic::Opt   = Cases[c].Opt;
+	CartesianCommunicator::SetCommunicatorPolicy(Cases[c].CommsAsynch);
+      
+	std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+	if ( StaggeredKernelsStatic::Opt == StaggeredKernelsStatic::OptGeneric   ) std::cout << GridLogMessage<< "* Using Stencil Nc Laplace" <<std::endl;
+	if ( StaggeredKernelsStatic::Comms == StaggeredKernelsStatic::CommsAndCompute ) std::cout << GridLogMessage<< "* Using Overlapped Comms/Compute" <<std::endl;
+	if ( StaggeredKernelsStatic::Comms == StaggeredKernelsStatic::CommsThenCompute) std::cout << GridLogMessage<< "* Using sequential Comms/Compute" <<std::endl;
+	std::cout << GridLogMessage<< "* SINGLE precision "<<std::endl;
+	std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+	
+	int nwarm = 10;
+	double t0=usecond();
+	FGrid->Barrier();
+	for(int i=0;i<nwarm;i++){
+//	  Ds.DhopEO(src_o,r_e,DaggerNo);
+//          QuadOpF.HermOp(src,r_eo);
+          LapStencilF.M(src,r_eo);
+	}
+	FGrid->Barrier();
+	double t1=usecond();
+	uint64_t ncall = 500;
+
+	FGrid->Broadcast(0,&ncall,sizeof(ncall));
+
+	//	std::cout << GridLogMessage << " Estimate " << ncall << " calls per second"<<std::endl;
+
+	time_statistics timestat;
+	std::vector<double> t_time(ncall);
+	for(uint64_t i=0;i<ncall;i++){
+	  t0=usecond();
+//	  Ds.DhopEO(src_o,r_e,DaggerNo);
+//          QuadOpF.HermOp(src,r_eo);
+          LapStencilF.M(src,r_eo);
+	  t1=usecond();
+	  t_time[i] = t1-t0;
+	}
+
+    GaugeLinkFieldF r_eo2  (FGrid);
+    GaugeLinkFieldF err  (FGrid);
+	{
+		std::vector<GaugeLinkFieldF> U(Nd,FGrid);
+//		Gauge  UmuF;
+//		precisionChange(UmuF,Umu);
+	    GaugeLinkFieldF tmp(FGrid);
+    	GaugeLinkFieldF tmp2(FGrid);
+      for (int mu = 0; mu < Nd; mu++) 
+		U[mu]=PeekIndex<LorentzIndex>(Umu, mu);
+
+//    for (int nu = 0; nu < Nd; nu++) {
+      r_eo2 = Zero();
+//      GaugeLinkField in_nu = PeekIndex<LorentzIndex>(in, nu);
+//      GaugeLinkField out_nu(out.Grid());
+      for (int mu = 0; mu < Nd; mu++) {
+        tmp = U[mu] * Cshift(src, mu, +1) * adj(U[mu]);
+        tmp2 = adj(U[mu]) * src * U[mu];
+        r_eo2 += tmp + Cshift(tmp2, mu, -1) - 2.0 * src;
+      }
+//      out_nu = (1.0 - kappa) * in_nu - kappa / (double(4 * Nd)) * sum;
+//      PokeIndex<LorentzIndex>(out, out_nu, nu);
+//    }
+
+	}
+	FGrid->Barrier();
+	std::cout<<GridLogMessage << "Lap result "<< norm2(r_eo)<<std::endl;
+    std::cout<<GridLogMessage << "Lap ref    "<< norm2(r_eo2)<<std::endl;
+  err = r_eo-r_eo2;
+  auto n2e= norm2(err);
+  std::cout<<GridLogMessage << "Lap diff   "<< n2e<< "  Line "<<__LINE__ <<std::endl;
+	
+	double volume=1;  for(int mu=0;mu<Nd;mu++) volume=volume*latt4[mu];
+//Quad
+//	double flops=(2*2*8*216.0*volume);
+	double flops=(2*8*216.0*volume);
+	double mf_hi, mf_lo, mf_err;
+	
+	timestat.statistics(t_time);
+	mf_hi = flops/timestat.min;
+	mf_lo = flops/timestat.max;
+	mf_err= flops/timestat.min * timestat.err/timestat.mean;
+
+	mflops = flops/timestat.mean;
+	mflops_all.push_back(mflops);
+	if ( mflops_best == 0   ) mflops_best = mflops;
+	if ( mflops_worst== 0   ) mflops_worst= mflops;
+	if ( mflops>mflops_best ) mflops_best = mflops;
+	if ( mflops<mflops_worst) mflops_worst= mflops;
+	
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Laplace mflop/s =   "<< mflops << " ("<<mf_err<<") " << mf_lo<<"-"<<mf_hi <<std::endl;
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Laplace mflop/s per rank   "<< mflops/NP<<std::endl;
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Laplace mflop/s per node   "<< mflops/NN<<std::endl;
+	FGrid->Barrier();
+      
+      }
+
+      std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+      std::cout<<GridLogMessage << latt4 <<"  Quad Best  mflop/s        =   "<< mflops_best << " ; " << mflops_best/NN<<" per node " <<std::endl;
+      std::cout<<GridLogMessage << latt4 <<"  Quad Worst mflop/s        =   "<< mflops_worst<< " ; " << mflops_worst/NN<<" per node " <<std::endl;
+      std::cout<<GridLogMessage <<fmt << std::endl;
+      std::cout<<GridLogMessage ;
+	FGrid->Barrier();
+
+      for(int i=0;i<mflops_all.size();i++){
+	std::cout<<mflops_all[i]/NN<<" ; " ;
+      }
+      std::cout<<std::endl;
+    }
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+//    return mflops_best;
+  }
