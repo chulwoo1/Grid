@@ -60,6 +60,7 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 #include <Grid/cshift/Cshift.h>       
 #include <Grid/stencil/Stencil.h>      
 //#include <Grid/parallelIO/MetaData.h>
+#include <Grid/stencil/GeneralLocalStencil.h>      
 #include <Grid/parallelIO/BinaryIO.h>
 #include <Grid/algorithms/Algorithms.h>   
 NAMESPACE_CHECK(GridCore)

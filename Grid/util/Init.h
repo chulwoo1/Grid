@@ -34,6 +34,8 @@ NAMESPACE_BEGIN(Grid);
 void Grid_init(int *argc,char ***argv);
 void Grid_finalize(void);
 
+char * GridHostname(void);
+
 // internal, controled with --handle
 void Grid_sa_signal_handler(int sig,siginfo_t *si,void * ptr);
 void Grid_debug_handler_init(void);
@@ -70,6 +72,7 @@ void printHash(void);
 extern int traj_num;
 extern int field_num;
 inline int FieldNum(){return field_num++;}
+
 
 NAMESPACE_END(Grid);
 
