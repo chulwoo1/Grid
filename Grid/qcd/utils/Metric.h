@@ -194,8 +194,8 @@ public:
     X = Zero();
     M.MinvDeriv(in, MDer);  // MDer = U * dS/dU
     der = -1.0* Implementation::projectForce(MDer);  // Ta if gauge fields
-//    std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
-//    std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
+    std::cout << GridLogIntegrator << " DerivativeU: norm(in)= " << std::sqrt(norm2(in)) << std::endl;
+    std::cout << GridLogIntegrator << " DerivativeU: norm(der)= " << std::sqrt(norm2(der)) << std::endl;
     
   }
 

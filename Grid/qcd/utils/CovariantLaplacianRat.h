@@ -268,7 +268,7 @@ public:
 
         std::cout<<GridLogMessage << "force contraction "<< i <<std::endl;
     //    roctxRangePushA("RMHMC force contraction");
- #if 0
+#if 1
         MDerivLink(GMom,MinvMom[i],tempDer); der += coef*2*par.a1[i]*tempDer;
         MDerivLink(left_nu,MinvGMom,tempDer); der += coef*2*par.a1[i]*tempDer;
         MDerivLink(LMinvAGMom,MinvMom[i],tempDer); der += coef*-2.*par.b2*tempDer;
@@ -293,6 +293,7 @@ public:
 	der += tempDer;
 #endif
         std::cout<<GridLogMessage << "coef =  force contraction "<< i << "done "<< coef <<std::endl;
+        std::cout<<GridLogMessage << "MDerivInt: "<< norm2(der) <<std::endl; 
     //    roctxRangePop();
     
         }
@@ -317,7 +318,7 @@ public:
     std::vector< std::vector<GaugeLinkField> > prev_solns(4);
     der=Zero();
     MDerivInt(Gparam, in, in, der,prev_solnsMinvDeriv);
-    std::cout <<GridLogDebug << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
+    std::cout <<GridLogIntegrator << "MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
 
 

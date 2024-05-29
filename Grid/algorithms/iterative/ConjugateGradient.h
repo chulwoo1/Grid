@@ -98,12 +98,12 @@ public:
       return;
     }
 
-    std::cout << GridLogIterative << std::setprecision(8) << "ConjugateGradient: guess " << guess << std::endl;
-    std::cout << GridLogIterative << std::setprecision(8) << "ConjugateGradient:   src " << ssq << std::endl;
-    std::cout << GridLogIterative << std::setprecision(8) << "ConjugateGradient:    mp " << d << std::endl;
-    std::cout << GridLogIterative << std::setprecision(8) << "ConjugateGradient:   mmp " << b << std::endl;
-    std::cout << GridLogIterative << std::setprecision(8) << "ConjugateGradient:  cp,r " << cp << std::endl;
-    std::cout << GridLogIterative << std::setprecision(8) << "ConjugateGradient:     p " << a << std::endl;
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient: guess " << guess << std::endl;
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient:   src " << ssq << std::endl;
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient:    mp " << d << std::endl;
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient:   mmp " << b << std::endl;
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient:  cp,r " << cp << std::endl;
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient:     p " << a << std::endl;
 
     RealD rsq = Tolerance * Tolerance * ssq;
 
@@ -115,7 +115,7 @@ public:
       return;
     }
 
-    std::cout << GridLogIterative << std::setprecision(8)
+    std::cout << GridLogMessage << std::setprecision(8)
               << "ConjugateGradient: k=0 residual " << cp << " target " << rsq << std::endl;
 
     PreambleTimer.Stop();
@@ -186,7 +186,7 @@ public:
         RealD srcnorm = std::sqrt(norm2(src));
         RealD resnorm = std::sqrt(norm2(p));
         RealD true_residual = resnorm / srcnorm;
-        std::cout << GridLogMessage << "ConjugateGradient Converged on iteration " << k 
+        std::cout << GridLogMessage << std::dec<< "ConjugateGradient Converged on iteration " << k 
 		  << "\tComputed residual " << std::sqrt(cp / ssq)
 		  << "\tTrue residual " << true_residual
 		  << "\tTarget " << Tolerance << std::endl;

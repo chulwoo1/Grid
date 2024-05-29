@@ -567,25 +567,26 @@ int main(int argc, char **argv) {
 #ifndef DO_IMPLICIT
   TrivialMetric<HMCWrapper::ImplPolicy::Field> Mtr;
 #else
+    double scale=1.;
     LaplacianRatParams gpar(2),mpar(2);
-    gpar.offset = 1.;
-    gpar.a0[0] = 500.;
-    gpar.a1[0] = 0.;
+    gpar.offset = 1.*scale;
+    gpar.a0[0] = 500.*scale;
+    gpar.a1[0] = 0.*scale;
     gpar.b0[0] = 0.25;
     gpar.b1[0] = 1.;
-    gpar.a0[1] = -500.;
-    gpar.a1[1] = 0.;
+    gpar.a0[1] = -500.*scale;
+    gpar.a1[1] = 0.*scale;
     gpar.b0[1] = 0.36;
     gpar.b1[1] = 1.2;
     gpar.b2=1.;
 
-    mpar.offset = 1.;
-    mpar.a0[0] =  -0.850891906532;
-    mpar.a1[0] = -1.54707654538;
+    mpar.offset = 1./scale;
+    mpar.a0[0] =  -0.850891906532/scale;
+    mpar.a1[0] = -1.54707654538/scale;
     mpar. b0[0] = 2.85557166137;
     mpar. b1[0] = 5.74194794773;
-    mpar.a0[1] = -13.5120056831218384729709214298;
-    mpar.a1[1] = 1.54707654538396877086370295729;
+    mpar.a0[1] = -13.5120056831218384729709214298/scale;
+    mpar.a1[1] = 1.54707654538396877086370295729/scale;
     mpar.b0[1] = 19.2921090880640520026645390317;
     mpar.b1[1] = -3.54194794773029020262811172870;
     mpar.b2=1.;
