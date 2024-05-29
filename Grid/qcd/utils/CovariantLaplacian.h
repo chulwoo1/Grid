@@ -425,8 +425,8 @@ public:
     grid->Barrier();
   };
 
-  virtual void  M(const Field &in, Field &out) {Mnew(in,out);};
-//  virtual void  M(const Field &in, Field &out) {Morig(in,out);};
+//  virtual void  M(const Field &in, Field &out) {Mnew(in,out);};
+  virtual void  M(const Field &in, Field &out) {Morig(in,out);};
 //  virtual void  M(const Field &in, Field &out) {Mslow(in,out);};
   virtual void  Mdag (const Field &in, Field &out) { M(in,out);}; // Laplacian is hermitian
   virtual  void Mdiag    (const Field &in, Field &out)                  {assert(0);}; // Unimplemented need only for multigrid
