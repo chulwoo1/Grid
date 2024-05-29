@@ -108,10 +108,11 @@ public:
   // created Nd new fields
   // hide these in the metric?
   //typedef Lattice<iVector<iScalar<iMatrix<vComplex, Nc> >, Nd/2 > > AuxiliaryMomentaType;
+  bool AuxDynamic;
   MomentaField AuxMom;
   MomentaField AuxField;
 
-  GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid){}
+  GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid),AuxDynamic(true){}
 
   // Correct
   void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG){
@@ -130,7 +131,7 @@ public:
       // do nothing if trivial, so hide in the metric
       MomentaField AuxMomTemp(Mom.Grid());
       Implementation::generate_momenta(AuxMom, sRNG,pRNG);
-      Implementation::generate_momenta(AuxField, sRNG,pRNG);
+      if(this->AuxDynamic) Implementation::generate_momenta(AuxField, sRNG,pRNG);
       // Modify the distribution with the metric
       // Aux^dag M Aux
       M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
@@ -169,9 +170,11 @@ public:
         // hide in the operators
         auto inv_mu = PeekIndex<LorentzIndex>(inv, mu);
         auto am_mu = PeekIndex<LorentzIndex>(AuxMom, mu);
-        auto af_mu = PeekIndex<LorentzIndex>(AuxField, mu);
         Hloc += trace(am_mu * inv_mu);
-        Hloc2 += trace(af_mu * af_mu);
+	if(this->AuxDynamic){
+          auto af_mu = PeekIndex<LorentzIndex>(AuxField, mu);
+          Hloc2 += trace(af_mu * af_mu);
+        }
       }
     }
     auto Htmp2 = TensorRemove(sum(Hloc))-Htmp1;
@@ -232,16 +235,16 @@ public:
   }
 
   void update_auxiliary_momenta(RealD ep){
+     if(this->AuxDynamic) {
       std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
       std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
-    {
       AuxMom -= ep * AuxField * HMC_MOMENTUM_DENOMINATOR;
       std::cout << GridLogIntegrator << "AuxMom update_auxiliary_fields: " << std::sqrt(norm2(AuxMom)) << std::endl;
     }
   }
 
   void update_auxiliary_fields(RealD ep){
-//    if(!M.Trivial()) 
+    if(this->AuxDynamic)
     {
       MomentaField tmp(AuxMom.Grid());
       MomentaField tmp2(AuxMom.Grid());
