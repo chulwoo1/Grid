@@ -567,7 +567,7 @@ int main(int argc, char **argv) {
 #ifndef DO_IMPLICIT
   TrivialMetric<HMCWrapper::ImplPolicy::Field> Mtr;
 #else
-    double scale=10.;
+    double scale=1.;
     LaplacianRatParams gpar(2),mpar(2);
     gpar.offset = 1.*scale;
     gpar.a0[0] = 500.*scale;

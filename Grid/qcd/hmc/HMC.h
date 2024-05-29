@@ -186,7 +186,7 @@ private:
     // set U and initialize P and phi's
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     std::cout << GridLogMessage << "--------------------------------------------------\n";
-    std::cout << GridLogMessage << "Refresh momenta and pseudofermions";
+    std::cout << GridLogMessage << "Refresh momenta and pseudofermions\n";
     TheIntegrator.refresh(U, sRNG, pRNG);  
     std::cout << GridLogMessage << "--------------------------------------------------\n";
 
