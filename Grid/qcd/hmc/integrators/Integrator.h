@@ -43,6 +43,7 @@ public:
   GRID_SERIALIZABLE_CLASS_MEMBERS(IntegratorParameters,
 				  std::string, name,      // name of the integrator
 				  unsigned int, MDsteps,  // number of outer steps
+				  bool , AuxDynamic,
 				  RealD, RMHMCTol,
                                   RealD, RMHMCCGTol,
                                   RealD, lambda0,
@@ -51,7 +52,7 @@ public:
 				  RealD, trajL)           // trajectory length
 
   IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
-  : MDsteps(MDsteps_),
+  : MDsteps(MDsteps_),AuxDynamic(true),
    lambda0(0.1931833275037836),
    lambda1(0.1931833275037836),
    lambda2(0.1931833275037836),
@@ -227,12 +228,12 @@ public:
     std::cout << GridLogIntegrator << "Mom update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
 
     // Auxiliary fields
-    P.update_auxiliary_momenta(ep*0.5 );
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
     P.AuxiliaryFieldsDerivative(MomDer);
     std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
 //    Mom -= MomDer * ep;
     Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
-    P.update_auxiliary_momenta(ep*0.5 );
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
 
     for (int a = 0; a < as[level].actions.size(); ++a) {
       double start_full = usecond();
@@ -306,6 +307,7 @@ public:
 //    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
 
     // Auxiliary fields
+    if(P.AuxDynamic)
     P.update_auxiliary_momenta(ep1);
     P.AuxiliaryFieldsDerivative(AuxDer);
     Msum += AuxDer;
@@ -337,6 +339,7 @@ public:
     std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
 
     // update the auxiliary fields momenta    
+    if(P.AuxDynamic)
     P.update_auxiliary_momenta(ep2);
   }
 
@@ -387,7 +390,7 @@ public:
     P.DerivativeP(Mom1); // first term in the derivative 
     std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
 
-    P.update_auxiliary_fields(ep1);
+     if(P.AuxDynamic) P.update_auxiliary_fields(ep1);
 
 
     MomentaField sum=Mom1;
@@ -416,7 +419,7 @@ public:
 
     U = NewU;
     std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
-    P.update_auxiliary_fields(ep2);
+    if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
   }
 
 
@@ -434,6 +437,8 @@ public:
       Representations(grid),
       Saux(0.),Smom(0.),Sg(0.)
   {
+    P.AuxDynamic=true;
+    if (!Params.AuxDynamic) P.AuxDynamic=false;
     t_P.resize(levels, 0.0);
     t_U = 0.0;
     // initialization of smearer delegated outside of Integrator
@@ -576,10 +581,11 @@ public:
     }
     std::cout << GridLogMessage << ":::::::::::::::::::::::::::::::::::::::::"<< std::endl;
   }
-
   void reverse_momenta()
   {
     P.Mom *= -1.0;
+    if(P.AuxDynamic)
+
     P.AuxMom *= -1.0;
   }
 
@@ -787,6 +793,7 @@ public:
         int tworow      = 0;
         NerscIO::writeConfiguration(U,fileU,tworow,precision32);
         NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
+	if(P.AuxDynamic)
         NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
         NerscIO::writeConfiguration(P.AuxMom,fileAM,tworow,precision32);
       }
@@ -796,6 +803,7 @@ public:
 	FieldMetaData header;
         NerscIO::readConfiguration(U,header,fileU);
         NerscIO::readConfiguration(P.Mom,header,fileM);
+	if(P.AuxDynamic)
         NerscIO::readConfiguration(P.AuxField,header,fileAF);
         NerscIO::readConfiguration(P.AuxMom,header,fileAM);
       }

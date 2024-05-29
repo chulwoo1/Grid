@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<grid>
+  <HMCparameters>
+    <StartTrajectory>0</StartTrajectory>
+    <Trajectories>10000</Trajectories>
+    <MetropolisTest>true</MetropolisTest>
+    <NoMetropolisUntil>100</NoMetropolisUntil>
+    <PerformRandomShift>true</PerformRandomShift>
+    <StartingType>ColdStart</StartingType>
+    <SW>12</SW>
+    <Kappa>0</Kappa>
+    <MD>
+      <name>ImplicitMinimumNorm</name>
+      <MDsteps>1</MDsteps>
+      <AuxDynamic>true</AuxDynamic>
+      <RMHMCTol>1e-08</RMHMCTol>
+      <RMHMCCGTol>1e-08</RMHMCCGTol>
+      <lambda0>0.1931833275037836</lambda0>
+      <lambda1>0.1931833275037836</lambda1>
+      <lambda2>0.1931833275037836</lambda2>
+      <trajL>0.001</trajL>
+    </MD>
+  </HMCparameters>
+</grid>
