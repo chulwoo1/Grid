@@ -134,13 +134,15 @@ public:
     RealD factor = -1. / (double(4 * Nd));
     for (int mu = 0; mu < Nd; mu++) {
       GaugeLinkField der_mu(der.Grid());
+      GaugeLinkField tmp(der.Grid());
       der_mu = Zero();
-//      for (int nu = 0; nu < Nd; nu++) {
-//        GaugeLinkField left_nu = PeekIndex<LorentzIndex>(left, nu);
-//        GaugeLinkField right_nu = PeekIndex<LorentzIndex>(right, nu);
+#if 1
+        LapStencil.MDeriv(mu,left,tmp); der_mu += tmp*right;
+        LapStencil.MDeriv(mu,right,tmp); der_mu += tmp*left;
+#else
         der_mu += U[mu] * Cshift(left, mu, 1) * adj(U[mu]) * right;
         der_mu += U[mu] * Cshift(right, mu, 1) * adj(U[mu]) * left;
-//      }
+#endif
       PokeIndex<LorentzIndex>(der, -factor * der_mu, mu);
     }
 //    std::cout << GridLogDebug <<"MDerivLink:  norm2(der) = "<<norm2(der)<<std::endl;
@@ -216,7 +218,7 @@ public:
 #ifndef COV_LAP_MIXED_CG
         CG(QuadOp,right_nu,MinvMom[i]);
 #else
-        QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2);
+        QuadLinearOperator<CovariantAdjointLaplacianStencil<ImplF,typename ImplF::LinkField>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
     //    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],par.b1[i],par.b2);
         MixedPrecisionConjugateGradient<GaugeLinkField,GaugeLinkFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
         MixedCG.InnerTolerance=par.tolerance;
