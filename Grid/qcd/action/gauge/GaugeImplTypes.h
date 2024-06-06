@@ -115,8 +115,10 @@ public:
     //
     // Must scale the momentum by sqrt(2) to invoke CPS and UKQCD conventions
     //
+
     LinkField Pmu(P.Grid());
     Pmu = Zero();
+    std::cout << GridLogMessage <<  "HMC_MOMENTUM_DENOMINATOR : "<< HMC_MOMENTUM_DENOMINATOR <<std::endl;
 
     for (int mu = 0; mu < Nd; mu++) {
       Group::GaussianFundamentalLieAlgebraMatrix(pRNG, Pmu);

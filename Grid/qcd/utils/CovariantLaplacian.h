@@ -278,6 +278,75 @@ public:
 
   };
 
+  virtual void  MDeriv2(int mu, const Field &_in, const Field &_in2, Field &_out)
+  {
+    ///////////////////////////////////////////////
+    // Halo exchange for this geometry of stencil
+    ///////////////////////////////////////////////
+    Stencil.HaloExchange(_in, Compressor);
+
+    
+
+    ///////////////////////////////////
+    // Arithmetic expressions
+    ///////////////////////////////////
+//    auto st = Stencil.View(AcceleratorRead);
+    autoView( st     , Stencil    , AcceleratorRead);
+    auto buf = st.CommBuf();
+
+    autoView( in     , _in    , AcceleratorRead);
+    autoView( in2     , _in2    , AcceleratorRead);
+    autoView( out    , _out   , AcceleratorWrite);
+    autoView( U     , Uds    , AcceleratorRead);
+
+    typedef typename Field::vector_object        vobj;
+    typedef decltype(coalescedRead(in[0]))    calcObj;
+    typedef decltype(coalescedRead(U[0](0))) calcLink;
+
+    const int      Nsimd = vobj::Nsimd();
+    const uint64_t NN = grid->oSites();
+
+    accelerator_for( ss, NN, Nsimd, {
+
+	StencilEntry *SE;
+	
+	const int lane=acceleratorSIMTlane(Nsimd);
+
+	calcObj chi;
+	calcObj phi;
+	calcObj res;
+	calcObj Uchi;
+	calcObj Utmp;
+	calcObj Utmp2;
+	calcLink UU;
+	calcLink Udag;
+	int ptype;
+
+	res                 = coalescedRead(out[ss]);
+	phi                 = coalescedRead(in2[ss]);
+
+#define LEG_LOAD_MULT3(leg,polarisation)			\
+	UU = coalescedRead(U[ss](polarisation));	\
+	Udag = adj(UU);					\
+	LEG_LOAD(leg);					\
+	mult(&Utmp(), &UU, &chi());			\
+	Utmp2 = adj(Utmp);				\
+	mult(&Utmp(), &UU, &Utmp2());			\
+	Utmp2 = adj(Utmp);				\
+	mult(&Uchi(), &Utmp2(), &phi());			\
+	res = res+Uchi;
+	
+	LEG_LOAD_MULT3(mu,mu);
+//	LEG_LOAD_MULT2(1,Yp);
+//	LEG_LOAD_MULT2(2,Zp);
+//	LEG_LOAD_MULT2(3,Tp);
+
+	coalescedWrite(out[ss], res,lane);
+    });
+    grid->Barrier();
+
+  };
+
   virtual void  Morig(const Field &_in, Field &_out)
   {
     ///////////////////////////////////////////////
@@ -503,8 +572,8 @@ public:
     grid->Barrier();
   };
 
-  virtual void  M(const Field &in, Field &out) {Mnew(in,out);};
-//  virtual void  M(const Field &in, Field &out) {Morig(in,out);};
+//  virtual void  M(const Field &in, Field &out) {Mnew(in,out);};
+  virtual void  M(const Field &in, Field &out) {Morig(in,out);};
 //  virtual void  M(const Field &in, Field &out) {Mslow(in,out);};
   virtual void  Mdag (const Field &in, Field &out) { M(in,out);}; // Laplacian is hermitian
   virtual  void Mdiag    (const Field &in, Field &out)                  {assert(0);}; // Unimplemented need only for multigrid

@@ -199,8 +199,9 @@ int main(int argc, char **argv) {
 
 #ifdef DO_IMPLICIT
 //    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
+//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
+  HMCparams.MD.name          =std::string("ForceGradientImplNested");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
@@ -569,7 +570,7 @@ int main(int argc, char **argv) {
 #else
     double scale=1.;
     LaplacianRatParams gpar(2),mpar(2);
-#if 0
+#if 1
     gpar.offset = 1.;
     gpar.a0[0] =  1.999999999999265e+04;
     gpar.a1[0] = 0.;
