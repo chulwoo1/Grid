@@ -77,6 +77,10 @@ feenableexcept (unsigned int excepts)
 }
 #endif
 
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+#endif
+
 NAMESPACE_BEGIN(Grid);
 
 //////////////////////////////////////////////////////
@@ -93,8 +97,12 @@ int GridThread::_cores=1;
 int traj_num=0;
 int field_num=0;
 
+char hostname[HOST_NAME_MAX+1];
 
-
+char *GridHostname(void)
+{
+  return hostname;
+}
 const Coordinate &GridDefaultLatt(void)     {return Grid_default_latt;};
 const Coordinate &GridDefaultMpi(void)      {return Grid_default_mpi;};
 const Coordinate GridDefaultSimd(int dims,int nsimd)
@@ -287,6 +295,7 @@ void GridBanner(void)
     std::cout << "Build " << GRID_BUILD_STR(GRID_BUILD_REF) << std::endl;
 #endif
     std::cout << std::endl;
+    std::cout << std::setprecision(9);
 }
 
 void Grid_init(int *argc,char ***argv)
@@ -397,6 +406,8 @@ void Grid_init(int *argc,char ***argv)
   std::cout << GridLogMessage << "MPI is initialised and logging filters activated "<<std::endl;
   std::cout << GridLogMessage << "================================================ "<<std::endl;
 
+  gethostname(hostname, HOST_NAME_MAX+1);
+  std::cout << GridLogMessage << "This rank is running on host "<< hostname<<std::endl;
 
   /////////////////////////////////////////////////////////
   // Reporting
@@ -417,7 +428,7 @@ void Grid_init(int *argc,char ***argv)
   // Logging
   ////////////////////////////////////
   std::vector<std::string> logstreams;
-  std::string defaultLog("Error,Warning,Message,Performance");
+  std::string defaultLog("Error,Warning,Message");
   GridCmdOptionCSL(defaultLog,logstreams);
   GridLogConfigure(logstreams);
 
@@ -541,6 +552,10 @@ void Grid_init(int *argc,char ***argv)
 
 void Grid_finalize(void)
 {
+  std::cout<<GridLogMessage<<"*******************************************"<<std::endl;
+  std::cout<<GridLogMessage<<"******* Grid Finalize                ******"<<std::endl;
+  std::cout<<GridLogMessage<<"*******************************************"<<std::endl;
+
 #if defined (GRID_COMMS_MPI) || defined (GRID_COMMS_MPI3) || defined (GRID_COMMS_MPIT)
   MPI_Barrier(MPI_COMM_WORLD);
   MPI_Finalize();

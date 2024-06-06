@@ -87,7 +87,6 @@ public:
   double t_U;  // Track time passing on each level and for U and for P
   std::vector<double> t_P;  
 
-//  MomentaField P;
   GeneralisedMomenta<FieldImplementation > P;
   SmearingPolicy& Smearer;
   RepresentationPolicy Representations;
@@ -332,6 +331,8 @@ public:
       counter++;
       RelativeError = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
       std::cout << GridLogIntegrator << "UpdateP RelativeError: " << RelativeError << std::endl;
+//desparte indeed
+      NewMom = NewMom + 0.003* diff ;
       OldMom = NewMom;
     } while (RelativeError > threshold);
 
@@ -394,12 +395,15 @@ public:
 
 
     MomentaField sum=Mom1;
+    MomentaField Oldsum=Mom1;
     do {
       std::cout << GridLogIntegrator << "UpdateU implicit step "<< counter << std::endl;
       
       P.DerivativeP(Mom2); // second term in the derivative, on the updated U
       std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
       sum = (Mom1*ep1 + Mom2*ep2);
+//desperate indeed if ( counter >0 ) 
+      sum += 0.003*(sum-Oldsum);
 
       for (int mu = 0; mu < Nd; mu++) {
         auto Umu = PeekIndex<LorentzIndex>(U, mu);
@@ -414,6 +418,8 @@ public:
       
       P.M.ImportGauge(NewU);
       OldU = NewU; // some redundancy to be eliminated
+
+      Oldsum=sum;
       counter++;
     } while (RelativeError > threshold && counter < MaxCounter);
 
@@ -448,7 +454,7 @@ public:
 
     for (int level = 0; level < as.size(); ++level) {
       int multiplier = as.at(level).multiplier;
-      ActionLevel<Field> * Level = new ActionLevel<Field>(multiplier);
+      ActionLevel<Field, RepresentationPolicy> * Level = new ActionLevel<Field, RepresentationPolicy>(multiplier);
       Level->push_back(new EmptyAction<Field>); 
       LevelForces.push_back(*Level);
       // does it copy by value or reference??
