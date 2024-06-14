@@ -501,8 +501,8 @@ int main(int argc, char **argv) {
 
     std::cout << GridLogMessage << " 2f quotient Action  "<< light_num[h] << " / " << light_den[h]<< std::endl;
 
-    Numerators.push_back  (new FermionAction(U,*FGrid,*FrbGrid,*GridPtr,*GridRBPtr,light_num[h],0.,M5,b,c, Params));
-    Denominators.push_back(new FermionAction(U,*FGrid,*FrbGrid,*GridPtr,*GridRBPtr,light_den[h],0.,M5,b,c, Params));
+    Numerators.push_back  (new FermionAction(U,*FGrid,*FrbGrid,*GridPtr,*GridRBPtr,light_num[h],M5,b,c, Params));
+    Denominators.push_back(new FermionAction(U,*FGrid,*FrbGrid,*GridPtr,*GridRBPtr,light_den[h],M5,b,c, Params));
 
 #ifdef MIXED_PRECISION
     ////////////////////////////////////////////////////////////////////////////
@@ -510,7 +510,7 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     double DerivativeStoppingConditionLoose = 1e-8;
 
-    DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*UGrid_f,*GridRBPtrF,light_den[h],0.,M5,b,c, ParamsF));
+    DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*UGrid_f,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 

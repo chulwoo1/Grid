@@ -199,9 +199,10 @@ int main(int argc, char **argv) {
 
 #ifdef DO_IMPLICIT
 //    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
-//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
-  HMCparams.MD.name          =std::string("ForceGradientImplNested");
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+//  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
+//  HMCparams.MD.name          =std::string("ForceGradientImplNested");
+  HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
