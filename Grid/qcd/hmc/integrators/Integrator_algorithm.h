@@ -557,7 +557,7 @@ class ImplicitMinimumNorm2 : public Integrator<FieldImplementation, SmearingPoli
 template <class FieldImplementation, class SmearingPolicy,
           class RepresentationPolicy =
               Representations<FundamentalRepresentation> >
-class ImplicitOemlyan : public Integrator<FieldImplementation, SmearingPolicy,
+class ImplicitOmelyan : public Integrator<FieldImplementation, SmearingPolicy,
                                        RepresentationPolicy> {
  private:
 //  const RealD lambda = 0.1931833275037836;
@@ -565,12 +565,12 @@ class ImplicitOemlyan : public Integrator<FieldImplementation, SmearingPolicy,
  public:
   INHERIT_FIELD_TYPES(FieldImplementation);
 
-  ImplicitOemlyan(GridBase* grid, IntegratorParameters Par,
+  ImplicitOmelyan(GridBase* grid, IntegratorParameters Par,
                ActionSet<Field, RepresentationPolicy>& Aset, SmearingPolicy& Sm, Metric<Field>& M)
       : Integrator<FieldImplementation, SmearingPolicy, RepresentationPolicy>(
             grid, Par, Aset, Sm, M){};
 
-  std::string integrator_name(){return "ImplicitOemlyan";}
+  std::string integrator_name(){return "ImplicitOmelyan";}
 
   void step(Field& U, int level, int _first, int _last) {
     // level  : current level
@@ -624,13 +624,13 @@ class ImplicitOemlyan : public Integrator<FieldImplementation, SmearingPolicy,
 
     int multiplier = this->as[level].multiplier;
     for (int e = 0; e < multiplier; ++e) {  // steps per step
-
-#if 1
-        this->implicit_update_PQ(U, level, 2.0* lambda * eps);
-        this->implicit_update_PQ(U, level,  (1.0 - 2.0 * lambda) * eps);
-#else
       int first_step = _first && (e == 0);
       int last_step = _last && (e == multiplier - 1);
+
+#if 1
+      this->implicit_update_PQ(U, level, 0.5*eps);
+      this->implicit_update_PQ(U, level, 0.5*eps);
+#else
 
       if (first_step) {  // initial half step
         this->implicit_update_P(U, level, lambda * eps);

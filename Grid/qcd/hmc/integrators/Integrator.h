@@ -431,9 +431,10 @@ public:
   void implicit_update_PQ(Field& U, int level, double ep, bool intermediate = false) {
 // void implicit_update_U(Field&U, double ep, double ep1 ){
     double ep1 = 0.5*ep;
+    double ep2= ep-ep1;
+
     t_P[level] += ep;
 
-    double ep2= ep-ep1;
 
     std::cout << GridLogIntegrator << "[" << level << "] P "
               << " dt " << ep << " : t_P " << t_P[level] << std::endl;
@@ -460,26 +461,25 @@ public:
     }
 
     MomentaField NewMom = P.Mom;
+    MomentaField MidMom = P.Mom;
     MomentaField OldMom = P.Mom;
     double threshold = Params.RMHMCTol;
+
     P.M.ImportGauge(U);
     MomentaField MomDer(P.Mom.Grid());
     MomentaField MomDer1(P.Mom.Grid());
     MomentaField AuxDer(P.Mom.Grid());
     MomDer1 = Zero();
     MomentaField diff(P.Mom.Grid());
-    double factor = 2.0;
-    if (intermediate){
-      P.DerivativeU(P.Mom, MomDer1);
-      factor = 1.0;
-    }
+//    double factor = 2.0;
+//    if (intermediate){
+//      P.DerivativeU(P.Mom, MomDer1);
+//      factor = 1.0;
+//    }
+
 //    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
 
-    // Auxiliary fields
-    if(P.AuxDynamic)
-    P.update_auxiliary_momenta(ep1);
-    P.AuxiliaryFieldsDerivative(AuxDer);
-    Msum += AuxDer;
+//    Msum += AuxDer;
 
     t_U += ep;
     int fl = levels - 1;
@@ -487,83 +487,95 @@ public:
     std::cout << GridLogIntegrator << "U before implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
 
     MomentaField Mom1(P.Mom.Grid());
-    MomentaField Mom2(P.Mom.Grid());
-    RealD RelativeError;
-    Field diffU(U.Grid());
+//    MomentaField Mom2(P.Mom.Grid());
 //    Real threshold =  Params.RMHMCTol;
     int counter = 1;
     int MaxCounter = 100;
 
     Field OldU = U;
     Field NewU = U;
+    Field MidU = U;
 
-    P.M.ImportGauge(U);
-    P.DerivativeP(Mom1); // first term in the derivative 
-    std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
-
-     if(P.AuxDynamic) P.update_auxiliary_fields(ep1);
 
 
     MomentaField sum=Mom1;
     MomentaField Oldsum=Mom1;
     
-
-    // Here run recursively
-//    int counter = 1;
+    RealD RelativeErrorP;
+    Field diffU(U.Grid());
     RealD RelativeErrorU;
+    // Auxiliary fields
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep1);
+    if(P.AuxDynamic) P.update_auxiliary_fields(ep1);
+
     do {
+      P.M.ImportGauge(MidU);
+
+      P.AuxiliaryFieldsDerivative(AuxDer);
+//      P.DerivativeP(Msum); // first term in the derivative 
+
+
+			   
+      std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
       std::cout << GridLogIntegrator << "UpdatePQ implicit step "<< counter << std::endl;
       // Compute the derivative of the kinetic term
       // with respect to the gauge field
-      P.DerivativeU(NewMom, MomDer);
+      P.DerivativeU(MidMom, MomDer);
+      MomDer += AuxDer;
+
       Real force_abs = std::sqrt(norm2(MomDer) / U.Grid()->gSites());
       std::cout << GridLogIntegrator << "|Force| laplacian site average: " << force_abs
                 << std::endl;
 
-      NewMom = P.Mom -  HMC_MOMENTUM_DENOMINATOR * (ep*Msum + ep1* factor*MomDer + ep2* MomDer1);// simplify
+//      NewMom = P.Mom -  HMC_MOMENTUM_DENOMINATOR * (ep*Msum + ep1* factor*MomDer + ep2* MomDer1);// simplify
+      NewMom = P.Mom -  HMC_MOMENTUM_DENOMINATOR * ( ep*Msum + ep*MomDer );// simplify
       diff = NewMom - OldMom;
-      counter++;
-      RelativeError = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
-      std::cout << GridLogIntegrator << "UpdatePQ RelativeError: " << RelativeError << std::endl;
+      RelativeErrorP = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
+      std::cout << GridLogIntegrator << "UpdateP RelativeError: " << RelativeErrorP << std::endl;
       OldMom = NewMom;
 //    } while (RelativeError > threshold);
 //    do {
       std::cout << GridLogIntegrator << "UpdateU implicit step "<< counter << std::endl;
       
-      P.DerivativeP(Mom2); // second term in the derivative, on the updated U
+//      P.DerivativeP(Mom2); // second term in the derivative, on the updated U
       std::cout << GridLogIntegrator << "implicit_update_PU: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
-      sum = (Mom1*ep1 + Mom2*ep2);
+//      sum = (Mom1*ep1 + Mom2*ep2);
 //desperate indeed if ( counter >0 ) 
 //      sum += 0.003*(sum-Oldsum);
+      sum = 0.5*(P.Mom+NewMom);
 
       for (int mu = 0; mu < Nd; mu++) {
         auto Umu = PeekIndex<LorentzIndex>(U, mu);
         auto Pmu = PeekIndex<LorentzIndex>(sum, mu);
         Umu = expMat(Pmu, 1, 12) * Umu;
         PokeIndex<LorentzIndex>(NewU, ProjectOnGroup(Umu), mu);
+        auto UmuMid = PeekIndex<LorentzIndex>(U, mu);
+        UmuMid = expMat(Pmu, 0.5, 12) * UmuMid;
+        PokeIndex<LorentzIndex>(MidU, ProjectOnGroup(UmuMid), mu);
       }
 
       diffU = NewU - OldU;
       RelativeErrorU = std::sqrt(norm2(diff))/std::sqrt(norm2(NewU));
       std::cout << GridLogIntegrator << "UpdateU RelativeError: " << RelativeErrorU << std::endl;
       
-      P.M.ImportGauge(NewU);
+//      P.M.ImportGauge(NewU);
       OldU = NewU; // some redundancy to be eliminated
 
-      Oldsum=sum;
+//      Oldsum=sum;
+      MidMom = 0.5*(P.Mom+NewMom);
+      OldMom=NewMom;
       counter++;
-    } while ( ( (RelativeError > threshold) ||  (RelativeErrorU > threshold) ) && counter < MaxCounter);
+    } while ( ( (RelativeErrorP > threshold) ||  (RelativeErrorU > threshold) ) && counter < MaxCounter);
 
     P.Mom = NewMom;
     std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
 
     // update the auxiliary fields momenta    
-    if(P.AuxDynamic)
-    P.update_auxiliary_momenta(ep2);
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep2);
+    if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
 
     U = NewU;
     std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
-    if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
   }
 
 
@@ -923,9 +935,8 @@ public:
       std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsAF(fileAF);
       std::ifstream fsAM(fileAM);
-//  MomentaField AuxMom;
-//  MomentaField AuxField;
-      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+//      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+      if ( fsU.good() && fsM.good() && fsAM.good() ) {
 	if_checkpoint=true;
 	fsU.close();fsM.close();
 	fsAF.close();fsAM.close();

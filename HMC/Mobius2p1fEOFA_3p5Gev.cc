@@ -201,6 +201,8 @@ int main(int argc, char **argv) {
 //    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
   HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
+//  typedef GenericHMCRunner<ImplicitOmelyan> HMCWrapper; 
+//  HMCparams.MD.name          =std::string("ImplicitOmelyan");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
@@ -563,7 +565,36 @@ int main(int argc, char **argv) {
   TrivialMetric<HMCWrapper::ImplPolicy::Field> Mtr;
 #else
 //#include<g_x3_2.h.inc>
+//#include<g_x2.h.inc>
 #include<g_x3_2_3.h.inc>
+  double shift=-0.25;
+  for(int i=0;i<gpar_order;i++){
+       double a0 = gpar.a0[i] + shift*gpar.a1[i];
+       gpar.a0[i] =a0;
+       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*gpar.b2[i];
+       double b1 = gpar.b1[i] + 2*shift*gpar.b2[i];
+       gpar.b0[i] =b0;
+       gpar.b1[i] =b1;
+
+       a0 = mpar.a0[i] + shift*mpar.a1[i];
+       mpar.a0[i] =a0;
+       b0 = mpar.b0[i] + shift*mpar.b1[i]+shift*shift*mpar.b2[i];
+       b1 = mpar.b1[i] + 2*shift*mpar.b2[i];
+       mpar.b0[i] =b0;
+       mpar.b1[i] =b1;
+    }
+
+
+    for(int i=0;i<gpar_order;i++){
+       gpar.a1[i] *=16.;
+       gpar.b1[i] *=16.;
+       mpar.a1[i] *=16.;
+       mpar.b1[i] *=16.;
+       gpar.b2[i] *= 16.*16.;
+       mpar.b2[i] *= 16.*16.;
+    }
+
+
 
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);

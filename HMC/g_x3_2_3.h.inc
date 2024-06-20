@@ -1,5 +1,5 @@
     LaplacianRatParams gpar(2),mpar(2);
-
+    int gpar_order=2;
     gpar.offset = 1.;
     gpar.a0[0] =  1.999999999999265e+04;
     gpar.a1[0] = 0.;
@@ -23,11 +23,3 @@
     mpar.b1[1] = -3.541768369836859e+00;
     mpar.b2[1]= 1;
 
-    for(int i=0;i<2;i++){
-       gpar.a1[i] *=16.;
-       gpar.b1[i] *=16.;
-       mpar.a1[i] *=16.;
-       mpar.b1[i] *=16.;
-       gpar.b2[i] *= 16*16;
-       mpar.b2[i] *= 16*16;
-    }
