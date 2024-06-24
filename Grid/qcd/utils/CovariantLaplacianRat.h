@@ -37,8 +37,8 @@ NAMESPACE_BEGIN(Grid);
 
 struct LaplacianRatParams {
 
-  RealD offset;
-  int order;
+  std::vector<RealD> poly;
+  int order_p,order;
   std::vector<RealD> a0;
   std::vector<RealD> a1;
   std::vector<RealD> b0;
@@ -50,14 +50,15 @@ struct LaplacianRatParams {
   int   precision;
   
   // constructor 
-  LaplacianRatParams(int ord = 1,
+  LaplacianRatParams(int ord_p=1, int ord = 1,
                   int maxit     = 1000,
                   RealD tol     = 1.0e-8, 
                   int precision = 64)
-    : offset(1.), order(ord),
+    : order_p(ord_p), order(ord),poly(1,1.),
       MaxIter(maxit),
       tolerance(tol),
       precision(precision){ 
+      poly.resize(ord_p,0.);
       a0.resize(ord,0.);
       a1.resize(ord,0.);
       b0.resize(ord,0.);
@@ -215,7 +216,14 @@ public:
     
         ChronoForecast< QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,GaugeLinkField>,GaugeLinkField> , GaugeLinkField> Forecast;
     
-        GMom = par.offset * right_nu;
+//        GMom = par.offset * right_nu;
+         
+        GMom = par.poly[0] * right_nu;
+	Gtemp = right_nu;
+        for(int i =1;i<par.poly.size();i++){
+          LapStencil.M(Gtemp,Gtemp2); Gtemp=fac*Gtemp2;
+	  GMom += par.poly[i]*Gtemp;
+	}
     
         for(int i =0;i<par.order;i++){
         QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
@@ -239,6 +247,31 @@ public:
         LapStencil.M(MinvMom[i],Gtemp2);
         GMom += par.a1[i]*fac*Gtemp2; 
         }
+
+    
+        GaugeField tempDer(left.Grid());
+        std::vector<GaugeLinkField> DerLink(Nd,left.Grid());
+        std::vector<GaugeLinkField> tempDerLink(Nd,left.Grid());
+        std::vector<GaugeLinkField> L(par.poly.size(),left.Grid());
+        std::vector<GaugeLinkField> GL(par.poly.size(),left.Grid());
+	L[0] = right_nu;
+	GL[0] = GMom;
+        for(int i =1;i<par.poly.size();i++){
+            LapStencil.M(L[i-1],Gtemp2); L[i]=fac*Gtemp2;
+            LapStencil.M(GL[i-1],Gtemp2); GL[i]=fac*Gtemp2;
+	}
+
+	for (int mu=0;mu<Nd;mu++) DerLink[mu]=Zero();
+        for(int i =1;i<par.poly.size();i++){
+	for(int j=0;j<i;j++){
+           MDerivLink(GL[j],L[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*2*par.poly[i]*tempDerLink[mu];
+	}
+	}
+
+        for (int mu=0;mu<Nd;mu++) PokeIndex<LorentzIndex>(tempDer, DerLink[mu], mu);
+	der += tempDer;
+
+
         for(int i =0;i<par.order;i++){
         QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,typename Impl::LinkField>,GaugeLinkField> QuadOp(LapStencil,par.b0[i],fac*par.b1[i],fac*fac*par.b2[i]);
     
@@ -254,7 +287,6 @@ public:
         MixedCG.InnerTolerance=par.tolerance;
         MixedCG(GMom,MinvGMom);
         LapStencil.M(MinvGMom, Gtemp2); LMinvGMom=fac*Gtemp2;
-    //    Laplacian.M(MinvGMom, LMinvGMom);
         MixedCG(right_nu,MinvMom[i]);
 #endif
 #if USE_CHRONO
@@ -271,10 +303,6 @@ public:
         MinvAGMom += par.a0[i]*MinvGMom;
         LapStencil.M(MinvAGMom, Gtemp2); LMinvAGMom=fac*Gtemp2;
     
-    
-        GaugeField tempDer(left.Grid());
-        std::vector<GaugeLinkField> DerLink(Nd,left.Grid());
-        std::vector<GaugeLinkField> tempDerLink(Nd,left.Grid());
 
         std::cout<<GridLogMessage << "force contraction "<< i <<std::endl;
     //    roctxRangePushA("RMHMC force contraction");
@@ -291,27 +319,18 @@ public:
         MDerivLink(AMinvMom,MinvGMom,tempDer); der += coef*-2.*par.b1[i]*tempDer;
 #else
 	for (int mu=0;mu<Nd;mu++) DerLink[mu]=Zero();
-//        MDerivLink(GMom,MinvMom[i],tempDer);                                            der += coef*2*par.a1[i]*tempDer;
         MDerivLink(GMom,MinvMom[i],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*2*par.a1[i]*tempDerLink[mu];
-//        MDerivLink(left_nu,MinvGMom,tempDer);                                            der += coef*2*par.a1[i]*tempDer;
         MDerivLink(left_nu,MinvGMom,tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*2*par.a1[i]*tempDerLink[mu];
-//        MDerivLink(LMinvAGMom,MinvMom[i],tempDer);                                            der += coef*-2.*par.b2[i]*tempDer;
 if (par.b2[i] !=0 ){
         MDerivLink(LMinvAGMom,MinvMom[i],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.b2[i]*tempDerLink[mu];
-//        MDerivLink(LMinvAMom,MinvGMom,tempDer);                                            der += coef*-2.*par.b2[i]*tempDer;
         MDerivLink(LMinvAMom,MinvGMom,tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.b2[i]*tempDerLink[mu];
-//        MDerivLink(MinvAGMom,LMinvMom,tempDer);                                            der += coef*-2.*par.b2[i]*tempDer;
         MDerivLink(MinvAGMom,LMinvMom,tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.b2[i]*tempDerLink[mu];
-//        MDerivLink(AMinvMom,LMinvGMom,tempDer);                                            der += coef*-2.*par.b2[i]*tempDer;
         MDerivLink(AMinvMom,LMinvGMom,tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.b2[i]*tempDerLink[mu];
 }
-//        MDerivLink(MinvAGMom,MinvMom[i],tempDer);                                            der += coef*-2.*par.b1[i]*tempDer;
         MDerivLink(MinvAGMom,MinvMom[i],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.b1[i]*tempDerLink[mu];
-//        MDerivLink(AMinvMom,MinvGMom,tempDer);                                            der += coef*-2.*par.b1[i]*tempDer;
         MDerivLink(AMinvMom,MinvGMom,tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.b1[i]*tempDerLink[mu];
 
         for (int mu=0;mu<Nd;mu++) PokeIndex<LorentzIndex>(tempDer, DerLink[mu], mu);
-
 	der += tempDer;
 #endif
         std::cout<<GridLogMessage << "coef =  force contraction "<< i << "done "<< coef <<std::endl;
@@ -353,7 +372,6 @@ if (par.b2[i] !=0 ){
     for(int nu=0; nu<Nd;nu++){
         GaugeLinkField P_nu = PeekIndex<LorentzIndex>(P, nu);
         GaugeLinkField Gp(P.Grid());
-        Gp = par.offset * P_nu;
         ConjugateGradient<GaugeLinkField> CG(par.tolerance,10000);
     //    ConjugateGradient<GaugeLinkFieldF> CG_f(1.0e-8,10000);
     
@@ -361,6 +379,14 @@ if (par.b2[i] !=0 ){
     
         GaugeLinkField Gtemp(P.Grid());
         GaugeLinkField Gtemp2(P.Grid());
+
+//        Gp = par.offset * P_nu;
+        Gp = par.poly[0] * P_nu;
+	Gtemp = P_nu;
+        for(int i =1;i<par.poly.size();i++){
+          LapStencil.M(Gtemp,Gtemp2); Gtemp=fac*Gtemp2;
+	  Gp += par.poly[i]*fac*Gtemp;
+	}
     
     
         for(int i =0;i<par.order;i++){

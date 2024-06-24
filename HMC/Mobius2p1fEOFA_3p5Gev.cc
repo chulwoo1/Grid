@@ -567,30 +567,35 @@ int main(int argc, char **argv) {
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
 #include<g_x3_2_3.h.inc>
-  double shift=-0.25;
-  for(int i=0;i<gpar_order;i++){
+//#include<g_poly.h.inc>
+  double shift=-0.25; // not worked out for poly.size>1!
+  for(int i=0;i<gpar.order;i++){
        double a0 = gpar.a0[i] + shift*gpar.a1[i];
        gpar.a0[i] =a0;
-       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*gpar.b2[i];
-       double b1 = gpar.b1[i] + 2*shift*gpar.b2[i];
+       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*(RealD)gpar.b2[i];
+       double b1 = gpar.b1[i] + 2*shift*(RealD)gpar.b2[i];
        gpar.b0[i] =b0;
        gpar.b1[i] =b1;
+  }
 
-       a0 = mpar.a0[i] + shift*mpar.a1[i];
+  for(int i=0;i<mpar.order;i++){
+       double a0 = mpar.a0[i] + shift*mpar.a1[i];
        mpar.a0[i] =a0;
-       b0 = mpar.b0[i] + shift*mpar.b1[i]+shift*shift*mpar.b2[i];
-       b1 = mpar.b1[i] + 2*shift*mpar.b2[i];
+       double b0 = mpar.b0[i] + shift*mpar.b1[i]+shift*shift*(RealD)mpar.b2[i];
+       double b1 = mpar.b1[i] + 2*shift*(RealD)mpar.b2[i];
        mpar.b0[i] =b0;
        mpar.b1[i] =b1;
     }
 
 
-    for(int i=0;i<gpar_order;i++){
+    for(int i=0;i<gpar.order;i++){
        gpar.a1[i] *=16.;
        gpar.b1[i] *=16.;
+       gpar.b2[i] *= 16.*16.;
+    }
+    for(int i=0;i<mpar.order;i++){
        mpar.a1[i] *=16.;
        mpar.b1[i] *=16.;
-       gpar.b2[i] *= 16.*16.;
        mpar.b2[i] *= 16.*16.;
     }
 
@@ -602,14 +607,14 @@ int main(int argc, char **argv) {
     std::cout << GridLogMessage << "LaplacianRat " << std::endl;
     gpar.tolerance=HMCparams.MD.RMHMCCGTol;
     mpar.tolerance=HMCparams.MD.RMHMCCGTol;
-    std::cout << GridLogMessage << "gpar offset= " << gpar.offset <<std::endl;
+    std::cout << GridLogMessage << "gpar poly= " << gpar.poly <<std::endl;
     std::cout << GridLogMessage << " a0= " << gpar.a0 <<std::endl;
     std::cout << GridLogMessage << " a1= " << gpar.a1 <<std::endl;
     std::cout << GridLogMessage << " b0= " << gpar.b0 <<std::endl;
     std::cout << GridLogMessage << " b1= " << gpar.b1 <<std::endl;
     std::cout << GridLogMessage << " b2= " << gpar.b2 <<std::endl ;;
 
-    std::cout << GridLogMessage << "mpar offset= " << mpar.offset <<std::endl;
+    std::cout << GridLogMessage << "mpar poly= " << mpar.poly <<std::endl;
     std::cout << GridLogMessage << " a0= " << mpar.a0 <<std::endl;
     std::cout << GridLogMessage << " a1= " << mpar.a1 <<std::endl;
     std::cout << GridLogMessage << " b0= " << mpar.b0 <<std::endl;
@@ -621,6 +626,27 @@ int main(int argc, char **argv) {
 //  auto GridPtrF   = SpaceTimeGrid::makeFourDimGrid(latt,simdF,mpi);
 //    std::cout << GridLogMessage << " UGrid= " << UGrid <<std::endl;
 //    std::cout << GridLogMessage << " UGrid_f= " << UGrid_f <<std::endl;
+
+    for (int i=0;i<100;i++){
+	    double x=0.01*(RealD) i;
+	    double xn=x;
+	    double g= gpar.poly[0];
+	    for(int j=1; j < gpar.poly.size();j++){
+			g += xn*gpar.poly[j];
+			xn *= x;
+	    }
+	    xn=x;
+	    double m= mpar.poly[0];
+	    for(int j=1; j < mpar.poly.size();j++){
+			m += xn*mpar.poly[j];
+			xn *= x;
+	    }
+	    for(int j=0; j < gpar.order;j++)
+			g += (gpar.a0[j] + gpar.a1[j] *x )/(gpar.b0[j]+gpar.b1[j]*x+(RealD) gpar.b2[j] *x*x);
+	    for(int j=0; j < mpar.order;j++)
+			m += (mpar.a0[j] + mpar.a1[j] *x )/(mpar.b0[j]+mpar.b1[j]*x+(RealD) mpar.b2[j] *x*x);
+            std::cout << GridLogMessage << "x " << x  <<" gpar "<<g<<" mpar "<<m<< " diff "<< 1.-(g*m)<< std::endl;
+    }
 
     LaplacianAdjointRat<HMCWrapper::ImplPolicy, PeriodicGimplF> Mtr(UGrid, UGrid_f ,CG, gpar, mpar);
 #endif
