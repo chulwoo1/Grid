@@ -54,7 +54,7 @@ struct LaplacianRatParams {
                   int maxit     = 1000,
                   RealD tol     = 1.0e-8, 
                   int precision = 64)
-    : order_p(ord_p), order(ord),poly(1,1.),
+    : order_p(ord_p), order(ord),
       MaxIter(maxit),
       tolerance(tol),
       precision(precision){ 
@@ -238,10 +238,10 @@ public:
         MixedPrecisionConjugateGradient<GaugeLinkField,GaugeLinkFieldF> MixedCG(par.tolerance,10000,10000,grid_f,QuadOpF,QuadOp);
         MixedCG.InnerTolerance=par.tolerance;
         MixedCG(right_nu,MinvMom[i]);
-    #endif
-    #if USE_CHRONO
+#endif
+#if USE_CHRONO
         prev_solns[nu].push_back(MinvMom[i]);
-    #endif
+#endif
         
         GMom += par.a0[i]*MinvMom[i]; 
         LapStencil.M(MinvMom[i],Gtemp2);
@@ -264,7 +264,7 @@ public:
 	for (int mu=0;mu<Nd;mu++) DerLink[mu]=Zero();
         for(int i =1;i<par.poly.size();i++){
 	for(int j=0;j<i;j++){
-           MDerivLink(GL[j],L[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*2*par.poly[i]*tempDerLink[mu];
+           MDerivLink(L[j],GL[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*1*par.poly[i]*tempDerLink[mu];
 	}
 	}
 

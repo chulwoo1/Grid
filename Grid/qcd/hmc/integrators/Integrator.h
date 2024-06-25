@@ -911,6 +911,7 @@ public:
       as[level].apply(Sinitial_hireps, Representations, level, H);
     }
 
+    std::cout << GridLogMessage << "Sinitial " << H << std::endl;
     return H;
   }
 
