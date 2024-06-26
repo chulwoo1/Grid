@@ -787,7 +787,8 @@ public:
       std::ifstream fsAM(fileAM);
 //  MomentaField AuxMom;
 //  MomentaField AuxField;
-      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+      if ( fsU.good() && fsM.good() && fsAM.good() ) {
+//      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
 	if_checkpoint=true;
 	fsU.close();fsM.close();
 	fsAF.close();fsAM.close();
