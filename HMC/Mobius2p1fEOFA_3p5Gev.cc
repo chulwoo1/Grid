@@ -35,7 +35,7 @@ directory
 #define MIXED_PRECISION
 #endif
 // second level EOFA
-#undef EOFA_H
+#define EOFA_H
 #undef USE_OBC
 #define DO_IMPLICIT
 
@@ -201,8 +201,8 @@ int main(int argc, char **argv) {
 //    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
   HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
-//  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
-//  HMCparams.MD.name          =std::string("ForceGradientImplNested");
+//  typedef GenericHMCRunner<ImplicitOmelyan> HMCWrapper; 
+//  HMCparams.MD.name          =std::string("ImplicitOmelyan");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
@@ -240,27 +240,22 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.983;
+  Real beta         = 2.44;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
-  Real light_mass   = 0.00049;
-  Real strange_mass = 0.0158;
-  Real charm_mass = 0.191;
+//  Real light_mass   = 0.0026;
+  Real light_mass   = 0.000302;
+  Real strange_mass = 0.0176;
+//  Real charm_mass = 0.191;
   Real pv_mass    = 1.0;
-  RealD M5  = 1.4;
-  RealD b   = 2.0; 
-  RealD c   = 1.0;
+  RealD M5  = 1.8;
+  RealD b   = 1.5; 
+  RealD c   = 0.5;
 
   // Copied from paper
-//  std::vector<Real> hasenbusch({ 0.045 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
-
-//  RealD eofa_mass=0.05 ;
-
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  //Bad choices with large dH. Equalising force L2 norm was not wise.
-  ///////////////////////////////////////////////////////////////////////////////////////////////
-  //std::vector<Real> hasenbusch({ 0.03, 0.2, 0.3, 0.5, 0.8 }); 
+  std::vector<Real> hasenbusch({ 0.0026, 0.017, 0.07 , 0.18, 0.45 }); // Paper values from F1 incorrect run
+//  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
+//EOFA Hasenbusch
+  RealD eofa_mass=0.13 ;
 
   auto GridPtr   = TheHMC.Resources.GetCartesian();
   auto GridRBPtr = TheHMC.Resources.GetRBCartesian();
@@ -279,8 +274,8 @@ int main(int argc, char **argv) {
 
 
 #ifndef USE_OBC
-//  IwasakiGaugeActionR GaugeAction(beta);
-  WilsonGaugeActionR GaugeAction(beta);
+  IwasakiGaugeActionR GaugeAction(beta);
+//  WilsonGaugeActionR GaugeAction(beta);
 #else
   std::vector<Complex> boundaryG = {1,1,1,0};
   WilsonGaugeActionR::ImplParams ParamsG(boundaryG);
@@ -300,7 +295,7 @@ int main(int argc, char **argv) {
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-8;
+  double ActionStoppingCondition     = 1e-10;
   double DerivativeStoppingCondition = 1e-8;
   double MaxCGIterations =  100000;
 
@@ -324,23 +319,23 @@ int main(int argc, char **argv) {
   // DJM: setup for EOFA ratio (Mobius)
   OneFlavourRationalParams OFRp;
   OFRp.lo       = 0.99; // How do I know this on F1?
-  OFRp.hi       = 20;
+  OFRp.hi       = 10;
   OFRp.MaxIter  = 100000;
   OFRp.tolerance= 1.0e-12;
   OFRp.degree   = 12;
   OFRp.precision= 50;
 
   
-  MobiusEOFAFermionD Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , strange_mass, strange_mass, charm_mass, 0.0, -1, M5, b, c);
-  MobiusEOFAFermionF Strange_Op_LF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, strange_mass, strange_mass, charm_mass, 0.0, -1, M5, b, c);
-  MobiusEOFAFermionD Strange_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , charm_mass, strange_mass,      charm_mass, -1.0, 1, M5, b, c);
-  MobiusEOFAFermionF Strange_Op_RF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, charm_mass, strange_mass,      charm_mass, -1.0, 1, M5, b, c);
+  MobiusEOFAFermionD Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , strange_mass, strange_mass, eofa_mass, 0.0, -1, M5, b, c);
+  MobiusEOFAFermionF Strange_Op_LF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, strange_mass, strange_mass, eofa_mass, 0.0, -1, M5, b, c);
+  MobiusEOFAFermionD Strange_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, strange_mass,      eofa_mass, -1.0, 1, M5, b, c);
+  MobiusEOFAFermionF Strange_Op_RF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, eofa_mass, strange_mass,      eofa_mass, -1.0, 1, M5, b, c);
   
 #ifdef EOFA_H
-  MobiusEOFAFermionD Strange2_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, eofa_mass, charm_mass , 0.0, -1, M5, b, c);
-  MobiusEOFAFermionF Strange2_Op_LF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, eofa_mass, eofa_mass, charm_mass , 0.0, -1, M5, b, c);
-  MobiusEOFAFermionD Strange2_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
-  MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
+  MobiusEOFAFermionD Strange2_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, eofa_mass, pv_mass , 0.0, -1, M5, b, c);
+  MobiusEOFAFermionF Strange2_Op_LF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, eofa_mass, eofa_mass, pv_mass , 0.0, -1, M5, b, c);
+  MobiusEOFAFermionD Strange2_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , pv_mass , eofa_mass,      pv_mass , -1.0, 1, M5, b, c);
+  MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, pv_mass , eofa_mass,      pv_mass , -1.0, 1, M5, b, c);
 #endif
 
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
@@ -480,13 +475,13 @@ int main(int argc, char **argv) {
   }
   light_num.push_back(pv_mass);
 
-  int n_hasenbusch2 = hasenbusch2.size();
-  light_den.push_back(charm_mass);
-  for(int h=0;h<n_hasenbusch2;h++){
-    light_den.push_back(hasenbusch2[h]);
-    light_num.push_back(hasenbusch2[h]);
-  }
-  light_num.push_back(pv_mass);
+//  int n_hasenbusch2 = hasenbusch2.size();
+//  light_den.push_back(charm_mass);
+ // for(int h=0;h<n_hasenbusch2;h++){
+//    light_den.push_back(hasenbusch2[h]);
+//    light_num.push_back(hasenbusch2[h]);
+//  }
+//  light_num.push_back(pv_mass);
 
 
   //////////////////////////////////////////////////////////////
@@ -569,80 +564,21 @@ int main(int argc, char **argv) {
 #ifndef DO_IMPLICIT
   TrivialMetric<HMCWrapper::ImplPolicy::Field> Mtr;
 #else
-<<<<<<< HEAD
-    double scale=1.;
-    LaplacianRatParams gpar(2),mpar(2);
-#if 0
-    gpar.offset = 1.;
-    gpar.a0[0] =  1.999999999999265e+04;
-    gpar.a1[0] = 0.;
-    gpar.b0[0] = 4.999999999999944e-01;
-    gpar.b1[0] = 1.;
-    gpar.b2[0] = 0;
-    gpar.a0[1] = -1.299999999999689e+04;
-    gpar.a1[1] = -1.999999999999510e+04;
-    gpar.b0[1] = 0.330;
-    gpar.b1[1] = 1.15;
-    gpar.b2[1]=1;
-    mpar.offset = 1.;
-    mpar.a0[0] =  -1.547136432463019e+00;
-    mpar.a1[0] = 0.;
-    mpar. b0[0] = 5.191768369836859e+00;
-    mpar. b1[0] = 1.;
-    mpar.b2[0] = 0;
-    mpar.a0[1] =  -1.351197287420350e+01;
-    mpar.a1[1] = 1.547136432463019e+00;
-    mpar.b0[1] = 1.929304099580766e+01;
-    mpar.b1[1] = -3.541768369836859e+00;
-    mpar.b2[1]= 1;
-#else
-    gpar.offset = 1.*scale;
-    gpar.a0[0] = 500.*scale;
-    gpar.a1[0] = 0.*scale;
-    gpar.b0[0] = 0.25;
-    gpar.b1[0] = 1.;
-    gpar.b2[0]=1.;
-    gpar.a0[1] = -500.*scale;
-    gpar.a1[1] = 0.*scale;
-    gpar.b0[1] = 0.36;
-    gpar.b1[1] = 1.2;
-    gpar.b2[1]=1.;
-    mpar.offset = 1./scale;
-    mpar.a0[0] =  -0.850891906532/scale;
-    mpar.a1[0] = -1.54707654538/scale;
-    mpar. b0[0] = 2.85557166137;
-    mpar. b1[0] = 5.74194794773;
-    mpar.b2[0]=1.;
-    mpar.a0[1] = -13.5120056831218384729709214298/scale;
-    mpar.a1[1] = 1.54707654538396877086370295729/scale;
-    mpar.b0[1] = 19.2921090880640520026645390317;
-    mpar.b1[1] = -3.54194794773029020262811172870;
-    mpar.b2[1]=1.;
-#endif
-=======
->>>>>>> d85500f4da94c8fd1a58e449b4518690d19572bb
-
-    double scale=1.;
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-//#include<g_x3_2_3.h.inc>
-#include<g_poly.h.inc>     
-//    LaplacianRatParams gpar(2),mpar(2);
-
-    double shift=-0;// not working for poly
-		    
-    for(int i=0;i<gpar.order;i++){
+#include<g_x3_2_3.h.inc>
+//#include<g_poly.h.inc>
+  double shift=-0.25; // not worked out for poly.size>1!
+  for(int i=0;i<gpar.order;i++){
        double a0 = gpar.a0[i] + shift*gpar.a1[i];
-       double a1 = gpar.a1[i];
        gpar.a0[i] =a0;
-       gpar.a1[i] =a1;
-       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*gpar.b2[i];
-       double b1 = gpar.b1[i] + 2*shift*gpar.b2[i];
+       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*(RealD)gpar.b2[i];
+       double b1 = gpar.b1[i] + 2*shift*(RealD)gpar.b2[i];
        gpar.b0[i] =b0;
        gpar.b1[i] =b1;
-    }
+  }
 
-      for(int i=0;i<mpar.order;i++){
+  for(int i=0;i<mpar.order;i++){
        double a0 = mpar.a0[i] + shift*mpar.a1[i];
        mpar.a0[i] =a0;
        double b0 = mpar.b0[i] + shift*mpar.b1[i]+shift*shift*(RealD)mpar.b2[i];
@@ -650,6 +586,7 @@ int main(int argc, char **argv) {
        mpar.b0[i] =b0;
        mpar.b1[i] =b1;
     }
+
 
     for(int i=0;i<gpar.order;i++){
        gpar.a1[i] *=16.;
@@ -662,16 +599,7 @@ int main(int argc, char **argv) {
        mpar.b2[i] *= 16.*16.;
     }
 
-    RealD xn=16.;
-    for(int i=1;i<gpar.poly.size();i++){
-       gpar.poly[i] *=xn;
-       xn *=16.;
-    }
-    xn=16.;
-    for(int i=1;i<mpar.poly.size();i++){
-       mpar.poly[i] *=xn;
-       xn *=16.;
-    }
+
 
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);

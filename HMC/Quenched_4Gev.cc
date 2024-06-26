@@ -200,9 +200,9 @@ int main(int argc, char **argv) {
 #ifdef DO_IMPLICIT
 //    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
 //  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
+  HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
@@ -307,8 +307,8 @@ int main(int argc, char **argv) {
   ////////////////////////////////////
   // Collect actions
   ////////////////////////////////////
-  ActionLevel<HMCWrapper::Field> Level1(1);
-  ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
+//  ActionLevel<HMCWrapper::Field> Level1(1);
+  ActionLevel<HMCWrapper::Field> Level2(1);
 
   ////////////////////////////////////
   // Strange action
@@ -450,9 +450,9 @@ int main(int argc, char **argv) {
 	 OFRp, true);
 #endif
 
-  Level1.push_back(&EOFA);
+//  Level1.push_back(&EOFA);
 #ifdef EOFA_H
-  Level1.push_back(&EOFA2);
+//  Level1.push_back(&EOFA2);
 #endif
 
 #else
@@ -463,7 +463,7 @@ int main(int argc, char **argv) {
 	 ActionCG, ActionCG,
 	 //         DerivativeCG, DerivativeCG,
 	 OFRp, true);
-  Level1.push_back(&EOFA);
+//  Level1.push_back(&EOFA);
 #endif
 
   ////////////////////////////////////
@@ -551,14 +551,14 @@ int main(int argc, char **argv) {
   }
 
   for(int h=0;h<n_hasenbusch+1;h++){
-    Level1.push_back(Quotients[h]);
+//    Level1.push_back(Quotients[h]);
   }
 
   /////////////////////////////////////////////////////////////
   // Gauge action
   /////////////////////////////////////////////////////////////
   Level2.push_back(&GaugeAction);
-  TheHMC.TheAction.push_back(Level1);
+//  TheHMC.TheAction.push_back(Level1);
   TheHMC.TheAction.push_back(Level2);
   std::cout << GridLogMessage << " Action complete "<< std::endl;
 
@@ -569,58 +569,6 @@ int main(int argc, char **argv) {
 #ifndef DO_IMPLICIT
   TrivialMetric<HMCWrapper::ImplPolicy::Field> Mtr;
 #else
-<<<<<<< HEAD
-    double scale=1.;
-    LaplacianRatParams gpar(2),mpar(2);
-#if 0
-    gpar.offset = 1.;
-    gpar.a0[0] =  1.999999999999265e+04;
-    gpar.a1[0] = 0.;
-    gpar.b0[0] = 4.999999999999944e-01;
-    gpar.b1[0] = 1.;
-    gpar.b2[0] = 0;
-    gpar.a0[1] = -1.299999999999689e+04;
-    gpar.a1[1] = -1.999999999999510e+04;
-    gpar.b0[1] = 0.330;
-    gpar.b1[1] = 1.15;
-    gpar.b2[1]=1;
-    mpar.offset = 1.;
-    mpar.a0[0] =  -1.547136432463019e+00;
-    mpar.a1[0] = 0.;
-    mpar. b0[0] = 5.191768369836859e+00;
-    mpar. b1[0] = 1.;
-    mpar.b2[0] = 0;
-    mpar.a0[1] =  -1.351197287420350e+01;
-    mpar.a1[1] = 1.547136432463019e+00;
-    mpar.b0[1] = 1.929304099580766e+01;
-    mpar.b1[1] = -3.541768369836859e+00;
-    mpar.b2[1]= 1;
-#else
-    gpar.offset = 1.*scale;
-    gpar.a0[0] = 500.*scale;
-    gpar.a1[0] = 0.*scale;
-    gpar.b0[0] = 0.25;
-    gpar.b1[0] = 1.;
-    gpar.b2[0]=1.;
-    gpar.a0[1] = -500.*scale;
-    gpar.a1[1] = 0.*scale;
-    gpar.b0[1] = 0.36;
-    gpar.b1[1] = 1.2;
-    gpar.b2[1]=1.;
-    mpar.offset = 1./scale;
-    mpar.a0[0] =  -0.850891906532/scale;
-    mpar.a1[0] = -1.54707654538/scale;
-    mpar. b0[0] = 2.85557166137;
-    mpar. b1[0] = 5.74194794773;
-    mpar.b2[0]=1.;
-    mpar.a0[1] = -13.5120056831218384729709214298/scale;
-    mpar.a1[1] = 1.54707654538396877086370295729/scale;
-    mpar.b0[1] = 19.2921090880640520026645390317;
-    mpar.b1[1] = -3.54194794773029020262811172870;
-    mpar.b2[1]=1.;
-#endif
-=======
->>>>>>> d85500f4da94c8fd1a58e449b4518690d19572bb
 
     double scale=1.;
 //#include<g_x3_2.h.inc>

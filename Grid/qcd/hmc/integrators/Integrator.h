@@ -332,7 +332,7 @@ public:
       RelativeError = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
       std::cout << GridLogIntegrator << "UpdateP RelativeError: " << RelativeError << std::endl;
 //desparte indeed
-      NewMom = NewMom + 0.003* diff ;
+//      NewMom = NewMom + 0.003* diff ;
       OldMom = NewMom;
     } while (RelativeError > threshold);
 
@@ -403,7 +403,7 @@ public:
       std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
       sum = (Mom1*ep1 + Mom2*ep2);
 //desperate indeed if ( counter >0 ) 
-      sum += 0.003*(sum-Oldsum);
+//      sum += 0.003*(sum-Oldsum);
 
       for (int mu = 0; mu < Nd; mu++) {
         auto Umu = PeekIndex<LorentzIndex>(U, mu);
@@ -426,6 +426,156 @@ public:
     U = NewU;
     std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
     if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
+  }
+
+  void implicit_update_PQ(Field& U, int level, double ep, bool intermediate = false) {
+// void implicit_update_U(Field&U, double ep, double ep1 ){
+    double ep1 = 0.5*ep;
+    double ep2= ep-ep1;
+
+    t_P[level] += ep;
+
+
+    std::cout << GridLogIntegrator << "[" << level << "] P "
+              << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+    std::cout << GridLogIntegrator << "U before implicit_update_PQ: " << std::sqrt(norm2(U)) << std::endl;
+    // Fundamental updates, include smearing
+    MomentaField Msum(P.Mom.Grid());
+    Msum = Zero();
+    for (int a = 0; a < as[level].actions.size(); ++a) {
+      // Compute the force terms for the lagrangian part
+      // We need to compute the derivative of the actions
+      // only once
+      Field force(U.Grid());
+      conformable(U.Grid(), P.Mom.Grid());
+      Field& Us = Smearer.get_U(as[level].actions.at(a)->is_smeared);
+      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
+
+      std::cout << GridLogIntegrator << "Smearing (on/off): " << as[level].actions.at(a)->is_smeared << std::endl;
+      if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
+      force = FieldImplementation::projectForce(force);  // Ta for gauge fields
+      Real force_abs = std::sqrt(norm2(force) / U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "|Force| site average: " << force_abs
+                << std::endl;
+      Msum += force;
+    }
+
+    MomentaField NewMom = P.Mom;
+    MomentaField MidMom = P.Mom;
+    MomentaField OldMom = P.Mom;
+    double threshold = Params.RMHMCTol;
+
+    P.M.ImportGauge(U);
+    MomentaField MomDer(P.Mom.Grid());
+    MomentaField MomDer1(P.Mom.Grid());
+    MomentaField AuxDer(P.Mom.Grid());
+    MomDer1 = Zero();
+    MomentaField diff(P.Mom.Grid());
+//    double factor = 2.0;
+//    if (intermediate){
+//      P.DerivativeU(P.Mom, MomDer1);
+//      factor = 1.0;
+//    }
+
+//    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
+
+//    Msum += AuxDer;
+
+    t_U += ep;
+    int fl = levels - 1;
+    std::cout << GridLogIntegrator << "   " << "[" << fl << "] U " << " dt " << ep << " : t_U " << t_U << std::endl;
+    std::cout << GridLogIntegrator << "U before implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
+
+    MomentaField Mom1(P.Mom.Grid());
+//    MomentaField Mom2(P.Mom.Grid());
+//    Real threshold =  Params.RMHMCTol;
+    int counter = 1;
+    int MaxCounter = 100;
+
+    Field OldU = U;
+    Field NewU = U;
+    Field MidU = U;
+
+
+
+    MomentaField sum=Mom1;
+    MomentaField Oldsum=Mom1;
+    
+    RealD RelativeErrorP;
+    Field diffU(U.Grid());
+    RealD RelativeErrorU;
+    // Auxiliary fields
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep1);
+    if(P.AuxDynamic) P.update_auxiliary_fields(ep1);
+
+    do {
+      P.M.ImportGauge(MidU);
+
+      P.AuxiliaryFieldsDerivative(AuxDer);
+//      P.DerivativeP(Msum); // first term in the derivative 
+
+
+			   
+      std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
+      std::cout << GridLogIntegrator << "UpdatePQ implicit step "<< counter << std::endl;
+      // Compute the derivative of the kinetic term
+      // with respect to the gauge field
+      P.DerivativeU(MidMom, MomDer);
+      MomDer += AuxDer;
+
+      Real force_abs = std::sqrt(norm2(MomDer) / U.Grid()->gSites());
+      std::cout << GridLogIntegrator << "|Force| laplacian site average: " << force_abs
+                << std::endl;
+
+//      NewMom = P.Mom -  HMC_MOMENTUM_DENOMINATOR * (ep*Msum + ep1* factor*MomDer + ep2* MomDer1);// simplify
+      NewMom = P.Mom -  HMC_MOMENTUM_DENOMINATOR * ( ep*Msum + ep*MomDer );// simplify
+      diff = NewMom - OldMom;
+      RelativeErrorP = std::sqrt(norm2(diff))/std::sqrt(norm2(NewMom));
+      std::cout << GridLogIntegrator << "UpdateP RelativeError: " << RelativeErrorP << std::endl;
+      OldMom = NewMom;
+//    } while (RelativeError > threshold);
+//    do {
+      std::cout << GridLogIntegrator << "UpdateU implicit step "<< counter << std::endl;
+      
+//      P.DerivativeP(Mom2); // second term in the derivative, on the updated U
+      std::cout << GridLogIntegrator << "implicit_update_PU: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
+//      sum = (Mom1*ep1 + Mom2*ep2);
+//desperate indeed if ( counter >0 ) 
+//      sum += 0.003*(sum-Oldsum);
+      sum = 0.5*(P.Mom+NewMom);
+
+      for (int mu = 0; mu < Nd; mu++) {
+        auto Umu = PeekIndex<LorentzIndex>(U, mu);
+        auto Pmu = PeekIndex<LorentzIndex>(sum, mu);
+        Umu = expMat(Pmu, 1, 12) * Umu;
+        PokeIndex<LorentzIndex>(NewU, ProjectOnGroup(Umu), mu);
+        auto UmuMid = PeekIndex<LorentzIndex>(U, mu);
+        UmuMid = expMat(Pmu, 0.5, 12) * UmuMid;
+        PokeIndex<LorentzIndex>(MidU, ProjectOnGroup(UmuMid), mu);
+      }
+
+      diffU = NewU - OldU;
+      RelativeErrorU = std::sqrt(norm2(diff))/std::sqrt(norm2(NewU));
+      std::cout << GridLogIntegrator << "UpdateU RelativeError: " << RelativeErrorU << std::endl;
+      
+//      P.M.ImportGauge(NewU);
+      OldU = NewU; // some redundancy to be eliminated
+
+//      Oldsum=sum;
+      MidMom = 0.5*(P.Mom+NewMom);
+      OldMom=NewMom;
+      counter++;
+    } while ( ( (RelativeErrorP > threshold) ||  (RelativeErrorU > threshold) ) && counter < MaxCounter);
+
+    P.Mom = NewMom;
+    std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
+
+    // update the auxiliary fields momenta    
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep2);
+    if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
+
+    U = NewU;
+    std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
   }
 
 
@@ -761,6 +911,7 @@ public:
       as[level].apply(Sinitial_hireps, Representations, level, H);
     }
 
+    std::cout << GridLogMessage << "Sinitial " << H << std::endl;
     return H;
   }
 
@@ -785,10 +936,15 @@ public:
       std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsAF(fileAF);
       std::ifstream fsAM(fileAM);
+<<<<<<< HEAD
 //  MomentaField AuxMom;
 //  MomentaField AuxField;
       if ( fsU.good() && fsM.good() && fsAM.good() ) {
 //      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+=======
+//      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+      if ( fsU.good() && fsM.good() && fsAM.good() ) {
+>>>>>>> d85500f4da94c8fd1a58e449b4518690d19572bb
 	if_checkpoint=true;
 	fsU.close();fsM.close();
 	fsAF.close();fsAM.close();
