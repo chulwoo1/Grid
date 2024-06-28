@@ -198,8 +198,8 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef DO_IMPLICIT
-//    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
+//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
   HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 5.983;
+  Real beta         = 0.000;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
   Real light_mass   = 0.00049;
   Real strange_mass = 0.0158;

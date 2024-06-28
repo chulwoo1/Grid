@@ -213,6 +213,7 @@ public:
     // input U actually not used in the fundamental case
     // Fundamental updates, include smearing
 
+    std::cout << GridLogIntegrator << "P.Mom before update_P2: " << std::sqrt(norm2(P.Mom)) << std::endl;
     std::cout << GridLogIntegrator << "U before update_P2: " << std::sqrt(norm2(U)) << std::endl;
     // Generalised momenta  
     // Derivative of the kinetic term must be computed before
@@ -258,6 +259,7 @@ public:
 
     // Force from the other representations
     as[level].apply(update_P_hireps, Representations, Mom, U, ep);
+    std::cout << GridLogIntegrator << "P.Mom after update_P2: " << std::sqrt(norm2(P.Mom)) << std::endl;
   }
 
   void implicit_update_P(Field& U, int level, double ep, double ep1, bool intermediate = false) {
@@ -267,6 +269,7 @@ public:
 
     std::cout << GridLogIntegrator << "[" << level << "] P "
               << " dt " << ep << " : t_P " << t_P[level] << std::endl;
+    std::cout << GridLogIntegrator << "P.Mom before implicit_update_P: " << std::sqrt(norm2(P.Mom)) << std::endl;
     std::cout << GridLogIntegrator << "U before implicit_update_P: " << std::sqrt(norm2(U)) << std::endl;
     // Fundamental updates, include smearing
     MomentaField Msum(P.Mom.Grid());
@@ -284,7 +287,7 @@ public:
       if (as[level].actions.at(a)->is_smeared) Smearer.smeared_force(force);
       force = FieldImplementation::projectForce(force);  // Ta for gauge fields
       Real force_abs = std::sqrt(norm2(force) / U.Grid()->gSites());
-      std::cout << GridLogIntegrator << "|Force| site average: " << force_abs
+      std::cout << GridLogIntegrator << "implicit_update_P "<<a<<" |Force| site average: " << force_abs
                 << std::endl;
       Msum += force;
     }
@@ -298,12 +301,12 @@ public:
     MomentaField AuxDer(P.Mom.Grid());
     MomDer1 = Zero();
     MomentaField diff(P.Mom.Grid());
-    double factor = 2.0;
+    double factor = ep/ep1;
     if (intermediate){
       P.DerivativeU(P.Mom, MomDer1);
       factor = 1.0;
     }
-//    std::cout << GridLogIntegrator << "MomDer1 implicit_update_P: " << std::sqrt(norm2(MomDer1)) << std::endl;
+    std::cout << GridLogIntegrator << "implicit_update_P ep "<<ep<<" ep1 "<<ep1<<" factor "<<factor << std::endl;
 
     // Auxiliary fields
     if(P.AuxDynamic)
@@ -337,7 +340,8 @@ public:
     } while (RelativeError > threshold);
 
     P.Mom = NewMom;
-    std::cout << GridLogIntegrator << "NewMom implicit_update_P: " << std::sqrt(norm2(NewMom)) << std::endl;
+    std::cout << GridLogIntegrator << "P.Mom after implicit_update_P: " << std::sqrt(norm2(P.Mom)) << std::endl;
+    std::cout << GridLogIntegrator << "U after implicit_update_P: " << std::sqrt(norm2(U)) << std::endl;
 
     // update the auxiliary fields momenta    
     if(P.AuxDynamic)
@@ -424,7 +428,7 @@ public:
     } while (RelativeError > threshold && counter < MaxCounter);
 
     U = NewU;
-    std::cout << GridLogIntegrator << "NewU implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
+    std::cout << GridLogIntegrator << "U after implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
     if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
   }
 
@@ -936,15 +940,8 @@ public:
       std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsAF(fileAF);
       std::ifstream fsAM(fileAM);
-<<<<<<< HEAD
-//  MomentaField AuxMom;
-//  MomentaField AuxField;
       if ( fsU.good() && fsM.good() && fsAM.good() ) {
 //      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
-=======
-//      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
-      if ( fsU.good() && fsM.good() && fsAM.good() ) {
->>>>>>> d85500f4da94c8fd1a58e449b4518690d19572bb
 	if_checkpoint=true;
 	fsU.close();fsM.close();
 	fsAF.close();fsAM.close();
