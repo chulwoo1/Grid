@@ -181,8 +181,6 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	der_mu = tmp * right;
 	LapStencil.MDeriv (mu, right, tmp);
 	der_mu += tmp * left;
-//        LapStencil.MDeriv2(mu,left,right,der_mu); 
-//        LapStencil.MDeriv2(mu,right,left,der_mu);
 #else
 	der_mu += U[mu] * Cshift (left, mu, 1) * adj (U[mu]) * right;
 	der_mu += U[mu] * Cshift (right, mu, 1) * adj (U[mu]) * left;
@@ -370,24 +368,28 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	  DerLink[mu] = Zero ();
 	for (int i = 1; i < par.poly.size (); i++)
 	  {
-	    for (int j = 0; j < i; j++)
-	      {
+	    for (int j = 0; j < i; j++) {
+	    std::
+	      cout << GridLogMessage << "MDerivLink " << j << " L " << norm2 (L[j]) << " "<< i - j - 1 << 
+	      " GL " << norm2 (GL[i-j-i ]) << std::endl;
 		MDerivLink (L[j], GL[i - j - 1], tempDerLink);
-		for (int mu = 0; mu < Nd; mu++)
-		  DerLink[mu] += coef * -2. * par.poly[i] * tempDerLink[mu];
-	      }
+		for (int mu = 0; mu < Nd; mu++){
+		  DerLink[mu] += coef * 0. * par.poly[i] * tempDerLink[mu];
+		  std:: cout << GridLogMessage << "tempDerLink " <<  norm2 (tempDerLink[mu]) <<  std::endl;
+		}
+	    }
 	  }
 
 	for (int mu = 0; mu < Nd; mu++)
 	  PokeIndex < LorentzIndex > (tempDer, DerLink[mu], mu);
 	std::
 	  cout << GridLogMessage << " tempDer " << norm2 (tempDer) << " der "
-	  << norm2 (tempDer) << std::endl;
+	  << norm2 (der) << std::endl;
 	der += tempDer;
 
 	std::
 	  cout << GridLogMessage << " tempDer " << norm2 (tempDer) << " der "
-	  << norm2 (tempDer) << std::endl;
+	  << norm2 (der) << std::endl;
 
 
 	for (int i = 0; i < par.order; i++)
