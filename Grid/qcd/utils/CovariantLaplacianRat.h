@@ -211,13 +211,11 @@ public:
     
     
         ConjugateGradient<GaugeLinkField> CG(par.tolerance,10000,false);
-    //    ConjugateGradient<GaugeFieldF> CG_f(par.tolerance,10000,false);
         LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
     
         ChronoForecast< QuadLinearOperator<CovariantAdjointLaplacianStencil<Impl,GaugeLinkField>,GaugeLinkField> , GaugeLinkField> Forecast;
     
 //        GMom = par.offset * right_nu;
-         
         GMom = par.poly[0] * right_nu;
 	Gtemp = right_nu;
         for(int i =1;i<par.poly.size();i++){
@@ -264,7 +262,7 @@ public:
 	for (int mu=0;mu<Nd;mu++) DerLink[mu]=Zero();
         for(int i =1;i<par.poly.size();i++){
 	for(int j=0;j<i;j++){
-           MDerivLink(L[j],GL[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*1*par.poly[i]*tempDerLink[mu];
+           MDerivLink(GL[j],L[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*2*par.poly[i]*tempDerLink[mu];
 	}
 	}
 
