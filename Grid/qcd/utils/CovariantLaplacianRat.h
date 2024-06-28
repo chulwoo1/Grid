@@ -267,7 +267,7 @@ public:
 	for (int mu=0;mu<Nd;mu++) DerLink[mu]=Zero();
         for(int i =1;i<par.poly.size();i++){
 	for(int j=0;j<i;j++){
-           MDerivLink(L[j],GL[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.poly[i]*tempDerLink[mu];
+           MDerivLink(L[j],GL[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-1.*par.poly[i]*tempDerLink[mu];
 	}
 	}
 
