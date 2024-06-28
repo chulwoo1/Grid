@@ -1,8 +1,8 @@
-    LaplacianRatParams gpar(2,0),mpar(1,0);
+    LaplacianRatParams gpar(3,0),mpar(1,0);
 //    int gpar_order=1;
-//    1.5 -0.0625 *x 
-    gpar.poly[0] =1.5;
-    gpar.poly[1] = -0.0625;
+    gpar.poly[0] =17.;
+    gpar.poly[1] = -2.;
+    gpar.poly[2] = 0.0625;
 
 //	gpar.a0[0] = 16;
 //	gpar.a1[0] = 0.;

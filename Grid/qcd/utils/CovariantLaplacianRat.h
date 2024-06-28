@@ -179,7 +179,7 @@ public:
               GaugeField& der ,  std::vector< std::vector<GaugeLinkField> >& prev_solns ) {
 
 // get rid of this please
-    std::cout<<GridLogMessage << "LaplaceStart " <<std::endl;
+    std::cout<<GridLogMessage << "LaplaceStart der= " << norm2(der) <<std::endl;
     RealD fac =  - 1. / (double(4 * Nd)) ;
     RealD coef=0.5;
     LapStencil.GaugeImport(Usav);
@@ -217,10 +217,13 @@ public:
     
 //        GMom = par.offset * right_nu;
         GMom = par.poly[0] * right_nu;
+        std::cout<<GridLogMessage << "par.poly[0] "<<par.poly[0]<<" GMom " <<norm2(GMom) <<std::endl;
 	Gtemp = right_nu;
+        std::cout<<GridLogMessage << "Gtemp " <<norm2(Gtemp) <<std::endl;
         for(int i =1;i<par.poly.size();i++){
           LapStencil.M(Gtemp,Gtemp2); Gtemp=fac*Gtemp2;
 	  GMom += par.poly[i]*Gtemp;
+          std::cout<<GridLogMessage << "i "<<i << " par.poly "<<par.poly[i]<<" GMom " <<norm2(GMom) <<std::endl;
 	}
     
         for(int i =0;i<par.order;i++){
@@ -252,22 +255,27 @@ public:
         std::vector<GaugeLinkField> tempDerLink(Nd,left.Grid());
         std::vector<GaugeLinkField> L(par.poly.size(),left.Grid());
         std::vector<GaugeLinkField> GL(par.poly.size(),left.Grid());
-	L[0] = right_nu;
+	L[0] = left_nu;
 	GL[0] = GMom;
+          std::cout<<GridLogMessage << "i "<<0 << " L "<<norm2(L[0]) <<" GL " <<norm2(GL[0]) <<std::endl;
         for(int i =1;i<par.poly.size();i++){
             LapStencil.M(L[i-1],Gtemp2); L[i]=fac*Gtemp2;
             LapStencil.M(GL[i-1],Gtemp2); GL[i]=fac*Gtemp2;
+          std::cout<<GridLogMessage << "i "<<i << " L "<<norm2(L[i]) <<" GL " <<norm2(GL[i]) <<std::endl;
 	}
 
 	for (int mu=0;mu<Nd;mu++) DerLink[mu]=Zero();
         for(int i =1;i<par.poly.size();i++){
 	for(int j=0;j<i;j++){
-           MDerivLink(GL[j],L[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*2*par.poly[i]*tempDerLink[mu];
+           MDerivLink(L[j],GL[i-j-1],tempDerLink); 	for (int mu=0;mu<Nd;mu++) DerLink[mu] += coef*-2.*par.poly[i]*tempDerLink[mu];
 	}
 	}
 
         for (int mu=0;mu<Nd;mu++) PokeIndex<LorentzIndex>(tempDer, DerLink[mu], mu);
+        std::cout<<GridLogMessage << " tempDer "<<norm2(tempDer) <<" der " <<norm2(tempDer) <<std::endl;
 	der += tempDer;
+
+        std::cout<<GridLogMessage << " tempDer "<<norm2(tempDer) <<" der " <<norm2(tempDer) <<std::endl;
 
 
         for(int i =0;i<par.order;i++){
@@ -337,7 +345,7 @@ if (par.b2[i] !=0 ){
     
         }
     }
-    std::cout<<GridLogMessage << "LaplaceEnd " <<std::endl;
+    std::cout<<GridLogMessage << "LaplaceEnd der= " << norm2(der) <<std::endl;
 //  exit(-42);
   }
 
@@ -363,7 +371,7 @@ if (par.b2[i] !=0 ){
 
   void MSquareRootInt(LaplacianRatParams &par, GaugeField& P, std::vector< std::vector<GaugeLinkField> > & prev_solns ){
 
-    std::cout<<GridLogMessage << "LaplaceStart " <<std::endl;
+    std::cout<<GridLogMessage << "LaplaceStart P: " << norm2(P) <<std::endl;
     RealD fac = -1. / (double(4 * Nd));
     LapStencil.GaugeImport(Usav);
     LapStencilF.GaugeImport(UsavF);
@@ -380,10 +388,12 @@ if (par.b2[i] !=0 ){
 
 //        Gp = par.offset * P_nu;
         Gp = par.poly[0] * P_nu;
+        std::cout <<GridLogIntegrator << "Gp 0 = "<<norm2(Gp)<<std::endl;
 	Gtemp = P_nu;
         for(int i =1;i<par.poly.size();i++){
           LapStencil.M(Gtemp,Gtemp2); Gtemp=fac*Gtemp2;
 	  Gp += par.poly[i]*fac*Gtemp;
+          std::cout <<GridLogIntegrator << "Gp "<<i<<" = "<<norm2(Gp)<<std::endl;
 	}
     
     
@@ -408,8 +418,9 @@ if (par.b2[i] !=0 ){
         Gp += par.a1[i]*fac*Gtemp2; 
         }
         PokeIndex<LorentzIndex>(P, Gp, nu);
+        std::cout <<GridLogIntegrator << " Gp "<<norm2(Gp)<<" P "<<norm2(P)<<std::endl;
     }
-    std::cout<<GridLogMessage << "LaplaceEnd " <<std::endl;
+    std::cout<<GridLogMessage << "LaplaceEnd P: " <<norm2(P) <<std::endl;
   }
 
   void MSquareRoot(GaugeField& P){
