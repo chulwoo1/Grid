@@ -48,6 +48,7 @@ public:
   virtual void MDeriv(const Field&, Field&) = 0;
   virtual void MDeriv(const Field&, const Field&, Field&) = 0;
   virtual void MinvDeriv(const Field&, Field&) = 0;
+  virtual void MinvDerivTest (const Field & , Field &, RealD )=0;
 //  virtual void MinvDeriv(const Field&, const Field&, Field&) = 0;
 };
 
@@ -88,6 +89,7 @@ public:
     std::cout << GridLogIntegrator << " MDeriv:norm(right)= " << std::sqrt(norm2(right)) << std::endl;
     out = Zero();
   }
+  virtual void MinvDerivTest (const Field & , Field &, RealD ){}
 
 };
 
@@ -124,6 +126,16 @@ public:
     Implementation::generate_momenta(Mom, sRNG, pRNG);
     // Modify the distribution with the metric
 //    if(M.Trivial()) return;
+    {
+       MomentaField dU(Mom.Grid());
+       Implementation::generate_momenta(dU, sRNG, pRNG);
+       M.MinvDerivTest (Mom, dU, 0.0001);
+       M.MinvDerivTest (Mom, dU, 0.001);
+       M.MinvDerivTest (Mom, dU, 0.01);
+       M.MinvDerivTest (Mom, dU, 0.1);
+//       exit(-42);
+    }
+
     M.MSquareRoot(Mom);
 
     if (1) {
