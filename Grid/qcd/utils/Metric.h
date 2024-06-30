@@ -126,6 +126,7 @@ public:
     Implementation::generate_momenta(Mom, sRNG, pRNG);
     // Modify the distribution with the metric
 //    if(M.Trivial()) return;
+    if(0)
     {
        MomentaField dU(Mom.Grid());
        Implementation::generate_momenta(dU, sRNG, pRNG);
@@ -133,7 +134,6 @@ public:
        M.MinvDerivTest (Mom, dU, 0.001);
        M.MinvDerivTest (Mom, dU, 0.01);
        M.MinvDerivTest (Mom, dU, 0.1);
-//       exit(-42);
     }
 
     M.MSquareRoot(Mom);
