@@ -198,8 +198,8 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef DO_IMPLICIT
-    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
-//  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
+//    typedef GenericHMCRunner<ImplicitLeapFrog> HMCWrapper; 
+  typedef GenericHMCRunner<ImplicitMinimumNorm2> HMCWrapper; 
 //  typedef GenericHMCRunner<ForceGradientImplNested> HMCWrapper; 
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
   HMCparams.MD.name          =std::string("ImplicitMinimumNorm2");
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
   //////////////////////////////////////////////
 
   const int Ls      = 12;
-  Real beta         = 0.000;
+  Real beta         = 6.42;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
   Real light_mass   = 0.00049;
   Real strange_mass = 0.0158;
@@ -573,8 +573,8 @@ int main(int argc, char **argv) {
     double scale=1.;
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-#include<g_poly.h.inc>     
-//#include<g_x3_2_3.h.inc>
+//#include<g_poly.h.inc>     
+#include<g_x3_2_3.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 
     double shift=-0;// not working for poly
