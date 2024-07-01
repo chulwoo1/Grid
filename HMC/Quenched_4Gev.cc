@@ -574,7 +574,7 @@ int main(int argc, char **argv) {
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
 //#include<g_x3_2_3.h.inc>
-#include<g_poly.h.inc>     
+#include<g_poly2.h.inc>     
 //    LaplacianRatParams gpar(2),mpar(2);
 
     double shift=-0;// not working for poly
