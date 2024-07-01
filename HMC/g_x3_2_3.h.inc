@@ -1,5 +1,5 @@
 //    LaplacianRatParams gpar(2),mpar(2);
-      LaplacianRatParams gpar(1,2),mpar(1,0);
+      LaplacianRatParams gpar(1,2),mpar(1,2);
 //    int gpar_order=1;
 
 //    int gpar_order=2;
@@ -18,7 +18,7 @@
 
     mpar.poly[0] = 1.;
 //    mpar.offset = 1.;
-#if 0
+#if 1
     mpar.a0[0] =  -1.547136432463019e+00;
     mpar.a1[0] = 0.;
     mpar. b0[0] = 5.191768369836859e+00;

@@ -166,7 +166,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
   MDerivLink (const GaugeLinkField & left, const GaugeLinkField & right,
 	      GaugeField & der)
   {
-    std::cout << GridLogMessage << "MDerivLink start " << std::endl;
+//    std::cout << GridLogMessage << "MDerivLink start " << std::endl;
     RealD
       factor = -1. / (double (4 * Nd));
     for (int mu = 0; mu < Nd; mu++)
@@ -188,7 +188,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	PokeIndex < LorentzIndex > (der, -factor * der_mu, mu);
       }
 //    std::cout << GridLogDebug <<"MDerivLink:  norm2(der) = "<<norm2(der)<<std::endl;
-    std::cout << GridLogMessage << "MDerivLink end " << std::endl;
+//    std::cout << GridLogMessage << "MDerivLink end " << std::endl;
   }
 
 #if 1
@@ -196,7 +196,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
   MDerivLink (const GaugeLinkField & left, const GaugeLinkField & right,
 	      std::vector < GaugeLinkField > &der)
   {
-    std::cout << GridLogMessage << "MDerivLink start " << std::endl;
+//    std::cout << GridLogMessage << "MDerivLink start " << std::endl;
     RealD
       factor = -1. / (double (4 * Nd));
 
@@ -218,7 +218,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 //      std::cout << GridLogDebug <<"MDerivLink:  norm2(der) = "<<norm2(der[mu])<<std::endl;
 
       }
-    std::cout << GridLogMessage << "MDerivLink end " << std::endl;
+//    std::cout << GridLogMessage << "MDerivLink end " << std::endl;
   }
 #endif
 
@@ -289,11 +289,9 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	  CovariantAdjointLaplacianStencil < Impl, GaugeLinkField >,
 	  GaugeLinkField >, GaugeLinkField > Forecast;
 
-//        GMom = par.offset * right_nu;
-
+//      GMom = par.offset * right_nu;
 	GMom = par.poly[0] * right_nu;
-	std::cout << GridLogMessage << "par.poly[0] " << par.
-	  poly[0] << " GMom " << norm2 (GMom) << std::endl;
+	std::cout << GridLogMessage << "par.poly[0] " << par.poly[0] << " GMom " << norm2 (GMom) << std::endl;
 	Gtemp = right_nu;
 	std::cout << GridLogMessage << "Gtemp " << norm2 (Gtemp) << std::endl;
 	for (int i = 1; i < par.poly.size (); i++)
@@ -325,7 +323,6 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	      GaugeLinkFieldF > QuadOpF (LapStencilF, par.b0[i],
 					 fac * par.b1[i],
 					 fac * fac * par.b2[i]);
-	    //    QuadLinearOperator<LaplacianAdjointField<ImplF>,GaugeLinkFieldF> QuadOpF(LapStencilF,par.b0[i],par.b1[i],par.b2);
 	    MixedPrecisionConjugateGradient < GaugeLinkField,
 	      GaugeLinkFieldF > MixedCG (par.tolerance, 10000, 10000, grid_f,
 					 QuadOpF, QuadOp);
@@ -350,18 +347,14 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	std::vector < GaugeLinkField > GL (par.poly.size (), left.Grid ());
 	L[0] = left_nu;
 	GL[0] = GMom;
-	std::
-	  cout << GridLogMessage << "i " << 0 << " L " << norm2 (L[0]) <<
-	  " GL " << norm2 (GL[0]) << std::endl;
+//	std:: cout << GridLogMessage << "i " << 0 << " L " << norm2 (L[0]) << " GL " << norm2 (GL[0]) << std::endl;
 	for (int i = 1; i < par.poly.size (); i++)
 	  {
 	    LapStencil.M (L[i - 1], Gtemp2);
 	    L[i] = fac * Gtemp2;
 	    LapStencil.M (GL[i - 1], Gtemp2);
 	    GL[i] = fac * Gtemp2;
-	    std::
-	      cout << GridLogMessage << "i " << i << " L " << norm2 (L[i]) <<
-	      " GL " << norm2 (GL[i]) << std::endl;
+//	    std:: cout << GridLogMessage << "i " << i << " L " << norm2 (L[i]) << " GL " << norm2 (GL[i]) << std::endl;
 	  }
 
 	for (int mu = 0; mu < Nd; mu++)
@@ -370,26 +363,21 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	  {
 	    for (int j = 0; j < i; j++) {
 	    std::
-	      cout << GridLogMessage << "MDerivLink " << j << " L " << norm2 (L[j]) << " "<< i - j - 1 << 
-	      " GL " << norm2 (GL[i-j-i ]) << std::endl;
+//	      cout << GridLogMessage << "MDerivLink " << j << " L " << norm2 (L[j]) << " "<< i - j - 1 << " GL " << norm2 (GL[i-j-1 ]) << std::endl;
 		MDerivLink (L[j], GL[i - j - 1], tempDerLink);
 		for (int mu = 0; mu < Nd; mu++){
-		  DerLink[mu] += coef * -2. * par.poly[i] * tempDerLink[mu];
-		  std:: cout << GridLogMessage << "tempDerLink " <<  norm2 (tempDerLink[mu]) <<  std::endl;
+		  DerLink[mu] += coef * 4. * par.poly[i] * tempDerLink[mu];
+//		  std:: cout << GridLogMessage << "tempDerLink " <<  norm2 (tempDerLink[mu]) <<  std::endl;
 		}
 	    }
 	  }
 
 	for (int mu = 0; mu < Nd; mu++)
 	  PokeIndex < LorentzIndex > (tempDer, DerLink[mu], mu);
-	std::
-	  cout << GridLogMessage << " tempDer " << norm2 (tempDer) << " der "
-	  << norm2 (der) << std::endl;
+//	std:: cout << GridLogMessage << " tempDer " << norm2 (tempDer) << " der " << norm2 (der) << std::endl;
 	der += tempDer;
 
-	std::
-	  cout << GridLogMessage << " tempDer " << norm2 (tempDer) << " der "
-	  << norm2 (der) << std::endl;
+//	std:: cout << GridLogMessage << " tempDer " << norm2 (tempDer) << " der " << norm2 (der) << std::endl;
 
 
 	for (int i = 0; i < par.order; i++)
@@ -501,12 +489,8 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	      PokeIndex < LorentzIndex > (tempDer, DerLink[mu], mu);
 	    der += tempDer;
 #endif
-	    std::
-	      cout << GridLogMessage << "coef =  force contraction " << i <<
-	      "done " << coef << std::endl;
-	    std::
-	      cout << GridLogMessage << "MDerivInt: " << norm2 (der) << std::
-	      endl;
+//	    std:: cout << GridLogMessage << "coef =  force contraction " << i << "done " << coef << std::endl;
+//	    std:: cout << GridLogMessage << "MDerivInt: " << norm2 (der) << std:: endl;
 	    //    roctxRangePop();
 
 	  }
@@ -536,12 +520,73 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
   void
   MinvDeriv (const GaugeField & in, GaugeField & der)
   {
+
     std::vector < std::vector < GaugeLinkField > >prev_solns (4);
     der = Zero ();
     MDerivInt (Gparam, in, in, der, prev_solnsMinvDeriv);
     std::
       cout << GridLogIntegrator << "MinvDeriv:norm2(der) = " << norm2 (der) <<
       std::endl;
+  }
+
+//JKY
+  void MinvDerivTest (const GaugeField & in, GaugeField &dU, RealD dt)
+  {
+
+    std::cout << GridLogMessage << "MinvDerivTest: in " << norm2(in)<< " dU "<<norm2(dU)<<std::endl;
+    GaugeField der(in.Grid());der=Zero();
+    MDerivInt (Gparam, in, in, der, prev_solnsMinvDeriv);
+    std::cout << GridLogMessage << "MinvDerivTest: der " << norm2(der)<< std::endl;
+    LatticeComplex Hloc(in.Grid()); Hloc=Zero();
+
+    for (int mu = 0; mu < Nd; mu++) {
+      // This is not very general
+      // hide in the metric
+      auto Mom_mu = PeekIndex<LorentzIndex>(der, mu);
+      auto inv_mu = PeekIndex<LorentzIndex>(dU, mu);
+//      auto dH = (der*dU);
+      Hloc += trace(Mom_mu * inv_mu);
+    }
+    auto Htmp1 = TensorRemove(sum(Hloc));
+    std::cout << GridLogMessage << "MinvDerivTest: der*dU " << Htmp1.real() << std::endl;
+    Hloc=Zero();
+    this->Minv(in, der);
+    for (int mu = 0; mu < Nd; mu++) {
+      // This is not very general
+      // hide in the metric
+      auto Mom_mu = PeekIndex<LorentzIndex>(in, mu);
+      auto inv_mu = PeekIndex<LorentzIndex>(der, mu);
+//      auto dH = (der*dU);
+      Hloc += trace(Mom_mu * inv_mu);
+    }
+    Htmp1 = TensorRemove(sum(Hloc));
+    std::cout << GridLogMessage << "MinvDerivTest: H " << Htmp1.real() << std::endl;
+
+    GaugeField  Usav2=Usav; 
+    GaugeField  Unew(Usav.Grid());
+    for (int mu = 0; mu < Nd; mu++) {
+        auto Umu = PeekIndex<LorentzIndex>(Usav2, mu);
+        auto Pmu = PeekIndex<LorentzIndex>(dU, mu);
+        GaugeLinkField  NewUmu = ProjectOnGroup( expMat(Pmu, dt, 12))  * Umu;
+	PokeIndex<LorentzIndex>(Unew, NewUmu, mu);
+    }
+    this->ImportGauge(Unew);
+    
+    Hloc=Zero();
+    this->Minv(in, der);
+    for (int mu = 0; mu < Nd; mu++) {
+      // This is not very general
+      // hide in the metric
+      auto Mom_mu = PeekIndex<LorentzIndex>(in, mu);
+      auto inv_mu = PeekIndex<LorentzIndex>(der, mu);
+//      auto dH = (der*dU);
+      Hloc += trace(Mom_mu * inv_mu);
+    }
+    auto Htmp2 = TensorRemove(sum(Hloc));
+    std::cout << GridLogMessage << "MinvDerivTest: dt "<<dt<< " dH " << Htmp2.real()-Htmp1.real() << std::endl;
+    
+    this->ImportGauge(Usav2);
+
   }
 
 
@@ -576,16 +621,14 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 
 //        Gp = par.offset * P_nu;
 	Gp = par.poly[0] * P_nu;
-	std::cout << GridLogIntegrator << "Gp 0 = " << norm2 (Gp) << std::
-	  endl;
+//	std::cout << GridLogIntegrator << "Gp 0 = " << norm2 (Gp) << std:: endl;
 	Gtemp = P_nu;
 	for (int i = 1; i < par.poly.size (); i++)
 	  {
-	    LapStencil.M (Gtemp, Gtemp2); Gtemp = fac * Gtemp2;
+	    LapStencil.M (Gtemp, Gtemp2);
+	    Gtemp = fac * Gtemp2;
 	    Gp += par.poly[i] * Gtemp;
-	    std::
-	      cout << GridLogIntegrator << "Gp " << i << " = " << norm2 (Gp)
-	      << std::endl;
+//	    std:: cout << GridLogIntegrator << "Gp " << i << " = " << norm2 (Gp) << std::endl;
 	  }
 
 
@@ -623,9 +666,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	    Gp += par.a1[i] * fac * Gtemp2;
 	  }
 	PokeIndex < LorentzIndex > (P, Gp, nu);
-	std::
-	  cout << GridLogIntegrator << " Gp " << norm2 (Gp) << " P " <<
-	  norm2 (P) << std::endl;
+//	std:: cout << GridLogIntegrator << " Gp " << norm2 (Gp) << " P " << norm2 (P) << std::endl;
       }
     std::cout << GridLogMessage << "LaplaceEnd P: " << norm2 (P) << std::endl;
   }

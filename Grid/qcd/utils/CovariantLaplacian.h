@@ -731,6 +731,7 @@ public:
     der *=-1.0;
     std::cout << GridLogDebug <<"MinvDeriv:norm2(der) = "<<norm2(der)<<std::endl;
   }
+  void MinvDerivTest (const GaugeField & in, GaugeField & dU, RealD dt){}
 
   void MSquareRoot(GaugeField& P){
     GaugeField Gp(P.Grid());
