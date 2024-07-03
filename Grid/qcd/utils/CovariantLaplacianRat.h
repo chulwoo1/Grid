@@ -362,7 +362,6 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 	for (int i = 1; i < par.poly.size (); i++)
 	  {
 	    for (int j = 0; j < i; j++) {
-	    std::
 //	      cout << GridLogMessage << "MDerivLink " << j << " L " << norm2 (L[j]) << " "<< i - j - 1 << " GL " << norm2 (GL[i-j-1 ]) << std::endl;
 		MDerivLink (L[j], GL[i - j - 1], tempDerLink);
 		for (int mu = 0; mu < Nd; mu++){

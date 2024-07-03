@@ -566,40 +566,32 @@ int main(int argc, char **argv) {
 #else
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-#include<g_x3_2_3.h.inc>
+#include<g_x3_2_pol2.h.inc>
 //#include<g_poly.h.inc>
-  double shift=-0.25; // not worked out for poly.size>1!
-  for(int i=0;i<gpar.order;i++){
-       double a0 = gpar.a0[i] + shift*gpar.a1[i];
-       gpar.a0[i] =a0;
-       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*(RealD)gpar.b2[i];
-       double b1 = gpar.b1[i] + 2*shift*(RealD)gpar.b2[i];
-       gpar.b0[i] =b0;
-       gpar.b1[i] =b1;
-  }
 
-  for(int i=0;i<mpar.order;i++){
-       double a0 = mpar.a0[i] + shift*mpar.a1[i];
-       mpar.a0[i] =a0;
-       double b0 = mpar.b0[i] + shift*mpar.b1[i]+shift*shift*(RealD)mpar.b2[i];
-       double b1 = mpar.b1[i] + 2*shift*(RealD)mpar.b2[i];
-       mpar.b0[i] =b0;
-       mpar.b1[i] =b1;
-    }
-
+    RealD xn=16.;
 
     for(int i=0;i<gpar.order;i++){
-       gpar.a1[i] *=16.;
-       gpar.b1[i] *=16.;
-       gpar.b2[i] *= 16.*16.;
+       gpar.a1[i] *=xn;
+       gpar.b1[i] *=xn;
+       gpar.b2[i] *=xn*xn;
     }
+
     for(int i=0;i<mpar.order;i++){
-       mpar.a1[i] *=16.;
-       mpar.b1[i] *=16.;
-       mpar.b2[i] *= 16.*16.;
+       mpar.a1[i] *=xn;
+       mpar.b1[i] *=xn;
+       mpar.b2[i] *=xn*xn;
     }
 
-
+    for(int i=1;i<gpar.poly.size();i++){
+       gpar.poly[i] *=xn;
+       xn *=16.;
+    }
+    xn=16.;
+    for(int i=1;i<mpar.poly.size();i++){
+       mpar.poly[i] *=xn;
+       xn *=16.;
+    }
 
     ConjugateGradient<LatticeGaugeField> CG(1.0e-8,10000);
     LaplacianParams LapPar(0.0001, 1.0, 10000, 1e-8, 12, 64);
