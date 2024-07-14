@@ -295,8 +295,9 @@ int main(int argc, char **argv) {
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-10;
-  double DerivativeStoppingCondition = 1e-8;
+  double ActionStoppingCondition     = 1e-12;
+  double DerivativeStoppingCondition = 1e-9;
+  double DerivativeStoppingConditionLoose = 1e-7;
   double MaxCGIterations =  100000;
 
   ////////////////////////////////////
@@ -510,14 +511,13 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     // Mixed precision CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    double DerivativeStoppingConditionLoose = 1e-8;
 
     DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*UGrid_f,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 
     double conv  = DerivativeStoppingCondition;
-    if (h<3) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
+    if (h<1) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
     MPCG.push_back(new MxPCG(conv,
 			     MX_inner,
 			     MaxCGIterations,
@@ -566,7 +566,9 @@ int main(int argc, char **argv) {
 #else
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-#include<g_x3_2_pol2.h.inc>
+//#include<g_x3_2_pol2.h.inc>
+#include<g_poly_fields.h.inc>
+//#include<g_x3_2_pol2_m0p1.h.inc>
 //#include<g_poly.h.inc>
 
     RealD xn=16.;
@@ -648,6 +650,5 @@ int main(int argc, char **argv) {
 
   Grid_finalize();
 } // main
-
 
 
