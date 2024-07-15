@@ -301,7 +301,7 @@ public:
     MomentaField AuxDer(P.Mom.Grid());
     MomDer1 = Zero();
     MomentaField diff(P.Mom.Grid());
-    double factor = ep/ep1;
+    double factor = 2.0;
     if (intermediate){
       P.DerivativeU(P.Mom, MomDer1);
       factor = 1.0;

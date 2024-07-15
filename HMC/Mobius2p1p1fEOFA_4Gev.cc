@@ -571,12 +571,13 @@ int main(int argc, char **argv) {
 #else
 
     double scale=1.;
-//#include<g_x3_2.h.inc>
+#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-#include<g_x3_2_3.h.inc>
+//#include<g_x3_2_3.h.inc>
 //#include<g_poly.h.inc>     
 //    LaplacianRatParams gpar(2),mpar(2);
 
+#if 0
     double shift=-0;// not working for poly
 		    
     for(int i=0;i<gpar.order;i++){
@@ -598,6 +599,7 @@ int main(int argc, char **argv) {
        mpar.b0[i] =b0;
        mpar.b1[i] =b1;
     }
+#endif
 
     for(int i=0;i<gpar.order;i++){
        gpar.a1[i] *=16.;
