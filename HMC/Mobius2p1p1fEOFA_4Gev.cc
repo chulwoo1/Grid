@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 

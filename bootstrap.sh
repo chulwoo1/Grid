@@ -7,7 +7,7 @@ EIGEN_SHA256SUM='b4c198460eba6f28d34894e3a5710998818515104d6e74e5cc331ce31e46e62
 
 echo "-- deploying Eigen source..."
 ARC=$(basename ${EIGEN_URL})
-wget ${EIGEN_URL} --no-check-certificate
+#wget ${EIGEN_URL} --no-check-certificate
 if command -v sha256sum; then
    echo "$EIGEN_SHA256SUM  $(basename "$EIGEN_URL")" \
       | sha256sum --check || exit 1
