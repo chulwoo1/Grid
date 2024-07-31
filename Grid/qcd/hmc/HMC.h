@@ -109,6 +109,7 @@ private:
   GridParallelRNG &pRNG; 
 
   Field &Ucur;
+  Field &Pcur;
   
   IntegratorType &TheIntegrator;
   ObsListType Observables;
@@ -246,8 +247,8 @@ public:
   /////////////////////////////////////////
   HybridMonteCarlo(HMCparameters _Pams, IntegratorType &_Int,
                    GridSerialRNG &_sRNG, GridParallelRNG &_pRNG, 
-                   ObsListType _Obs, Field &_U)
-    : Params(_Pams), TheIntegrator(_Int), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U) {}
+                   ObsListType _Obs, Field &_U, Field &_Mom)
+    : Params(_Pams), TheIntegrator(_Int), sRNG(_sRNG), pRNG(_pRNG), Observables(_Obs), Ucur(_U),Pcur(_Mom) {}
   ~HybridMonteCarlo(){};
 //  static int traj_num;
 //  static int field_num;
@@ -257,6 +258,7 @@ public:
     Real DeltaH;
 
     Field Ucopy(Ucur.Grid());
+    Field Pcopy(Pcur.Grid());
 
     Params.print_parameters();
     TheIntegrator.print_actions();
@@ -275,6 +277,8 @@ public:
       
       double t0=usecond();
       Ucopy = Ucur;
+      TheIntegrator.P.Mom = Pcur;
+
 
       DeltaH = evolve_hmc_step(Ucopy);
       // Metropolis-Hastings test
@@ -285,8 +289,10 @@ public:
       	std::cout << GridLogHMC << "Skipping Metropolis test" << std::endl;
       }
 
-      if (accept)
+      if (accept){
         Ucur = Ucopy; 
+	Pcur = TheIntegrator.P.Mom;
+      }
       
       double t1=usecond();
       std::cout << GridLogHMC << "Total time for trajectory (s): " << (t1-t0)/1e6 << std::endl;
@@ -295,10 +301,11 @@ public:
       
       TheIntegrator.Smearer.set_Field(Ucur);
       for (int obs = 0; obs < Observables.size(); obs++) {
-      	std::cout << GridLogDebug << "Observables # " << obs << std::endl;
-      	std::cout << GridLogDebug << "Observables total " << Observables.size() << std::endl;
-      	std::cout << GridLogDebug << "Observables pointer " << Observables[obs] << std::endl;
-        Observables[obs]->TrajectoryComplete(traj + 1, TheIntegrator.Smearer, sRNG, pRNG);
+      	std::cout << GridLogDebug << "JKY Observables # " << obs << std::endl;
+      	std::cout << GridLogDebug << "JKY Observables total " << Observables.size() << std::endl;
+      	std::cout << GridLogDebug << "JKY Observables pointer " << Observables[obs] << std::endl;
+        Observables[obs]->TrajectoryComplete(traj + 1, TheIntegrator.Smearer, TheIntegrator.P.Mom, sRNG, pRNG);
+//        Observables[obs]->TrajectoryComplete(traj + 1, TheIntegrator.Smearer, sRNG, pRNG);
       }
       std::cout << GridLogHMC << ":::::::::::::::::::::::::::::::::::::::::::" << std::endl;
     }

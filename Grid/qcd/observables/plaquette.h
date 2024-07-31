@@ -49,13 +49,14 @@ public:
   {
     std::cout << GridLogMessage << "+++++++++++++++++++"<<std::endl;
     std::cout << GridLogMessage << "Unsmeared plaquette"<<std::endl;
-    TrajectoryComplete(traj,SmartConfig.get_U(false),sRNG,pRNG); // Unsmeared observable
+    TrajectoryComplete(traj,SmartConfig.get_U(false),SmartConfig.get_U(false),sRNG,pRNG); // Unsmeared observable
     std::cout << GridLogMessage << "Smeared plaquette"<<std::endl;
-    TrajectoryComplete(traj,SmartConfig.get_U(true),sRNG,pRNG); // Unsmeared observable
+    TrajectoryComplete(traj,SmartConfig.get_U(true),SmartConfig.get_U(true),sRNG,pRNG); // Unsmeared observable
     std::cout << GridLogMessage << "+++++++++++++++++++"<<std::endl;
   };
   void TrajectoryComplete(int traj,
                           Field &U,
+                          Field &Mom,
                           GridSerialRNG &sRNG,
                           GridParallelRNG &pRNG) {
 
@@ -66,6 +67,10 @@ public:
     std::cout << GridLogMessage
 	      << std::setprecision(std::numeric_limits<Real>::digits10 + 1)
 	      << "Plaquette: [ " << traj << " ] "<< plaq << std::endl;
+    plaq = WilsonLoops<Impl>::avgPlaquette(Mom);
+    std::cout << GridLogMessage
+	      << std::setprecision(std::numeric_limits<Real>::digits10 + 1)
+	      << "Mom: [ " << traj << " ] "<< plaq << std::endl;
 
     std::cout.precision(def_prec);
 

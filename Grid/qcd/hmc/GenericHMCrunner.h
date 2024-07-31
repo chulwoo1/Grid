@@ -138,7 +138,7 @@ public:
 
   //Use the checkpointer to initialize the RNGs and the gauge field, writing the resulting gauge field into U.
   //This is called automatically by Run but may be useful elsewhere, e.g. for integrator tuning experiments
-  void initializeGaugeFieldAndRNGs(Field &U){
+  void initializeGaugeFieldAndRNGs(Field &U,Field &Mom){
     if(!Resources.haveRNGs()) Resources.AddRNGs();
 
     if (Parameters.StartingType == "HotStart") {
@@ -155,7 +155,7 @@ public:
       Implementation::TepidConfiguration(Resources.GetParallelRNG(), U);
     } else if (Parameters.StartingType == "CheckpointStart") {
       // CheckpointRestart
-      Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U,
+      Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U, Mom,
 						     Resources.GetSerialRNG(),
 						     Resources.GetParallelRNG());
     } else if (Parameters.StartingType == "CheckpointStartReseed") {
@@ -164,7 +164,7 @@ public:
       
       // WARNING: Unfortunately because the checkpointer doesn't presently allow us to separately restore the RNG and gauge fields we have to load
       // an existing RNG checkpoint first; make sure one is available and named correctly
-      Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U,
+      Resources.GetCheckPointer()->CheckpointRestore(Parameters.StartTrajectory, U, Mom,
 						     Resources.GetSerialRNG(),
 						     Resources.GetParallelRNG());
       Resources.SeedFixedIntegers();      
@@ -187,8 +187,9 @@ private:
   void Runner(SmearingPolicy &Smearing, Metric &Mtr) {
     auto UGrid = Resources.GetCartesian();
     Field U(UGrid);
+    Field Mom(UGrid);
 
-    initializeGaugeFieldAndRNGs(U);
+    initializeGaugeFieldAndRNGs(U,Mom);
 
     typedef IntegratorType<SmearingPolicy> TheIntegrator;
     TheIntegrator MDynamics(UGrid, Parameters.MD, TheAction, Smearing,Mtr);
@@ -201,7 +202,7 @@ private:
     HybridMonteCarlo<TheIntegrator> HMC(Parameters, MDynamics,
                                         Resources.GetSerialRNG(),
                                         Resources.GetParallelRNG(), 
-                                        Resources.GetObservables(), U);
+                                        Resources.GetObservables(), U,Mom);
 
     // Run it
     HMC.evolve();

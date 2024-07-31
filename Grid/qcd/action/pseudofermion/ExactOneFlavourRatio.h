@@ -269,7 +269,7 @@ if ( fsO.good() ) {
 	 std::string fileO("./PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
          BinaryIO::writeLatticeObject<vobj,sobj>(Phi,fileO,munge, 0, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
-         std::cout << GridLogMessage << " PhiEOFA"<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+         std::cout << GridLogMessage << " PhiEOFA"<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 
 	}
 #endif
@@ -294,7 +294,7 @@ if ( fsO.good() ) {
   
            BinaryIO::writeLatticeObject<vobj,sobj>(Phi,fileO,munge, offset, format,
                                                      nersc_csum,scidac_csuma,scidac_csumb);
-           std::cout << GridLogMessage << " Phi"<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+           std::cout << GridLogMessage << " Phi"<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 
 
 	}
@@ -319,7 +319,7 @@ if ( fsO.good() ) {
 
          BinaryIO::readLatticeObject<vobj,sobj>(Phi,fileO,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
-         std::cout << GridLogMessage << " PhiEOFA "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+         std::cout << GridLogMessage << " PhiEOFA "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 
 	}
 

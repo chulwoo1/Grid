@@ -237,7 +237,7 @@ struct PFMunger {
   
            BinaryIO::writeLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, offset, format,
                                                      nersc_csum,scidac_csuma,scidac_csumb);
-           std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+           std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 
            if ( grid->IsBoss() ) {
 	     std::ofstream fout(fileE,std::ios::out);
@@ -247,7 +247,7 @@ struct PFMunger {
   
            BinaryIO::writeLatticeObject<vobj,sobj>(PhiEven,fileE,munge, offset, format,
                                                      nersc_csum,scidac_csuma,scidac_csumb);
-           std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+           std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 	   std::cout << std::dec <<std::endl;
 
 
@@ -272,12 +272,12 @@ struct PFMunger {
 
          BinaryIO::readLatticeObject<vobj,sobj>(PhiOdd,fileO,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
-         std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+         std::cout << GridLogMessage << " PhiOdd "<<fileO <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 
          offset = readHeader(hdr_size, hdr_checksum, format, fileE);
          BinaryIO::readLatticeObject<vobj,sobj>(PhiEven,fileE,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
-         std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::endl;
+         std::cout << GridLogMessage << " PhiEven "<<fileE <<" checksums "<<std::hex << scidac_csuma << " "<<scidac_csumb<<std::dec<< std::endl;
 	 std::cout << std::dec <<std::endl;
 
 

@@ -36,13 +36,15 @@ class HmcObservable {
  public:
   virtual void TrajectoryComplete(int traj,
                                   ConfigurationBase<Field> &SmartConfig,
+                                  Field &Mom,
                                   GridSerialRNG &sRNG,
                                   GridParallelRNG &pRNG)
   {
-    TrajectoryComplete(traj,SmartConfig.get_U(false),sRNG,pRNG); // Unsmeared observable
+    TrajectoryComplete(traj,SmartConfig.get_U(false),Mom,sRNG,pRNG); // Unsmeared observable
   };
   virtual void TrajectoryComplete(int traj,
                                   Field &U,
+                                  Field &Mom,
                                   GridSerialRNG &sRNG,
                                   GridParallelRNG &pRNG) = 0;
 };

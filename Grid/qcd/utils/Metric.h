@@ -262,7 +262,7 @@ public:
       MomentaField tmp2(AuxMom.Grid());
       M.M(AuxMom, tmp);
       // M.M(tmp, tmp2);
-      AuxField += ep * tmp;  // M^2 AuxMom
+      AuxField += ep * tmp * HMC_MOMENTUM_DENOMINATOR ;  // M^2 AuxMom
       // factor of 2?
       std::cout << GridLogIntegrator << "AuxField update_auxiliary_fields: " << std::sqrt(norm2(AuxField)) << std::endl;
     }

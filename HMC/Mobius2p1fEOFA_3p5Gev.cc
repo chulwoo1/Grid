@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #define EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -223,6 +223,7 @@ int main(int argc, char **argv) {
   
   CheckpointerParameters CPparams;
   CPparams.config_prefix = "ckpoint_lat";
+  CPparams.mom_prefix = "ckpoint_mom";
   CPparams.rng_prefix    = "ckpoint_rng";
   CPparams.saveInterval  = 1;
   CPparams.format        = "IEEE64BIG";
@@ -564,10 +565,10 @@ int main(int argc, char **argv) {
 #ifndef DO_IMPLICIT
   TrivialMetric<HMCWrapper::ImplPolicy::Field> Mtr;
 #else
-//#include<g_x3_2.h.inc>
+#include<g_x3_2_3.h.inc>
 //#include<g_x2.h.inc>
 //#include<g_x3_2_pol2.h.inc>
-#include<g_poly_fields.h.inc>
+//#include<g_poly_fields.h.inc>
 //#include<g_x3_2_pol2_m0p1.h.inc>
 //#include<g_poly.h.inc>
 

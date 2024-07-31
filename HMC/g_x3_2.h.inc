@@ -1,5 +1,4 @@
     LaplacianRatParams gpar(1,2),mpar(1,2);
-//    int gpar_order=2;
     gpar.poly[0] = 1.;
     gpar.a0[0] = 500.;
     gpar.a1[0] = 0.;

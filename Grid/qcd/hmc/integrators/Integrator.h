@@ -746,7 +746,6 @@ public:
   {
     P.Mom *= -1.0;
     if(P.AuxDynamic)
-
     P.AuxMom *= -1.0;
   }
 

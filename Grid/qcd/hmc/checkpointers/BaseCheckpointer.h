@@ -35,6 +35,7 @@ class CheckpointerParameters : Serializable {
 public:
   GRID_SERIALIZABLE_CLASS_MEMBERS(CheckpointerParameters, 
 				  std::string, config_prefix, 
+				  std::string, mom_prefix, 
 				  std::string, smeared_prefix, 
 				  std::string, rng_prefix, 
 				  int, saveInterval, 
@@ -65,6 +66,7 @@ class BaseHmcCheckpointer : public HmcObservable<typename Impl::Field> {
 public:
   void build_filenames(int traj, CheckpointerParameters &Params,
                        std::string &conf_file,
+                       std::string &mom_file,
                        std::string &smear_file,
 		       std::string &rng_file) {
     {
@@ -81,9 +83,16 @@ public:
 
     {
       std::ostringstream os;
+      os << Params.mom_prefix << "." << traj;
+      conf_file = os.str();
+    }
+
+    {
+      std::ostringstream os;
       os << Params.config_prefix << "." << traj;
       conf_file = os.str();
     }
+
   } 
   virtual ~BaseHmcCheckpointer(){};
   void check_filename(const std::string &filename){
@@ -97,12 +106,17 @@ public:
 
   virtual void TrajectoryComplete(int traj,
                                   typename Impl::Field &U,
+                                  typename Impl::Field &Mom,
                                   GridSerialRNG &sRNG,
-                                  GridParallelRNG &pRNG) { assert(0); } ; // HMC should pass the smart config with smeared and unsmeared
+                                  GridParallelRNG &pRNG) = 0;
+//  { assert(0); } ; // HMC should pass the smart config with smeared and unsmeared
   
-  virtual void CheckpointRestore(int traj, typename Impl::Field &U,
+  virtual void CheckpointRestore(int traj, 
+		  		typename Impl::Field &U,
+		  		typename Impl::Field &Mom,
                                  GridSerialRNG &sRNG,
-                                 GridParallelRNG &pRNG) = 0;
+                                 GridParallelRNG &pRNG) =0;
+//  { assert(0); } ;
 
 };  // class BaseHmcCheckpointer
 ///////////////////////////////////////////////////////////////////////////////

@@ -54,27 +54,86 @@ public:
 
   virtual void TrajectoryComplete(int traj,
                                   ConfigurationBase<GaugeField> &SmartConfig,
+				  GaugeField &Momenta,
                                   GridSerialRNG &sRNG,
-                                  GridParallelRNG &pRNG)
+                                  GridParallelRNG &pRNG, bool if_mom=true)
   {
-    if ((traj % Params.saveInterval) == 0) {
-      std::string config, rng, smr;
-      this->build_filenames(traj, Params, config, smr, rng);
+ //   if ((traj % Params.saveInterval) == 0) {
+      std::string config, mom, rng, smr;
+      this->build_filenames(traj, Params, config, mom, smr, rng);
+      std::cout << GridLogMessage  << "TrajectoryComplete " <<traj << " " << config <<" "<<mom<<" "<<rng<<std::endl;
       
       int precision32 = 1;
       int tworow = 0;
       NerscIO::writeRNGState(sRNG, pRNG, rng);
       NerscIO::writeConfiguration<GaugeStats>(SmartConfig.get_U(false), config, tworow, precision32);
+//      if (if_mom) 
+      NerscIO::writeConfiguration<GaugeStats>(Momenta, mom, tworow, precision32);
       if ( Params.saveSmeared ) {
 	NerscIO::writeConfiguration<GaugeStats>(SmartConfig.get_U(true), smr, tworow, precision32);
       }
-    }
+//    }
   };
 
-  void CheckpointRestore(int traj, GaugeField &U, GridSerialRNG &sRNG,
+  virtual void TrajectoryComplete(int traj,
+				  GaugeField &U,
+				  GaugeField &Momenta,
+                                  GridSerialRNG &sRNG,
+                                  GridParallelRNG &pRNG)
+  {
+//    if ((traj % Params.saveInterval) == 0) {
+      std::string config, mom, rng, smr;
+      std::cout << GridLogMessage  << "TrajectoryComplete " <<traj << " " << config <<" "<<mom<<" "<<rng<<std::endl;
+      this->build_filenames(traj, Params, config, mom, smr, rng);
+      
+      int precision32 = 1;
+      int tworow = 0;
+      NerscIO::writeRNGState(sRNG, pRNG, rng);
+      NerscIO::writeConfiguration<GaugeStats>(U, config, tworow, precision32);
+      NerscIO::writeConfiguration<GaugeStats>(Momenta, mom, tworow, precision32);
+//    }
+  };
+
+#if 0
+  virtual void TrajectoryComplete(int traj,
+				  GaugeField &U,
+                                  GridSerialRNG &sRNG,
+                                  GridParallelRNG &pRNG)
+  {
+    if ((traj % Params.saveInterval) == 0) {
+      std::string config, mom, rng, smr;
+      this->build_filenames(traj, Params, config, mom, smr, rng);
+      
+      int precision32 = 1;
+      int tworow = 0;
+      NerscIO::writeRNGState(sRNG, pRNG, rng);
+      NerscIO::writeConfiguration<GaugeStats>(U, config, tworow, precision32);
+    }
+  };
+#endif
+	
+
+  void CheckpointRestore(int traj, GaugeField &U, 
+		  	GaugeField &_mom,
+		  	GridSerialRNG &sRNG,
                          GridParallelRNG &pRNG) {
-    std::string config, rng, smr;
-    this->build_filenames(traj, Params, config, smr, rng );
+    std::string config, mom, rng, smr;
+    this->build_filenames(traj, Params, config, mom, smr, rng );
+    this->check_filename(rng);
+    this->check_filename(config);
+
+
+    FieldMetaData header;
+    NerscIO::readRNGState(sRNG, pRNG, header, rng);
+    NerscIO::readConfiguration<GaugeStats>(_mom, header, mom);
+    NerscIO::readConfiguration<GaugeStats>(U, header, config);
+  };
+#if 0
+  void CheckpointRestore(int traj, GaugeField &U, 
+		  	GridSerialRNG &sRNG,
+                         GridParallelRNG &pRNG) {
+    std::string config, mom, rng, smr;
+    this->build_filenames(traj, Params, config, mom, smr, rng );
     this->check_filename(rng);
     this->check_filename(config);
 
@@ -83,6 +142,7 @@ public:
     NerscIO::readRNGState(sRNG, pRNG, header, rng);
     NerscIO::readConfiguration<GaugeStats>(U, header, config);
   };
+#endif
 };
 
 NAMESPACE_END(Grid);
