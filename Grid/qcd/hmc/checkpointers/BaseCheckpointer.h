@@ -84,7 +84,7 @@ public:
     {
       std::ostringstream os;
       os << Params.mom_prefix << "." << traj;
-      conf_file = os.str();
+      mom_file = os.str();
     }
 
     {
