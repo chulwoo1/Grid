@@ -58,6 +58,7 @@ struct HMCparameters: Serializable {
                                   std::string, StartingType,
 				  Integer, SW,
                                   RealD, Kappa,
+//                                  RealD, c1,
                                   IntegratorParameters, MD)
 
   HMCparameters() {
@@ -65,6 +66,7 @@ struct HMCparameters: Serializable {
     MetropolisTest    = true;
     NoMetropolisUntil = 10;
     StartTrajectory   = 0;
+//    c1 = 0.;
     Trajectories      = 10;
     StartingType      = "HotStart";
     PerformRandomShift = true;
@@ -147,6 +149,7 @@ private:
 
     GridBase *Grid = U.Grid();
     Grid::field_num=0;//reset counter
+//    TheIntegrator.c1=Params.c1;
 
     if(Params.PerformRandomShift){
 #if 0
@@ -292,6 +295,8 @@ public:
       if (accept){
         Ucur = Ucopy; 
 	Pcur = TheIntegrator.P.Mom;
+      } else {
+	Pcur *= -1.0;
       }
       
       double t1=usecond();

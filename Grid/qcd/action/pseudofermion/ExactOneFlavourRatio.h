@@ -166,9 +166,12 @@ NAMESPACE_BEGIN(Grid);
       //
       // As a check of rational require \Phi^dag M_{EOFA} \Phi == eta^dag M^-1/2^dag M M^-1/2 eta = eta^dag eta
       //
-     void refresh(const GaugeField &U, const FermionField &eta) {
+     void refresh(const GaugeField &U, const FermionField &eta, RealD c1=0.) {
         Lop.ImportGauge(U);
         Rop.ImportGauge(U);
+
+	RealD c2=sqrt(1.-c1*c1);
+        std::cout << GridLogMessage << " c1 "<<c1 <<" c2 "<<c2  << std::endl;
 
         FermionField CG_src      (Lop.FermionGrid());
         FermionField CG_soln     (Lop.FermionGrid());
@@ -274,7 +277,7 @@ if ( fsO.good() ) {
 	}
 #endif
 
-	{
+	 uint32_t hdr_checksum, hdr_size;
            uint32_t nersc_csum;
            uint32_t scidac_csuma;
            uint32_t scidac_csumb;
@@ -283,7 +286,28 @@ if ( fsO.good() ) {
   
            PFMunger<sobj,sobj> munge;
            std::string format = getFormatStringLocal<typename FermionField::vector_object>();
+	  if(c1 > 0.01){
+	std::string fileP("./PhiEOFA."+std::to_string(Grid::traj_num-1)+"_"+std::to_string(fnum) );
+        std::ifstream fsP(fileP);
+         FermionField PhiP(Phi.Grid());
+         uint64_t offset = readHeader(hdr_size, hdr_checksum, format, fileP);
+         std::cout << "Data offset read " << offset << std::endl;
+         std::cout << "Data size read " << hdr_size << std::endl;
+         BinaryIO::readLatticeObject<vobj,sobj>(PhiP,fileP,munge, offset, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+          fsP.close();;
 
+	  Phi *=c2;
+	  PhiP *=c1;
+
+	  Phi += PhiP;
+
+	  }
+
+	{
+
+
+           format = getFormatStringLocal<typename FermionField::vector_object>();
 	   uint64_t offset; //leave 64 bits for header
            if ( grid->IsBoss() ) {
 	     std::ofstream fout(fileO,std::ios::out);
