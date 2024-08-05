@@ -73,6 +73,7 @@ public:
       std::ostringstream os;
       os << Params.rng_prefix << "." << traj;
       rng_file = os.str();
+      std::cout << GridLogMessage << "RNG " << rng_file << std::endl;
     }
 
     {
@@ -85,12 +86,14 @@ public:
       std::ostringstream os;
       os << Params.mom_prefix << "." << traj;
       mom_file = os.str();
+      std::cout << GridLogMessage << "Mom " << mom_file << std::endl;
     }
 
     {
       std::ostringstream os;
       os << Params.config_prefix << "." << traj;
       conf_file = os.str();
+      std::cout << GridLogMessage << "config " << conf_file << std::endl;
     }
 
   } 

@@ -44,6 +44,7 @@ public:
 				  std::string, name,      // name of the integrator
 				  unsigned int, MDsteps,  // number of outer steps
 				  bool , AuxDynamic,
+				  RealD, c1,             // GHMC/SMD
 				  RealD, RMHMCTol,
                                   RealD, RMHMCCGTol,
                                   RealD, lambda0,
@@ -56,6 +57,7 @@ public:
    lambda0(0.1931833275037836),
    lambda1(0.1931833275037836),
    lambda2(0.1931833275037836),
+   c1(0.),
    RMHMCTol(1e-8),RMHMCCGTol(1e-8),
     trajL(trajL_) {};
 
@@ -771,7 +773,7 @@ public:
     std::cout << GridLogIntegrator << "Generating momentum" << std::endl;
 //    FieldImplementation::generate_momenta(P.Mom, sRNG, pRNG);
     P.M.ImportGauge(U);
-    P.MomentaDistribution(sRNG,pRNG);
+    P.MomentaDistribution(sRNG,pRNG, Params.c1);
 
 
     // Update the smeared fields, can be implemented as observer

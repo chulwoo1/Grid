@@ -117,13 +117,22 @@ public:
   GeneralisedMomenta(GridBase* grid, Metric<MomentaField>& M): M(M), Mom(grid), AuxMom(grid), AuxField(grid),AuxDynamic(true){}
 
   // Correct
-  void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG){
+  void MomentaDistribution(GridSerialRNG & sRNG, GridParallelRNG& pRNG, RealD c1=0.){
     // Generate a distribution for
     // P^dag G P
     // where G = M^-1
 
     // Generate gaussian momenta
+    std::cout << GridLogMessage << "MomentaDistribution:c1 = " <<c1 << "\n";
+    if (c1 < 0.01)
     Implementation::generate_momenta(Mom, sRNG, pRNG);
+    else{
+	    RealD c2=sqrt(1.-c1*c1);
+	    MomentaField  TmpMom(Mom.Grid());
+    	    Implementation::generate_momenta(TmpMom, sRNG, pRNG);
+	    Mom *=c1;
+	    Mom += c2*TmpMom;
+    }
     // Modify the distribution with the metric
 //    if(M.Trivial()) return;
     if(0)

@@ -151,20 +151,28 @@ struct PFMunger {
       const FermionField &getPhiOdd() const{ return PhiOdd; }
 
       virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
+	      refresh(U,sRNG, pRNG,0.);
+      }
+
+      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1=0.) {
         // P(eta_o) = e^{- eta_o^dag eta_o}
         //
         // e^{x^2/2 sig^2} => sig^2 = 0.5.
         // 
+	
+	std::cout << GridLogMessage << "["<<action_name()<<"] -- No further parameters "<<std::endl;
         RealD scale = std::sqrt(0.5);
 
         FermionField eta    (NumOp.FermionGrid());
         gaussian(pRNG,eta); eta = eta * scale;
 
-	refresh(U,eta);
+	refresh(U,eta,c1);
       }
 
-      void refresh(const GaugeField &U, const FermionField &eta) {
+      void refresh(const GaugeField &U, const FermionField &eta,RealD c1=0.) {
 
+	Real c2=sqrt(1.-c1*c1);
+	std::cout << GridLogMessage << " c1 "<<c1 <<" "<<c2<<std::endl;
         // P(phi) = e^{- phi^dag Vpc (MpcdagMpc)^-1 Vpcdag phi}
         //
         // NumOp == V
@@ -199,6 +207,8 @@ struct PFMunger {
           pickCheckerboard(Even,PhiEven,eta);
           pickCheckerboard(Odd,PhiOdd,eta);
 	} else {
+	
+	
           fsO.close();fsE.close();
 
         // Odd det factors
@@ -215,19 +225,48 @@ struct PFMunger {
           // Even det factors
           DenOp.MooeeDag(etaEven,tmp);
           NumOp.MooeeInvDag(tmp,PhiEven);
-  
-  
-  //         emptyUserRecord record;
+ 
            uint32_t nersc_csum;
            uint32_t scidac_csuma;
            uint32_t scidac_csumb;
            typedef typename FermionField::vector_object  vobj;
            typedef typename FermionField::scalar_object  sobj;
-  
            PFMunger<sobj,sobj> munge;
            std::string format = getFormatStringLocal<typename FermionField::vector_object>();
-
 	   uint64_t offset; //leave 64 bits for header
+
+	  if(c1 > 0.01){
+	 uint32_t hdr_checksum, hdr_size;
+         std::string format;
+	std::string fileOP("./PhiOdd."+std::to_string(Grid::traj_num-1)+"_"+std::to_string(fnum) );
+	std::string fileEP("./PhiEven."+std::to_string(Grid::traj_num-1)+"_"+std::to_string(fnum) );
+        std::ifstream fsOP(fileOP);
+        std::ifstream fsEP(fileEP);
+         FermionField PhiOddP(PhiOdd.Grid());
+         FermionField PhiEvenP(PhiEven.Grid());
+         uint64_t offset = readHeader(hdr_size, hdr_checksum, format, fileOP);
+         std::cout << "Data offset read " << offset << std::endl;
+         std::cout << "Data size read " << hdr_size << std::endl;
+         BinaryIO::readLatticeObject<vobj,sobj>(PhiOddP,fileOP,munge, offset, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+         offset = readHeader(hdr_size, hdr_checksum, format, fileEP);
+         std::cout << "Data offset read " << offset << std::endl;
+         std::cout << "Data size read " << hdr_size << std::endl;
+         BinaryIO::readLatticeObject<vobj,sobj>(PhiEvenP,fileEP,munge, offset, format,
+                                                   nersc_csum,scidac_csuma,scidac_csumb);
+          fsOP.close();fsEP.close();
+
+	  PhiEven *=c2;
+	  PhiOdd *=c2;
+	  PhiEvenP *=c1;
+	  PhiOddP *=c1;
+
+	  PhiEven += PhiEvenP;
+	  PhiOdd += PhiOddP;
+
+	  }
+  //         emptyUserRecord record;
+
            if ( grid->IsBoss() ) {
 	     std::ofstream fout(fileO,std::ios::out);
              offset = writeHeader(1, 0, format, fileO);
