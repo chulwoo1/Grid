@@ -54,6 +54,7 @@ class Action
 {
 public:
   bool is_smeared = false;
+  bool keep_mom = false;
   RealD deriv_norm_sum;
   RealD deriv_max_sum;
   RealD Fdt_norm_sum;
@@ -94,7 +95,7 @@ public:
   /////////////////////////////
   // Heatbath?
   /////////////////////////////
-  virtual void refresh(const GaugeField& U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) = 0; // refresh pseudofermions
+  virtual void refresh(const GaugeField& U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1) = 0; // refresh pseudofermions
   virtual RealD S(const GaugeField& U) = 0;                             // evaluate the action
   virtual RealD Sinitial(const GaugeField& U) { return this->S(U); } ;  // if the refresh computes the action, can cache it. Alternately refreshAndAction() ?
   virtual void deriv(const GaugeField& U, GaugeField& dSdU) = 0;        // evaluate the action derivative
@@ -102,9 +103,9 @@ public:
   /////////////////////////////////////////////////////////////
   // virtual smeared interface through configuration container
   /////////////////////////////////////////////////////////////
-  virtual void refresh(ConfigurationBase<GaugeField> & U, GridSerialRNG &sRNG, GridParallelRNG& pRNG)
+  virtual void refresh(ConfigurationBase<GaugeField> & U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1=0.)
   {
-    refresh(U.get_U(is_smeared),sRNG,pRNG);
+    refresh(U.get_U(is_smeared),sRNG,pRNG,c1);
   }
   virtual RealD S(ConfigurationBase<GaugeField>& U)
   {
@@ -136,7 +137,7 @@ public:
 template <class GaugeField >
 class EmptyAction : public Action <GaugeField>
 {
-  virtual void refresh(const GaugeField& U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) { assert(0);}; // refresh pseudofermions
+  virtual void refresh(const GaugeField& U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1=0.) { assert(0);}; // refresh pseudofermions
   virtual RealD S(const GaugeField& U) { return 0.0;};                             // evaluate the action
   virtual void deriv(const GaugeField& U, GaugeField& dSdU) { assert(0); };        // evaluate the action derivative
 

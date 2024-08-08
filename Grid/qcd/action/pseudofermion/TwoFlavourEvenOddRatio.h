@@ -150,11 +150,11 @@ struct PFMunger {
       
       const FermionField &getPhiOdd() const{ return PhiOdd; }
 
-      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
-	      refresh(U,sRNG, pRNG,0.);
-      }
+//      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
+//	      refresh(U,sRNG, pRNG,0.);
+//      }
 
-      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1=0.) {
+      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1) {
         // P(eta_o) = e^{- eta_o^dag eta_o}
         //
         // e^{x^2/2 sig^2} => sig^2 = 0.5.
@@ -169,10 +169,10 @@ struct PFMunger {
 	refresh(U,eta,c1);
       }
 
-      void refresh(const GaugeField &U, const FermionField &eta,RealD c1=0.) {
+      void refresh(const GaugeField &U, const FermionField &eta,RealD c1) {
 
 	Real c2=sqrt(1.-c1*c1);
-	std::cout << GridLogMessage << " c1 "<<c1 <<" "<<c2<<std::endl;
+	std::cout << GridLogMessage << " refresh::c1 "<<c1 <<" "<<c2<<std::endl;
         // P(phi) = e^{- phi^dag Vpc (MpcdagMpc)^-1 Vpcdag phi}
         //
         // NumOp == V
@@ -236,6 +236,7 @@ struct PFMunger {
 	   uint64_t offset; //leave 64 bits for header
 
 	  if(c1 > 0.01){
+		  this->keep_mom=true;
 	 uint32_t hdr_checksum, hdr_size;
          std::string format;
 	std::string fileOP("./PhiOdd."+std::to_string(Grid::traj_num-1)+"_"+std::to_string(fnum) );
@@ -255,6 +256,8 @@ struct PFMunger {
          BinaryIO::readLatticeObject<vobj,sobj>(PhiEvenP,fileEP,munge, offset, format,
                                                    nersc_csum,scidac_csuma,scidac_csumb);
           fsOP.close();fsEP.close();
+          pickCheckerboard(Even,PhiEvenP,eta);
+          pickCheckerboard(Odd,PhiOddP,eta);
 
 	  PhiEven *=c2;
 	  PhiOdd *=c2;
@@ -332,7 +335,8 @@ struct PFMunger {
       //////////////////////////////////////////////////////
       virtual RealD Sinitial(const GaugeField &U) {
 	std::cout << GridLogMessage << "Returning stored two flavour refresh action "<<RefreshAction<<std::endl;
-	return RefreshAction;
+	if (this->keep_mom) return S(U);
+	else	return RefreshAction;
       }
       virtual RealD S(const GaugeField &U) {
 

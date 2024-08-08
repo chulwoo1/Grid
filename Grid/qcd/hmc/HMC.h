@@ -71,6 +71,7 @@ struct HMCparameters: Serializable {
     StartingType      = "HotStart";
     PerformRandomShift = true;
     /////////////////////////////////
+    std::cout << GridLogMessage << "MD.c1 "<<MD.c1<<std::endl;
   }
 
   template <class ReaderClass >
