@@ -32,7 +32,7 @@ directory
 #include <Grid/Grid.h>
 
 #ifdef GRID_DEFAULT_PRECISION_DOUBLE
-#define MIXED_PRECISION
+#undef MIXED_PRECISION
 #endif
 // second level EOFA
 #undef USE_OBC
@@ -305,11 +305,12 @@ int main(int argc, char **argv) {
 
   double MaxCGIterations =  100000;
 
+
   ////////////////////////////////////
   // Collect actions
   ////////////////////////////////////
   ActionLevel<HMCWrapper::Field> Level1(1);
-  ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
+  ActionLevel<HMCWrapper::Field> Level2(TheHMC.Parameters.SW);
 
   ////////////////////////////////////
   // Strange action
@@ -331,13 +332,34 @@ int main(int argc, char **argv) {
   OFRp.degree   = 12;
   OFRp.precision= 50;
 
-  int n_mass=10;
+  int n_mass=100;
+  int traj= TheHMC.Parameters.StartTrajectory;
+  GridSerialRNG sRNG;
+  GridParallelRNG pRNG(GridPtr);
+  {
+     FieldMetaData header;
+     std::string fileU(CPparams.config_prefix+"."+std::to_string(traj) );
+  std::cout << GridLogMessage <<  "fileU "<<fileU<< std::endl;
+     NerscIO::readConfiguration(U,header,fileU);
+     std::string rng(CPparams.rng_prefix+"."+std::to_string(traj) );
+  std::cout << GridLogMessage <<  "rng "<<rng<< std::endl;
+     NerscIO::readRNGState(sRNG, pRNG, header, rng);
+  }
+
+int n_smear=5;
+for(int i_smear=0;i_smear<n_smear;i_smear++){
+     int precision32 = 0;
+     int tworow      = 0;
+     FieldMetaData header;
+
+     std::string fileU(CPparams.config_prefix+"."+std::to_string(traj)+"_"+std::to_string(i_smear) );
+     std::cout << GridLogMessage <<  "fileU "<<fileU<< std::endl;
+     NerscIO::writeConfiguration(U,fileU,tworow,precision32);
 for(int i_mass=0;i_mass<n_mass;i_mass++)
 { 
-  RealD num_mass= (i_mass*charm_mass+(n_mass-i_mass)*1.)/n_mass;
+  RealD num_mass= (i_mass*charm_mass+(n_mass-i_mass)*pv_mass)/n_mass;
   int j_mass= i_mass+1;
-  RealD den_mass= ((j_mass*charm_mass+(n_mass-j_mass)*1.)/n_mass;
-  std::cout << GridLogMessage <<  "RW masses "<<i_mass<<" "<<num_mass<<" "<<den_mass << std::endl;
+  RealD den_mass= (j_mass*charm_mass+(n_mass-j_mass)*pv_mass)/n_mass;
 
   MobiusEOFAFermionD Strange_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , den_mass, den_mass, num_mass, 0.0, -1, M5, b, c);
   MobiusEOFAFermionD Strange_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , num_mass, den_mass, num_mass, -1.0, 1, M5, b, c);
@@ -351,10 +373,21 @@ for(int i_mass=0;i_mass<n_mass;i_mass++)
 	 ActionCG, ActionCG,
 	 //         DerivativeCG, DerivativeCG,
 	 OFRp, true);
-    EOFA.refresh()
+    RealD rw,norm; 
+    EOFA.reweight(rw,norm,U,sRNG,pRNG);
+  std::cout << GridLogMessage <<  "RW masses "<<i_mass<<" "<<num_mass<<" "<<den_mass << " rw= "<<rw<< " norm "<<norm<< std::endl;
 //  Level1.push_back(&EOFA);
 }
 
+double rho = 0.1;  // smearing parameter
+int Nsmear = 1;    // number of smearing levels - must be multiple of 2Nd
+int Nstep  = 8*Nsmear;
+Smear_Stout<HMCWrapper::ImplPolicy> Stout(rho);
+LatticeGaugeField Ucopy(GridPtr); Ucopy=U;
+Stout.smear(U,Ucopy);
+}
+
+#if 0
   ////////////////////////////////////
   // up down action
   ////////////////////////////////////
@@ -563,6 +596,7 @@ for(int i_mass=0;i_mass<n_mass;i_mass++)
 
   std::cout << GridLogMessage << " Running the HMC "<< std::endl;
   TheHMC.Run(S,Mtr);  // no smearing
+#endif
 
   Grid_finalize();
 } // main

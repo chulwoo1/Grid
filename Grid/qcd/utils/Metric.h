@@ -128,10 +128,13 @@ public:
     Implementation::generate_momenta(Mom, sRNG, pRNG);
     else{
 	    RealD c2=sqrt(1.-c1*c1);
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(Mom) = " <<norm2(Mom) << "\n";
 	    MomentaField  TmpMom(Mom.Grid());
     	    Implementation::generate_momenta(TmpMom, sRNG, pRNG);
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(TmpMom) = " <<norm2(TmpMom) << "\n";
 	    Mom *=c1;
 	    Mom += c2*TmpMom;
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(Mom) = " <<norm2(Mom) << "\n";
     }
     // Modify the distribution with the metric
 //    if(M.Trivial()) return;

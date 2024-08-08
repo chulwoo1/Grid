@@ -146,7 +146,8 @@ NAMESPACE_BEGIN(Grid);
         else{ for(int s=0; s<Ls; ++s){ axpby_ssp_pminus(out, 0.0, in, 1.0, in, s, s); } }
       }
 
-      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
+
+      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1) {
         // P(eta_o) = e^{- eta_o^dag eta_o}
         //
         // e^{x^2/2 sig^2} => sig^2 = 0.5.
@@ -156,7 +157,7 @@ NAMESPACE_BEGIN(Grid);
         FermionField eta    (Lop.FermionGrid());
         gaussian(pRNG,eta); eta = eta * scale;
 
-	refresh(U,eta);
+	refresh(U,eta,c1);
       }
 
       // EOFA heatbath: see Eqn. (29) of arXiv:1706.05843
@@ -166,7 +167,7 @@ NAMESPACE_BEGIN(Grid);
       //
       // As a check of rational require \Phi^dag M_{EOFA} \Phi == eta^dag M^-1/2^dag M M^-1/2 eta = eta^dag eta
       //
-     void refresh(const GaugeField &U, const FermionField &eta, RealD c1=0.) {
+     void refresh(const GaugeField &U, const FermionField &eta, RealD c1) {
         Lop.ImportGauge(U);
         Rop.ImportGauge(U);
 
@@ -287,6 +288,7 @@ if ( fsO.good() ) {
            PFMunger<sobj,sobj> munge;
            std::string format = getFormatStringLocal<typename FermionField::vector_object>();
 	  if(c1 > 0.01){
+	    this->keep_mom=true;
 	std::string fileP("./PhiEOFA."+std::to_string(Grid::traj_num-1)+"_"+std::to_string(fnum) );
         std::ifstream fsP(fileP);
          FermionField PhiP(Phi.Grid());
@@ -353,6 +355,7 @@ if ( fsO.good() ) {
 
 	//Mark that the next call to S is the first after refresh
 	initial_action = true;
+	if(this->keep_mom) initial_action = false;
 
 
 	// Bounds check
@@ -457,6 +460,55 @@ if ( fsO.good() ) {
       };
 
 
+      virtual RealD reweight(RealD &rw_fac, RealD &norm, const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
+        // P(eta_o) = e^{- eta_o^dag eta_o}
+        //
+        // e^{x^2/2 sig^2} => sig^2 = 0.5.
+        // 
+        RealD scale = std::sqrt(0.5);
+
+        FermionField eta    (Lop.FermionGrid());
+        gaussian(pRNG,eta); Phi = eta * scale;
+	norm = norm2(Phi);
+
+//        RealD rw_fac= this->S(U);
+//      }
+//      virtual RealD S(const GaugeField& U)
+//      {
+        Lop.ImportGauge(U);
+        Rop.ImportGauge(U);
+
+        FermionField spProj_Phi(Lop.FermionGrid());
+        std::vector<FermionField> tmp(2, Lop.FermionGrid());
+
+        // S = <\Phi|\Phi>
+ //       RealD action(norm2(Phi));
+ //       RealD rw_fac(0.);
+        rw_fac=0.;
+
+        // LH term: S = S - k <\Phi| P_{-} \Omega_{-}^{\dagger} H(mf)^{-1} \Omega_{-} P_{-} |\Phi>
+        spProj(Phi, spProj_Phi, -1, Lop.Ls);
+        Lop.Omega(spProj_Phi, tmp[0], -1, 0);
+        G5R5(tmp[1], tmp[0]);
+        tmp[0] = Zero();
+        SolverL(Lop, tmp[1], tmp[0]);
+        Lop.Dtilde(tmp[0], tmp[1]); // We actually solved Cayley preconditioned system: transform back
+        Lop.Omega(tmp[1], tmp[0], -1, 1);
+        rw_fac -= Lop.k * innerProduct(spProj_Phi, tmp[0]).real();
+
+        // RH term: S = S + k <\Phi| P_{+} \Omega_{+}^{\dagger} ( H(mb)
+        //               - \Delta_{+}(mf,mb) P_{+} )^{-1} \Omega_{+} P_{+} |\Phi>
+        spProj(Phi, spProj_Phi, 1, Rop.Ls);
+        Rop.Omega(spProj_Phi, tmp[0], 1, 0);
+        G5R5(tmp[1], tmp[0]);
+        tmp[0] = Zero();
+        SolverR(Rop, tmp[1], tmp[0]);
+        Rop.Dtilde(tmp[0], tmp[1]);
+        Rop.Omega(tmp[1], tmp[0], 1, 1);
+        rw_fac += Rop.k * innerProduct(spProj_Phi, tmp[0]).real();
+
+        return rw_fac;
+      };
 
 
       // EOFA action: see Eqn. (10) of arXiv:1706.05843
@@ -492,7 +544,7 @@ if ( fsO.good() ) {
         Rop.Omega(tmp[1], tmp[0], 1, 1);
         action += Rop.k * innerProduct(spProj_Phi, tmp[0]).real();
 
-	if(initial_action){
+	if(initial_action ){
 	  //For the first call to S after refresh,  S = |eta|^2. We can use this to ensure the rational approx is good
 	  RealD diff = action - norm2_eta;
 

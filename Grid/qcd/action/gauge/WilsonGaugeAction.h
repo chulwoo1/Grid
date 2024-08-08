@@ -58,7 +58,7 @@ public:
     return sstream.str();
   }
 
-  virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG &pRNG){};  // noop as no pseudoferms
+  virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG &pRNG, RealD c1=0.){};  // noop as no pseudoferms
 
 // Umu<->U maximally confusing
   virtual void boundary(const GaugeField &Umu, GaugeField &Ub){

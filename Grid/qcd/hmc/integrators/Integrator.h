@@ -604,6 +604,7 @@ public:
     if (!Params.AuxDynamic) P.AuxDynamic=false;
     t_P.resize(levels, 0.0);
     t_U = 0.0;
+    std::cout << GridLogMessage <<"Params.c1= "<< Params.c1 <<std::endl ;
     // initialization of smearer delegated outside of Integrator
 
     //Default the momentum filter to "do-nothing"
@@ -765,10 +766,10 @@ public:
   } refresh_hireps{};
 
   // Initialization of momenta and actions
-  void refresh(Field& U,  GridSerialRNG & sRNG, GridParallelRNG& pRNG) 
+  void refresh(Field& U,  GridSerialRNG & sRNG, GridParallelRNG& pRNG)
   {
     assert(P.Mom.Grid() == U.Grid());
-    std::cout << GridLogIntegrator << "Integrator refresh" << std::endl;
+    std::cout << GridLogMessage << "Integrator refresh c1= " << Params.c1<<std::endl;
 
     std::cout << GridLogIntegrator << "Generating momentum" << std::endl;
 //    FieldImplementation::generate_momenta(P.Mom, sRNG, pRNG);
@@ -794,10 +795,10 @@ public:
         // get gauge field from the SmearingPolicy and
         // based on the boolean is_smeared in actionID
 	auto name = as[level].actions.at(actionID)->action_name();
-        std::cout << GridLogMessage << "refresh [" << level << "][" << actionID << "] "<<name << std::endl;
+        std::cout << GridLogMessage << "refresh [" << level << "][" << actionID << "] "<<name <<" c1 "<<Params.c1 << std::endl;
 
 	as[level].actions.at(actionID)->refresh_timer_start();
-        as[level].actions.at(actionID)->refresh(Smearer, sRNG, pRNG);
+        as[level].actions.at(actionID)->refresh(Smearer, sRNG, pRNG,Params.c1);
 	as[level].actions.at(actionID)->refresh_timer_stop();
 
       }
