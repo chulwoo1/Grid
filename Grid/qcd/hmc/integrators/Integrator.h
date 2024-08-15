@@ -310,8 +310,7 @@ public:
     std::cout << GridLogIntegrator << "implicit_update_P ep "<<ep<<" ep1 "<<ep1<<" factor "<<factor << std::endl;
 
     // Auxiliary fields
-    if(P.AuxDynamic)
-    P.update_auxiliary_momenta(ep1);
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep1);
     P.AuxiliaryFieldsDerivative(AuxDer);
     Msum += AuxDer;
     
@@ -345,8 +344,7 @@ public:
     std::cout << GridLogIntegrator << "U after implicit_update_P: " << std::sqrt(norm2(U)) << std::endl;
 
     // update the auxiliary fields momenta    
-    if(P.AuxDynamic)
-    P.update_auxiliary_momenta(ep2);
+    if(P.AuxDynamic) P.update_auxiliary_momenta(ep2);
   }
 
   void implicit_update_P(Field& U, int level, double ep, bool intermediate = false) {
@@ -745,9 +743,7 @@ public:
   void reverse_momenta()
   {
     P.Mom *= -1.0;
-    if(P.AuxDynamic)
-
-    P.AuxMom *= -1.0;
+    if(P.AuxDynamic) P.AuxMom *= -1.0;
   }
 
   // to be used by the actionlevel class to iterate
@@ -954,8 +950,7 @@ public:
         int tworow      = 0;
         NerscIO::writeConfiguration(U,fileU,tworow,precision32);
         NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
-	if(P.AuxDynamic)
-        NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
+	if(P.AuxDynamic) NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
         NerscIO::writeConfiguration(P.AuxMom,fileAM,tworow,precision32);
       }
 //      if ( if_checkpoint )
@@ -964,8 +959,7 @@ public:
 	FieldMetaData header;
         NerscIO::readConfiguration(U,header,fileU);
         NerscIO::readConfiguration(P.Mom,header,fileM);
-	if(P.AuxDynamic)
-        NerscIO::readConfiguration(P.AuxField,header,fileAF);
+	if(P.AuxDynamic) NerscIO::readConfiguration(P.AuxField,header,fileAF);
         NerscIO::readConfiguration(P.AuxMom,header,fileAM);
       }
     }

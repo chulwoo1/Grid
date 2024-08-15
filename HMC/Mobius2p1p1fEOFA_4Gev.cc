@@ -205,9 +205,10 @@ int main(int argc, char **argv) {
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("ForceGradient");
+//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+//  HMCparams.MD.name          =std::string("ForceGradient");
+  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+  HMCparams.MD.name          =std::string("MinimumNorm2");
 #endif
 
   std::cout << GridLogMessage<< HMCparams <<std::endl;
@@ -572,10 +573,14 @@ int main(int argc, char **argv) {
 #else
 
     double scale=1.;
-#include<g_x3_2.h.inc>
+//#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-//#include<g_x3_2_3.h.inc>
+#include<g_x3_2_3.h.inc>
 //#include<g_poly.h.inc>     
+//#include<g_poly_fields.h.inc>     
+//#include<g_x3_2_poly.h.inc>     
+//#include<g_x3_2_pol2.h.inc>     
+//#include<poly_try_3.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 
 #if 0
