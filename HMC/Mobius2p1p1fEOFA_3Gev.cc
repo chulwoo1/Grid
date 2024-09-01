@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -240,23 +240,21 @@ int main(int argc, char **argv) {
   TheHMC.Resources.AddObservable<PlaqObs>();
   //////////////////////////////////////////////
 
-  const int Ls      = 12;
-  Real beta         = 5.983;
+  const int Ls      = 16;
+  Real beta         = 5.889;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
-  Real light_mass   = 0.00049;
-  Real strange_mass = 0.0158;
-  Real charm_mass = 0.191;
+  Real light_mass   = 0.00046;
+  Real strange_mass = 0.0232;
+  Real charm_mass = 0.279;
   Real pv_mass    = 1.0;
   RealD M5  = 1.4;
   RealD b   = 2.0; 
   RealD c   = 1.0;
 
   // Copied from paper
-//  std::vector<Real> hasenbusch({ 0.045 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch({ 0.0036, 0.0145, 0.045, 0.108 , 0.22, 0.38, 0.64 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch2({ 0.4,0.65 }); // Paper values from F1 incorrect run
 
-//  RealD eofa_mass=0.05 ;
 
   ///////////////////////////////////////////////////////////////////////////////////////////////
   //Bad choices with large dH. Equalising force L2 norm was not wise.
@@ -524,7 +522,7 @@ int main(int argc, char **argv) {
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 
     double conv  = DerivativeStoppingCondition;
-    if (h<1) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
+    if (h<1) conv= DerivativeStoppingConditionLoose; // Relax on first hasenbusch factor
     MPCG.push_back(new MxPCG(conv,
 			     MX_inner,
 			     MaxCGIterations,
