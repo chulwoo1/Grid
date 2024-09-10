@@ -104,8 +104,9 @@ NAMESPACE_BEGIN(Grid);
       }
       
 
-      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
+      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1) {
 
+	// c1 ignored for now
 	// S_f = chi^dag* P(V^dag*V)/Q(V^dag*V)* N(M^dag*M)/D(M^dag*M)* P(V^dag*V)/Q(V^dag*V)* chi       
 	//
 	// P(phi) = e^{- phi^dag (VdagV)^1/4 (MdagM)^-1/2 (VdagV)^1/4 phi}

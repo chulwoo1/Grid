@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -163,7 +163,8 @@ int main(int argc, char **argv) {
   std::cout << GridLogMessage << "Grid is setup to use " << threads << " threads" << std::endl;
 
    // Typedefs to simplify notation
-  typedef WilsonImplR FermionImplPolicy;
+  typedef WilsonImplD FermionImplPolicy;
+  typedef WilsonImplF FermionImplPolicyF;
   typedef MobiusFermionD FermionAction;
   typedef MobiusFermionF FermionActionF;
   typedef MobiusEOFAFermionD FermionEOFAAction;
@@ -473,23 +474,37 @@ int main(int argc, char **argv) {
   // up down action
   ////////////////////////////////////
   std::vector<Real> light_den;
+  std::vector<Real> shift_den;
   std::vector<Real> light_num;
+  std::vector<Real> shift_num;
 
   int n_hasenbusch = hasenbusch.size();
   light_den.push_back(light_mass);
+  shift_den.push_back(0.);
+  light_num.push_back(light_mass);
+  shift_num.push_back(0.01);
+  light_den.push_back(light_mass);
+  shift_den.push_back(0.01);
   for(int h=0;h<n_hasenbusch;h++){
-    light_den.push_back(hasenbusch[h]);
     light_num.push_back(hasenbusch[h]);
+    shift_num.push_back(0.);
+    light_den.push_back(hasenbusch[h]);
+    shift_den.push_back(0.);
   }
   light_num.push_back(pv_mass);
+  shift_num.push_back(0.);
 
   int n_hasenbusch2 = hasenbusch2.size();
   light_den.push_back(charm_mass);
+  shift_den.push_back(0.);
   for(int h=0;h<n_hasenbusch2;h++){
-    light_den.push_back(hasenbusch2[h]);
     light_num.push_back(hasenbusch2[h]);
+    shift_num.push_back(0.);
+    light_den.push_back(hasenbusch2[h]);
+    shift_den.push_back(0.);
   }
   light_num.push_back(pv_mass);
+  shift_num.push_back(0.);
 
 
   //////////////////////////////////////////////////////////////
@@ -503,6 +518,7 @@ int main(int argc, char **argv) {
   std::vector<TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy> *> Quotients;
   std::vector<MxPCG *> ActionMPCG;
   std::vector<MxPCG *> MPCG;
+  std::vector<FermionActionF *> NumeratorsF;
   std::vector<FermionActionF *> DenominatorsF;
   std::vector<LinearOperatorD *> LinOpD;
   std::vector<LinearOperatorF *> LinOpF; 
@@ -519,6 +535,7 @@ int main(int argc, char **argv) {
     // Mixed precision CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
 
+    NumeratorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*UGrid_f,*GridRBPtrF,light_num[h],M5,b,c, ParamsF));
     DenominatorsF.push_back(new FermionActionF(UF,*FGridF,*FrbGridF,*UGrid_f,*GridRBPtrF,light_den[h],M5,b,c, ParamsF));
     LinOpD.push_back(new LinearOperatorD(*Denominators[h]));
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
@@ -541,20 +558,50 @@ int main(int argc, char **argv) {
 				   *DenominatorsF[h],*Denominators[h],
 				   *LinOpF[h], *LinOpD[h]) );
 
+    OneFlavourRationalParams OFRp;
+    OFRp.lo=1e-4;
+    OFRp.hi=20;
+  OFRp.MaxIter  = 100000;
+  OFRp.tolerance= 1.0e-12;
+  OFRp.degree   = 12;
+  OFRp.precision= 50;
+
+    RationalActionParams STRp;
+    STRp.inv_pow = 1;
+    STRp.hi=20;
+    STRp.NumShift  = shift_num[h];
+    STRp.DenShift  = shift_den[h];
+
+    STRp.MaxIter  = 100000;
+    STRp.action_tolerance= ActionStoppingCondition;
+    STRp.md_tolerance= conv;
+    STRp.md_degree   = 12;
+    STRp.action_degree   = 12;
+    STRp.precision= 50;
+
+//    OneFlavourRatioRationalPseudoFermionAction<FermionImplPolicy> OneFl    (*Numerators[h],*Denominators[h], OTRp);
+//    OneFlavourEvenOddRatioRationalPseudoFermionAction<FermionImplPolicy> OneFl    (*Numerators[h],*Denominators[h], OTRp);
+//     OneFlavourEvenOddRatioRationalMixedPrecPseudoFermionAction<FermionImplPolicy,FermionImplPolicyF> OneFl    (*Numerators[h],*Denominators[h], *NumeratorsF[h],*DenominatorsF[h], OTRp,100);
+
+   if (h <2)  {
+  std::cout << GridLogMessage << "h= "<<h<< " TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction "<< std::endl;
+    Level1.push_back (new  TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction<FermionImplPolicy,FermionImplPolicyF> (*Numerators[h],*Denominators[h], *NumeratorsF[h],*DenominatorsF[h], STRp,100));
+   } else {
     // Heatbath not mixed yet. As inverts numerators not so important as raised mass.
-    Quotients.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
+    std::cout << GridLogMessage << "h= "<<h<< " TwoFlavourEvenOddRatioPseudoFermionAction:wq "<< std::endl;
+    Level1.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
+   }
 #else
     ////////////////////////////////////////////////////////////////////////////
     // Standard CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
+
+    Level1.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
+//    Level1.push_back(Quotients[h]);
 
   }
 
-  for(int h=0;h<n_hasenbusch+1;h++){
-    Level1.push_back(Quotients[h]);
-  }
 
   /////////////////////////////////////////////////////////////
   // Gauge action
