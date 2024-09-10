@@ -172,7 +172,6 @@ struct PFMunger {
       void refresh(const GaugeField &U, const FermionField &eta,RealD c1) {
 
 	Real c2=sqrt(1.-c1*c1);
-	std::cout << GridLogMessage << " refresh::c1 "<<c1 <<" "<<c2<<std::endl;
         // P(phi) = e^{- phi^dag Vpc (MpcdagMpc)^-1 Vpcdag phi}
         //
         // NumOp == V
@@ -267,8 +266,10 @@ struct PFMunger {
 	  PhiEven += PhiEvenP;
 	  PhiOdd += PhiOddP;
 
-	  }
+	  } else 
+	    this->keep_mom=false;
   //         emptyUserRecord record;
+	  std::cout << GridLogMessage << " refresh::c1 "<<c1 <<" "<<c2<<" keep_mom "<< this->keep_mom << std::endl;
 
            if ( grid->IsBoss() ) {
 	     std::ofstream fout(fileO,std::ios::out);
@@ -335,8 +336,9 @@ struct PFMunger {
       //////////////////////////////////////////////////////
       virtual RealD Sinitial(const GaugeField &U) {
 	std::cout << GridLogMessage << "Returning stored two flavour refresh action "<<RefreshAction<<std::endl;
-	if (this->keep_mom) return S(U);
-	else	return RefreshAction;
+	std::cout << GridLogMessage << " keep_mom "<<this->keep_mom<<" ignored for now " <<std::endl;
+//	if (this->keep_mom) return S(U);
+	return RefreshAction;
       }
       virtual RealD S(const GaugeField &U) {
 

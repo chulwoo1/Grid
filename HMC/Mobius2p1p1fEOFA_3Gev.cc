@@ -497,8 +497,10 @@ int main(int argc, char **argv) {
   // Same issue prevents using MxPCG in the Heatbath step
   //////////////////////////////////////////////////////////////
   std::vector<FermionAction *> Numerators;
+  std::vector<FermionAction *> NumeratorsF;
   std::vector<FermionAction *> Denominators;
   std::vector<TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy> *> Quotients;
+//  std::vector<TwoFlavourEvenOddRatioShiftedPseudoFermionAction<FermionImplPolicy> *> ShiftedQuotients;
   std::vector<MxPCG *> ActionMPCG;
   std::vector<MxPCG *> MPCG;
   std::vector<FermionActionF *> DenominatorsF;
@@ -531,16 +533,20 @@ int main(int argc, char **argv) {
 			     *DenominatorsF[h],*Denominators[h],
 			     *LinOpF[h], *LinOpD[h]) );
 
-    ActionMPCG.push_back(new MxPCG(ActionStoppingCondition,
+//    ActionMPCG.push_back(new MxPCG(ActionStoppingCondition,
+    MxPCG *Mxtemp =new MxPCG(ActionStoppingCondition,
 				   MX_inner,
 				   MaxCGIterations,
 				   UGrid_f,
 				   FrbGridF,
 				   *DenominatorsF[h],*Denominators[h],
-				   *LinOpF[h], *LinOpD[h]) );
+				   *LinOpF[h], *LinOpD[h]) ;
+    Mxtemp->InnerTolerance=1e-8;
+    ActionMPCG.push_back(Mxtemp);
 
     // Heatbath not mixed yet. As inverts numerators not so important as raised mass.
     Quotients.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
+//    ShiftedQuotients.push_back (new TwoFlavourEvenOddRatioShiftedPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
 #else
     ////////////////////////////////////////////////////////////////////////////
     // Standard CG for 2f force
@@ -548,11 +554,10 @@ int main(int argc, char **argv) {
     Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
 
+    Level1.push_back(Quotients[h]);
+
   }
 
-  for(int h=0;h<n_hasenbusch+1;h++){
-    Level1.push_back(Quotients[h]);
-  }
 
   /////////////////////////////////////////////////////////////
   // Gauge action

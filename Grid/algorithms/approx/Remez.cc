@@ -97,23 +97,23 @@ void AlgRemez::setBounds(double lower, double upper)
 
 // Generate the rational approximation x^(pnum/pden)
 double AlgRemez::generateApprox(int degree, unsigned long pnum, 
-				unsigned long pden)
+				unsigned long pden, double *shift_)
 {
-  return generateApprox(degree, degree, pnum, pden);
+  return generateApprox(degree, degree, pnum, pden,shift_);
 }
 
 double AlgRemez::generateApprox(int num_degree, int den_degree, 
-				unsigned long pnum, unsigned long pden)
+				unsigned long pnum, unsigned long pden, double *shift_)
 {
   double *a_param = 0;
   int *a_pow = 0;
-  return generateApprox(num_degree, den_degree, pnum, pden, 0, a_param, a_pow);
+  return generateApprox(num_degree, den_degree, pnum, pden, 0, a_param, a_pow,shift_);
 }
 
 // Generate the rational approximation x^(pnum/pden)
 double AlgRemez::generateApprox(int num_degree, int den_degree, 
 				unsigned long pnum, unsigned long pden,
-				int a_len, double *a_param, int *a_pow)
+				int a_len, double *a_param, int *a_pow, double *_shift)
 {
   std::cout<<"Degree of the approximation is ("<<num_degree<<","<<den_degree<<")\n";
   std::cout<<"Approximating the function x^("<<pnum<<"/"<<pden<<")\n";
@@ -133,6 +133,9 @@ double AlgRemez::generateApprox(int num_degree, int den_degree,
 
   power_num = pnum;
   power_den = pden;
+//  shift=0.;
+//  if (_shift) shift=_shift;
+ // std::cout<<"shift="<<shift<< " \n";
   spread = 1.0e37;
   iter = 0;
 
@@ -477,6 +480,7 @@ int AlgRemez::simq(bigfloat A[], bigfloat B[], bigfloat X[], int n) {
   int nip, nkp, nm1;
   bigfloat em, q, rownrm, big, size, pivot, sum;
   bigfloat *aa;
+    
 
   // simq() work vector
   int *IPS = new int[(neq) * sizeof(int)];

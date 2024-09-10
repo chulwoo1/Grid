@@ -906,10 +906,10 @@ public:
       for (int actionID = 0; actionID < as[level].actions.size(); ++actionID) {
         // get gauge field from the SmearingPolicy and
         // based on the boolean is_smeared in actionID
-        std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] action eval " << std::endl;
+        std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] INITIAL action eval " << std::endl;
 
 	as[level].actions.at(actionID)->S_timer_start();
-        Hterm = as[level].actions.at(actionID)->S(Smearer);
+        Hterm = as[level].actions.at(actionID)->Sinitial(Smearer);
 	as[level].actions.at(actionID)->S_timer_stop();
 
         std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] H = " << Hterm << std::endl;

@@ -61,7 +61,7 @@ NAMESPACE_BEGIN(Grid);
 				    LinearOperatorBase<FieldF> &_Linop_f, 
 				    LinearOperatorBase<FieldD> &_Linop_d) :
       Linop_f(_Linop_f), Linop_d(_Linop_d),
-      Tolerance(tol), InnerTolerance(tol), MaxInnerIterations(maxinnerit), MaxOuterIterations(maxouterit), SinglePrecGrid(_sp_grid),
+      Tolerance(tol), InnerTolerance(1e-8), MaxInnerIterations(maxinnerit), MaxOuterIterations(maxouterit), SinglePrecGrid(_sp_grid),
       OuterLoopNormMult(100.), guesser(NULL){ };
 
     void useGuesser(LinearFunction<FieldF> &g){

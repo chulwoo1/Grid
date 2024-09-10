@@ -45,6 +45,8 @@ class AlgRemez
   bigfloat *param, *roots, *poles;
   bigfloat norm;
 
+  bigfloat shift;
+
   // The numerator and denominator degree (n=d)
   int n, d;
   
@@ -148,11 +150,11 @@ class AlgRemez
   // Generate the rational approximation x^(pnum/pden)
   double generateApprox(int num_degree, int den_degree, 
 			unsigned long power_num, unsigned long power_den, 
-			int a_len, double* a_param, int* a_pow);
+			int a_len, double* a_param, int* a_pow, double *shift=NULL);
   double generateApprox(int num_degree, int den_degree, 
-			unsigned long power_num, unsigned long power_den);
+			unsigned long power_num, unsigned long power_den, double *shift=NULL);
   double generateApprox(int degree, unsigned long power_num, 
-			unsigned long power_den);
+			unsigned long power_den, double *shift=NULL);
 
   // Return the partial fraction expansion of the approximation x^(pnum/pden)
   int getPFE(double *res, double *pole, double *norm);

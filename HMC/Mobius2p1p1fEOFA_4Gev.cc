@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -533,13 +533,16 @@ int main(int argc, char **argv) {
 			     *DenominatorsF[h],*Denominators[h],
 			     *LinOpF[h], *LinOpD[h]) );
 
-    ActionMPCG.push_back(new MxPCG(ActionStoppingCondition,
+//    ActionMPCG.push_back(new MxPCG(ActionStoppingCondition,
+    MxPCG *Mxtemp=new MxPCG(ActionStoppingCondition,
 				   MX_inner,
 				   MaxCGIterations,
 				   UGrid_f,
 				   FrbGridF,
 				   *DenominatorsF[h],*Denominators[h],
-				   *LinOpF[h], *LinOpD[h]) );
+				   *LinOpF[h], *LinOpD[h]) ;
+    Mxtemp->InnerTolerance=1e-8;
+    ActionMPCG.push_back(Mxtemp);
 
     // Heatbath not mixed yet. As inverts numerators not so important as raised mass.
     Quotients.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
@@ -549,12 +552,10 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
-
-  }
-
-  for(int h=0;h<n_hasenbusch+1;h++){
     Level1.push_back(Quotients[h]);
+
   }
+
 
   /////////////////////////////////////////////////////////////
   // Gauge action
