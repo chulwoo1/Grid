@@ -6,7 +6,7 @@
 
     Copyright (C) 2015
 
-Author: Peter Boyle <paboyle@ph.ed.ac.uk>
+    Author: Chulwoo Jung (chulwoo@bnl.gov)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ Author: Peter Boyle <paboyle@ph.ed.ac.uk>
     See the full license in the file "LICENSE" in the top level distribution directory
     *************************************************************************************/
     /*  END LEGAL */
-#ifndef QCD_PSEUDOFERMION_ONE_FLAVOUR_EVEN_ODD_RATIONAL_RATIO_H
-#define QCD_PSEUDOFERMION_ONE_FLAVOUR_EVEN_ODD_RATIONAL_RATIO_H
+#ifndef QCD_PSEUDOFERMION_TWO_FLAVOUR_EVEN_ODD__RATIO_SHIFTED_H
+#define QCD_PSEUDOFERMION_TWO_FLAVOUR_EVEN_ODD__RATIO_SHIFTED_H
 
 NAMESPACE_BEGIN(Grid);
 
@@ -38,21 +38,34 @@ NAMESPACE_BEGIN(Grid);
     //
     // Here P/Q \sim R_{1/4}  ~ (V^dagV)^{1/4}  
     // Here N/D \sim R_{-1/2} ~ (M^dagM)^{-1/2}  
-
-
     template<class Impl>
     class TwoFlavourEvenOddRatioShiftedPseudoFermionAction : public GeneralEvenOddRatioRationalPseudoFermionAction<Impl> {
     public:
       typedef RationalActionParams Params;
+#if 0
+    private:
+      static RationalActionParams transcribe(const Params &in){
+	RationalActionParams out;
+	out.inv_pow = 2;
+	out.lo = in.lo;
+	out.hi = in.hi;
+	out.MaxIter = in.MaxIter;
+	out.action_tolerance = out.md_tolerance = in.tolerance;
+	out.action_degree = out.md_degree = in.degree;
+	out.precision = in.precision;
+	out.BoundsCheckFreq = in.BoundsCheckFreq;
+	return out;
+      }
+#endif
 
     public:
-      TwoFlavourEvenOddRatioShiftedPseudoFermionAction(FermionOperator<Impl>  &_NumOp,
-                                                        FermionOperator<Impl>  &_DenOp,
-                                                        const Params & p
-                                                        ) :
-        GeneralEvenOddRatioRationalPseudoFermionAction<Impl>(_NumOp, _DenOp, p){}
+      TwoFlavourEvenOddRatioShiftedPseudoFermionAction(FermionOperator<Impl>  &_NumOp, 
+							FermionOperator<Impl>  &_DenOp, 
+							const Params & p
+							) : 
+	GeneralEvenOddRatioRationalPseudoFermionAction<Impl>(_NumOp, _DenOp, p){}
 
-      virtual std::string action_name(){return "OneFlavourEvenOddRatioRationalPseudoFermionAction";}
+      virtual std::string action_name(){return "TwoFlavourEvenOddRatioShiftedPseudoFermionAction";}      
     };
 
     template<class Impl,class ImplF>
@@ -61,22 +74,36 @@ NAMESPACE_BEGIN(Grid);
     public:
 //      typedef OneFlavourRationalParams Params;
       typedef RationalActionParams Params;
-
+#if 0
+    private:
+      static RationalActionParams transcribe(const Params &in){
+	RationalActionParams out;
+	out.inv_pow = 2;
+	out.lo = in.lo;
+	out.hi = in.hi;
+	out.MaxIter = in.MaxIter;
+	out.action_tolerance = out.md_tolerance = in.tolerance;
+	out.action_degree = out.md_degree = in.degree;
+	out.precision = in.precision;
+	out.BoundsCheckFreq = in.BoundsCheckFreq;
+	return out;
+      }
+#endif
 
     public:
-      TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction (FermionOperator<Impl>  &_NumOp,
-                                                                 FermionOperator<Impl>  &_DenOp,
-                                                                 FermionOperator<ImplF>  &_NumOpF,
-                                                                 FermionOperator<ImplF>  &_DenOpF,
-                                                                 const Params & p, Integer ReliableUpdateFreq
-                                                        ) :
-        GeneralEvenOddRatioRationalMixedPrecPseudoFermionAction<Impl,ImplF>(_NumOp, _DenOp,_NumOpF, _DenOpF, p,ReliableUpdateFreq){}
+      TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction(FermionOperator<Impl>  &_NumOp, 
+								 FermionOperator<Impl>  &_DenOp, 
+								 FermionOperator<ImplF>  &_NumOpF, 
+								 FermionOperator<ImplF>  &_DenOpF, 
+								 const Params & p, Integer ReliableUpdateFreq
+							) : 
+	GeneralEvenOddRatioRationalMixedPrecPseudoFermionAction<Impl,ImplF>(_NumOp, _DenOp,_NumOpF, _DenOpF, p,ReliableUpdateFreq){
+		std::cout << GridLogMessage << action_name() <<std::endl;
+	}
 
-      virtual std::string action_name(){return "OneFlavourEvenOddRatioRationalPseudoFermionAction";}
+      virtual std::string action_name(){return "TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction";}      
     };
 
 NAMESPACE_END(Grid);
 
 #endif
-
-

@@ -43,7 +43,6 @@ directory
 #include <Grid/qcd/action/pseudofermion/GeneralEvenOddRationalRatio.h>
 #include <Grid/qcd/action/pseudofermion/GeneralEvenOddRationalRatioMixedPrec.h>
 #include <Grid/qcd/action/pseudofermion/OneFlavourEvenOddRationalRatio.h>
-#include <Grid/qcd/action/pseudofermion/ExactOneFlavourRatio.h>
 #include <Grid/qcd/action/pseudofermion/TwoFlavourEvenOddRatioShifted.h>
-
+#include <Grid/qcd/action/pseudofermion/ExactOneFlavourRatio.h>
 #endif

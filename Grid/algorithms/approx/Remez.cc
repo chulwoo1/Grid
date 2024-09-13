@@ -97,17 +97,17 @@ void AlgRemez::setBounds(double lower, double upper)
 
 // Generate the rational approximation x^(pnum/pden)
 double AlgRemez::generateApprox(int degree, unsigned long pnum, 
-				unsigned long pden, double *shift_)
+				unsigned long pden, double *_shift)
 {
-  return generateApprox(degree, degree, pnum, pden,shift_);
+  return generateApprox(degree, degree, pnum, pden,_shift);
 }
 
 double AlgRemez::generateApprox(int num_degree, int den_degree, 
-				unsigned long pnum, unsigned long pden, double *shift_)
+				unsigned long pnum, unsigned long pden, double *_shift)
 {
   double *a_param = 0;
   int *a_pow = 0;
-  return generateApprox(num_degree, den_degree, pnum, pden, 0, a_param, a_pow,shift_);
+  return generateApprox(num_degree, den_degree, pnum, pden, 0, a_param, a_pow,_shift);
 }
 
 // Generate the rational approximation x^(pnum/pden)
@@ -133,9 +133,11 @@ double AlgRemez::generateApprox(int num_degree, int den_degree,
 
   power_num = pnum;
   power_den = pden;
-//  shift=0.;
-//  if (_shift) shift=_shift;
- // std::cout<<"shift="<<shift<< " \n";
+
+  shift=0.;
+  if (_shift) shift=(bigfloat) *_shift;
+  std::cout<<"shift="<<shift<< " \n";
+
   spread = 1.0e37;
   iter = 0;
 
@@ -459,7 +461,7 @@ bigfloat AlgRemez::func(const bigfloat x) {
   bigfloat y;
 
   if (x == (bigfloat)1.0) y = (bigfloat)1.0;
-  else y = pow_bf(x,z);
+  else y = pow_bf(x+shift,z);
 
   if (a_length > 0) {
     bigfloat sum = 0l;

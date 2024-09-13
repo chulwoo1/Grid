@@ -226,7 +226,8 @@ NAMESPACE_BEGIN(Grid);
       //Access the fermion field
       const FermionField &getPhiOdd() const{ return PhiOdd; }
       
-      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG) {
+      virtual void refresh(const GaugeField &U, GridSerialRNG &sRNG, GridParallelRNG& pRNG, RealD c1) {
+        //c1 ignored for now
 	std::cout<<GridLogMessage << action_name() << " refresh: starting" << std::endl;
 	FermionField eta(NumOp.FermionGrid());	
 

@@ -145,7 +145,7 @@ struct StaggeredImplParams {
 				    int,   BoundsCheckFreq); //frequency the approximation is tested (with Metropolis degree/tolerance); 0 disables the check
   // constructor 
   RationalActionParams(int _inv_pow = 2,
-		       RealD _NumShift = 0.,
+                       RealD _NumShift = 0.,
                        RealD _DenShift = 0.,
 		       RealD _lo      = 0.0, 
 		       RealD _hi      = 1.0, 
