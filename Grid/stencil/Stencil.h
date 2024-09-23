@@ -31,7 +31,6 @@
 #define STENCIL_MAX (16)
 
 #include <Grid/stencil/SimpleCompressor.h>   // subdir aggregate
-#include <Grid/stencil/Lebesgue.h>   // subdir aggregate
 #include <Grid/stencil/GeneralLocalStencil.h>
 
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -256,7 +255,6 @@ protected:
   GridBase *                        _grid;
 public:
   GridBase *Grid(void) const { return _grid; }
-  LebesgueOrder *lo;
 
   ////////////////////////////////////////////////////////////////////////
   // Needed to conveniently communicate gparity parameters into GPU memory
@@ -273,11 +271,11 @@ public:
   int face_table_computed;
   int partialDirichlet;
   int fullDirichlet;
-  std::vector<commVector<std::pair<int,int> > > face_table ;
-  Vector<int> surface_list;
+  std::vector<deviceVector<std::pair<int,int> > > face_table ;
+  deviceVector<int> surface_list;
 
-  stencilVector<StencilEntry>  _entries; // Resident in managed memory
-  commVector<StencilEntry>     _entries_device; // Resident in device memory
+  std::vector<StencilEntry>  _entries; // Resident in host memory
+  deviceVector<StencilEntry>     _entries_device; // Resident in device memory
   std::vector<Packet> Packets;
   std::vector<Merge> Mergers;
   std::vector<Merge> MergersSHM;
@@ -367,10 +365,9 @@ public:
   void CommunicateBegin(std::vector<std::vector<CommsRequest_t> > &reqs)
   {
     // All GPU kernel tasks must complete
-    //    accelerator_barrier();     // All kernels should ALREADY be complete
-    //    _grid->StencilBarrier();   // Everyone is here, so noone running slow and still using receive buffer
+    accelerator_barrier();     // All kernels should ALREADY be complete
+    _grid->StencilBarrier();   // Everyone is here, so noone running slow and still using receive buffer
                                // But the HaloGather had a barrier too.
-#ifdef ACCELERATOR_AWARE_MPI
     for(int i=0;i<Packets.size();i++){
       _grid->StencilSendToRecvFromBegin(MpiReqs,
 					Packets[i].send_buf,
@@ -379,23 +376,6 @@ public:
 					Packets[i].from_rank,Packets[i].do_recv,
 					Packets[i].xbytes,Packets[i].rbytes,i);
     }
-#else
-#warning "Using COPY VIA HOST BUFFERS IN STENCIL"
-    for(int i=0;i<Packets.size();i++){
-      // Introduce a host buffer with a cheap slab allocator and zero cost wipe all
-      Packets[i].host_send_buf = _grid->HostBufferMalloc(Packets[i].xbytes);
-      Packets[i].host_recv_buf = _grid->HostBufferMalloc(Packets[i].rbytes);
-      if ( Packets[i].do_send ) {
-	acceleratorCopyFromDevice(Packets[i].send_buf, Packets[i].host_send_buf,Packets[i].xbytes);
-      }
-      _grid->StencilSendToRecvFromBegin(MpiReqs,
-					Packets[i].host_send_buf,
-					Packets[i].to_rank,Packets[i].do_send,
-					Packets[i].host_recv_buf,
-					Packets[i].from_rank,Packets[i].do_recv,
-					Packets[i].xbytes,Packets[i].rbytes,i);
-    }
-#endif
     // Get comms started then run checksums
     // Having this PRIOR to the dslash seems to make Sunspot work... (!)
     for(int i=0;i<Packets.size();i++){
@@ -410,18 +390,9 @@ public:
     if   ( this->partialDirichlet ) DslashLogPartial();
     else if ( this->fullDirichlet ) DslashLogDirichlet();
     else DslashLogFull();
-    // acceleratorCopySynchronise() is in the StencilSendToRecvFromComplete
-    //    accelerator_barrier(); 
+    acceleratorCopySynchronise();// is in the StencilSendToRecvFromComplete
+    accelerator_barrier(); 
     _grid->StencilBarrier(); 
-#ifndef ACCELERATOR_AWARE_MPI
-#warning "Using COPY VIA HOST BUFFERS IN STENCIL"
-    for(int i=0;i<Packets.size();i++){
-      if ( Packets[i].do_recv ) {
-	acceleratorCopyToDevice(Packets[i].host_recv_buf, Packets[i].recv_buf,Packets[i].rbytes);
-      }
-    }
-    _grid->HostBufferFreeAll();
-#endif
     // run any checksums
     for(int i=0;i<Packets.size();i++){
       if ( Packets[i].do_recv )
@@ -502,7 +473,7 @@ public:
   template<class compressor>
   void HaloGather(const Lattice<vobj> &source,compressor &compress)
   {
-    //    accelerator_barrier();
+    accelerator_barrier();
     _grid->StencilBarrier();// Synch shared memory on a single nodes
 
     assert(source.Grid()==_grid);
@@ -516,6 +487,7 @@ public:
       HaloGatherDir(source,compress,point,face_idx);
     }
     accelerator_barrier(); // All my local gathers are complete
+    _grid->StencilBarrier();// Synch shared memory on a single nodes
     face_table_computed=1;
     assert(u_comm_offset==_unified_buffer_size);
   }
@@ -668,7 +640,7 @@ public:
     for(int point=0;point<this->_npoints;point++){
       this->same_node[point] = this->SameNode(point);
     }
-
+    int32_t surface_list_size=0;
     for(int site = 0 ;site< vol4;site++){
       int local = 1;
       for(int point=0;point<this->_npoints;point++){
@@ -678,11 +650,30 @@ public:
       }
       if(local == 0) {
 	for(int s=0;s<Ls;s++){
-	  surface_list.push_back(site*Ls+s);
+	  surface_list_size++;
 	}
       }
     }
-    //std::cout << "BuildSurfaceList size is "<<surface_list.size()<<std::endl;
+    std::cout << "BuildSurfaceList size is "<<surface_list.size()<<std::endl;
+    surface_list.resize(surface_list_size);
+    std::vector<int> surface_list_host(surface_list_size);
+    int32_t ss=0;
+    for(int site = 0 ;site< vol4;site++){
+      int local = 1;
+      for(int point=0;point<this->_npoints;point++){
+	if( (!this->GetNodeLocal(site*Ls,point)) && (!this->same_node[point]) ){
+	  local = 0;
+	}
+      }
+      if(local == 0) {
+	for(int s=0;s<Ls;s++){
+	  int idx=site*Ls+s;
+	  surface_list_host[ss]= idx;
+	  ss++;
+	}
+      }
+    }
+    acceleratorCopyToDevice(&surface_list_host[0],&surface_list[0],surface_list_size*sizeof(int));
   }
   /// Introduce a block structure and switch off comms on boundaries
   void DirichletBlock(const Coordinate &dirichlet_block)
