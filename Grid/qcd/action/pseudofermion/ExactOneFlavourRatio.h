@@ -194,7 +194,7 @@ NAMESPACE_BEGIN(Grid);
         for(int k=0; k<param.degree; ++k){ N += PowerNegHalf.residues[k] / ( 1.0 + PowerNegHalf.poles[k] ); }
 
 	int fnum=Grid::FieldNum();
-	std::string fileO("./PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+	std::string fileO("./traj"+std::to_string(Grid::traj_num)+"/PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
         std::ifstream fsO(fileO);
 
         GridBase* grid = Phi.Grid();

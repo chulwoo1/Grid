@@ -194,8 +194,8 @@ struct PFMunger {
 	std::cout << " TwoFlavourRefresh: Diff ops "<<std::endl;
 
 	int fnum=Grid::FieldNum();
-	std::string fileO("./PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
-	std::string fileE("./PhiEven."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+	std::string fileO("./traj"+std::to_string(Grid::traj_num)+"/PhiOdd."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+	std::string fileE("./traj"+std::to_string(Grid::traj_num)+"/PhiEven."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
         std::ifstream fsO(fileO);
         std::ifstream fsE(fileE);
 	GridBase* grid = PhiEven.Grid();

@@ -221,6 +221,7 @@ int main(int argc, char **argv) {
   
   CheckpointerParameters CPparams;
   CPparams.config_prefix = "ckpoint_lat";
+  CPparams.mom_prefix = "ckpoint_mom";
   CPparams.rng_prefix    = "ckpoint_rng";
   CPparams.saveInterval  = 1;
   CPparams.format        = "IEEE64BIG";
