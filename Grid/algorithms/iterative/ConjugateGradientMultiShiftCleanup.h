@@ -178,7 +178,7 @@ public:
     precisionChange(tmp_d,mmp_f);
     Linop_d.HermOpAndNorm(p_d,mmp_d,d,qq); // mmp = MdagM p        d=real(dot(p, mmp)),  qq=norm2(mmp)
     tmp_d = tmp_d - mmp_d;
-    std::cout << " Testing operators match "<<norm2(mmp_d)<<" f "<<norm2(mmp_f)<<" diff "<< norm2(tmp_d)<<std::endl;
+    std::cout << GridLogMessage << " Testing operators match "<<norm2(mmp_d)<<" f "<<norm2(mmp_f)<<" diff "<< norm2(tmp_d)<<std::endl;
     //    assert(norm2(tmp_d)< 1.0e-4);
 
     axpy(mmp_d,mass[0],p_d,mmp_d);

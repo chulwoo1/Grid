@@ -61,7 +61,10 @@ AlgRemez::~AlgRemez()
 
 // Free memory and reallocate as necessary
 void AlgRemez::allocate(int num_degree, int den_degree)
-{
+{ 
+  std::cout << "alloc= "<<alloc <<" num_degree " << num_degree << " den_degree " <<den_degree <<std::endl;
+  n=num_degree;
+  d=den_degree;
   // Arrays have previously been allocated, deallocate first, then allocate
   if (alloc) {
     delete [] param;
@@ -150,8 +153,8 @@ double AlgRemez::generateApprox(int num_degree, int den_degree,
 
   while (spread > tolerance) { //iterate until convergance
 
-    if (iter++%100==0) 
-      std::cout<<"Iteration " <<iter-1<<" spread "<<(double)spread<<" delta "<<(double)delta<<std::endl; 
+    if (iter++%1==0) 
+      std::cout<<"Iteration " <<iter-1<<" spread "<<(double)spread<<" delta "<<(double)delta<<" tolerance "<<(double)tolerance<<std::endl; 
 
     equations();
     if (delta < tolerance) {
@@ -159,8 +162,10 @@ double AlgRemez::generateApprox(int num_degree, int den_degree,
       assert(0);
     };    
     assert( delta>= tolerance);
+      std::cout<<"Iteration " <<iter-1<<" spread "<<(double)spread<<" delta "<<(double)delta<<" tolerance "<<(double)tolerance<<std::endl; 
 
     search(step);
+      std::cout<<"Iteration " <<iter-1<<" spread "<<(double)spread<<" delta "<<(double)delta<<" tolerance "<<(double)tolerance<<std::endl; 
   }
 
   int sign;
@@ -378,6 +383,7 @@ void AlgRemez::search(bigfloat *step) {
     if (xm <= mm[i]) xm = (bigfloat)0.5 * (mm[i] + xx[i]);
     if (xm >= mm[i+1]) xm = (bigfloat)0.5 * (mm[i+1] + xx[i]);
     xx[i] = xm;
+//    std::cout<<"search: xx "<<i<<" "<<(double ) xx[i] <<std::endl;
   }
 
   delete [] yy;
@@ -393,6 +399,7 @@ void AlgRemez::equations(void) {
   bigfloat *BB = new bigfloat[neq];
   
   for (i = 0; i < neq; i++) {	// set up the equations for solution by simq()
+    std::cout << "equations() " <<i<<std::endl;
     ip = neq * i;		// offset to 1st element of this row of matrix
     x = xx[i];			// the guess for this row
     y = func(x);		// right-hand-side vector
@@ -441,7 +448,6 @@ bigfloat AlgRemez::approx(const bigfloat x) {
 // Compute size and sign of the approximation error at x
 bigfloat AlgRemez::getErr(bigfloat x, int *sign) {
   bigfloat e, f;
-
   f = func(x);
   e = approx(x) - f;
   if (f != 0) e /= f;
@@ -450,6 +456,7 @@ bigfloat AlgRemez::getErr(bigfloat x, int *sign) {
     e = -e;
   }
   else *sign = 1;
+  std::cout <<" getErr x= "<<(double)x<<" error "<<e<<std::endl;
   
   return(e);
 }
@@ -484,7 +491,9 @@ int AlgRemez::simq(bigfloat A[], bigfloat B[], bigfloat X[], int n) {
   bigfloat *aa;
 
   // simq() work vector
-  int *IPS = new int[(neq) * sizeof(int)];
+//  int *IPS = new int[(neq) * sizeof(int)];
+//  desparate debugging
+    int IPS[neq];
 
   nm1 = n - 1;
   // Initialize IPS and X
@@ -500,7 +509,7 @@ int AlgRemez::simq(bigfloat A[], bigfloat B[], bigfloat X[], int n) {
     }
     if (rownrm == (bigfloat)0l) {
       std::cout<<"simq rownrm=0\n";
-      delete [] IPS;
+//      delete [] IPS;
       return(1);
     }
     X[i] = (bigfloat)1.0 / rownrm;
@@ -522,7 +531,7 @@ int AlgRemez::simq(bigfloat A[], bigfloat B[], bigfloat X[], int n) {
     
     if (big == (bigfloat)0l) {
       std::cout<<"simq big=0\n";
-      delete [] IPS;
+//      delete [] IPS;
       return(2);
     }
     if (idxpiv != k) {
@@ -551,7 +560,7 @@ int AlgRemez::simq(bigfloat A[], bigfloat B[], bigfloat X[], int n) {
   kpn = n * IPS[n-1] + n - 1;	// last element of IPS[n] th row
   if (A[kpn] == (bigfloat)0l) {
     std::cout<<"simq A[kpn]=0\n";
-    delete [] IPS;
+ //   delete [] IPS;
     return(3);
   }
 
@@ -583,8 +592,13 @@ int AlgRemez::simq(bigfloat A[], bigfloat B[], bigfloat X[], int n) {
       sum += *aa++ * X[j];
     X[i] = (X[i] - sum) / A[nip+i];
   }
+
+  for (i = 1; i < n ; i ++){
+    std::cout  <<"simq n " <<n << " d "<<d<<" " << i <<" "<< (float)param[i] <<std::endl;
+	   
+  }
   
-  delete [] IPS;
+//  delete [] IPS;
   return(0);
 }
 

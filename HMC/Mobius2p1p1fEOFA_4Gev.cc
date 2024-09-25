@@ -478,13 +478,15 @@ int main(int argc, char **argv) {
   std::vector<Real> light_num;
   std::vector<Real> shift_num;
 
+  RealD shift=0.01;
+
   int n_hasenbusch = hasenbusch.size();
   light_den.push_back(light_mass);
   shift_den.push_back(0.);
   light_num.push_back(light_mass);
-  shift_num.push_back(0.01);
+  shift_num.push_back(shift);
   light_den.push_back(light_mass);
-  shift_den.push_back(0.01);
+  shift_den.push_back(shift);
   for(int h=0;h<n_hasenbusch;h++){
     light_num.push_back(hasenbusch[h]);
     shift_num.push_back(0.);
@@ -559,7 +561,7 @@ int main(int argc, char **argv) {
 				   *LinOpF[h], *LinOpD[h]) );
 
     OneFlavourRationalParams OFRp;
-    OFRp.lo=1e-4;
+    OFRp.lo=1e-2;
     OFRp.hi=20;
   OFRp.MaxIter  = 100000;
   OFRp.tolerance= 1.0e-12;
@@ -568,6 +570,8 @@ int main(int argc, char **argv) {
 
     RationalActionParams STRp;
     STRp.inv_pow = 1;
+    STRp.lo=1e-4;
+    STRp.lo=1e-2;
     STRp.hi=20;
     STRp.NumShift  = shift_num[h];
     STRp.DenShift  = shift_den[h];
@@ -583,7 +587,7 @@ int main(int argc, char **argv) {
 //    OneFlavourEvenOddRatioRationalPseudoFermionAction<FermionImplPolicy> OneFl    (*Numerators[h],*Denominators[h], OTRp);
 //     OneFlavourEvenOddRatioRationalMixedPrecPseudoFermionAction<FermionImplPolicy,FermionImplPolicyF> OneFl    (*Numerators[h],*Denominators[h], *NumeratorsF[h],*DenominatorsF[h], OTRp,100);
 
-   if (h <2)  {
+   if (h<2)  {
   std::cout << GridLogMessage << "h= "<<h<< " TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction "<< std::endl;
     Level1.push_back (new  TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction<FermionImplPolicy,FermionImplPolicyF> (*Numerators[h],*Denominators[h], *NumeratorsF[h],*DenominatorsF[h], STRp,100));
    } else {

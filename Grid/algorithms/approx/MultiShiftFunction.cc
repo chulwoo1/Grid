@@ -35,6 +35,11 @@ double MultiShiftFunction::approx(double x)
   for(int n=0;n<poles.size();n++){
     a = a + residues[n]/(x+poles[n]);
   }
+  double tmp=x;
+  for(int n=0;n<poly.size();n++){
+    a += poly[n]*tmp;
+    tmp *= x;
+  }
   return a;
 }
 void MultiShiftFunction::gnuplot(std::ostream &out)
@@ -42,6 +47,9 @@ void MultiShiftFunction::gnuplot(std::ostream &out)
   out<<"f(x) = "<<norm<<"";
   for(int n=0;n<poles.size();n++){
     out<<"+("<<residues[n]<<"/(x+"<<poles[n]<<"))";
+  }
+  for(int n=0;n<poly.size();n++){
+    out <<"+"<<poly[n]<<"*x^"<<n+1;
   }
   out<<";"<<std::endl;
 }

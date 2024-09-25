@@ -40,7 +40,7 @@ NAMESPACE_BEGIN(Grid);
     // Here N/D \sim R_{-1/2} ~ (M^dagM)^{-1/2}  
   
     template<class Impl>
-    class TwoFlavourEvenOddRatioShiftedPseudoFermionAction : public GeneralEvenOddRatioRationalPseudoFermionAction<Impl> {
+    class TwoFlavourEvenOddRatioShiftedPseudoFermionAction : public GeneralEvenOddRatioRationalPseudoFermionActionExt<Impl> {
     public:
       typedef RationalActionParams Params;
 #if 0
@@ -64,14 +64,14 @@ NAMESPACE_BEGIN(Grid);
 							FermionOperator<Impl>  &_DenOp, 
 							const Params & p
 							) : 
-	GeneralEvenOddRatioRationalPseudoFermionAction<Impl>(_NumOp, _DenOp, p){}
+	GeneralEvenOddRatioRationalPseudoFermionActionExt<Impl>(_NumOp, _DenOp, p){}
 
       virtual std::string action_name(){return "TwoFlavourEvenOddRatioShiftedPseudoFermionAction";}      
     };
 
     template<class Impl,class ImplF>
     class TwoFlavourEvenOddRatioShiftedMixedPrecPseudoFermionAction
-      : public GeneralEvenOddRatioRationalMixedPrecPseudoFermionAction<Impl,ImplF> {
+      : public GeneralEvenOddRatioRationalMixedPrecPseudoFermionActionExt<Impl,ImplF> {
     public:
       typedef RationalActionParams Params;
 #if 0
@@ -97,7 +97,7 @@ NAMESPACE_BEGIN(Grid);
 								 FermionOperator<ImplF>  &_DenOpF, 
 								 const Params & p, Integer ReliableUpdateFreq
 							) : 
-	GeneralEvenOddRatioRationalMixedPrecPseudoFermionAction<Impl,ImplF>(_NumOp, _DenOp,_NumOpF, _DenOpF, p,ReliableUpdateFreq){
+	GeneralEvenOddRatioRationalMixedPrecPseudoFermionActionExt<Impl,ImplF>(_NumOp, _DenOp,_NumOpF, _DenOpF, p,ReliableUpdateFreq){
 		std::cout << GridLogMessage << action_name() <<std::endl;
 	}
 

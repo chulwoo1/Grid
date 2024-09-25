@@ -37,6 +37,8 @@ public:
   std::vector<RealD> poles;
   std::vector<RealD> residues;
   std::vector<RealD> tolerances;
+// start from 1st order. 0th is norm
+  std::vector<RealD> poly;
   RealD norm;
   RealD lo,hi;
 
@@ -48,9 +50,13 @@ public:
   void Init(AlgRemez & remez,double tol,bool inverse) 
   {
     order=remez.getDegree();
+
+    std::cout << " Init: order= "<<order<<std::endl;
+
     tolerances.resize(remez.getDegree(),tol);
     poles.resize(remez.getDegree());
     residues.resize(remez.getDegree());
+    poly.resize(0);
     remez.getBounds(lo,hi);
     if ( inverse ) remez.getIPFE (&residues[0],&poles[0],&norm);
     else           remez.getPFE (&residues[0],&poles[0],&norm);

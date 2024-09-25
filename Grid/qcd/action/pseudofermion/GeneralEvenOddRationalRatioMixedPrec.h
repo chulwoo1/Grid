@@ -56,6 +56,7 @@ NAMESPACE_BEGIN(Grid);
       //Action evaluation
       //Allow derived classes to override the multishift CG
       virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, FermionFieldD &out){
+         
 #if 1
 	SchurDifferentiableOperator<ImplD> schurOp(numerator ? NumOpD : DenOpD);
 	ConjugateGradientMultiShift<FermionFieldD> msCG(MaxIter, approx);
@@ -81,6 +82,7 @@ NAMESPACE_BEGIN(Grid);
 	std::vector<FermionFieldD> out_elemsD(out_elems.size(),NumOpD.FermionRedBlackGrid());
 	ConjugateGradientMultiShiftMixedPrecCleanup<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
 	msCG(schurOpD, in, out_elems, out);
+	std::cout << "multiShiftInverse done"<<std::endl;
       }
       //Allow derived classes to override the gauge import
       virtual void ImportGauge(const typename ImplD::GaugeField &Ud){
@@ -108,6 +110,79 @@ NAMESPACE_BEGIN(Grid);
       {}
       
       virtual std::string action_name(){return "GeneralEvenOddRatioRationalMixedPrecPseudoFermionAction";}
+    };
+
+    template<class ImplD, class ImplF>
+    class GeneralEvenOddRatioRationalMixedPrecPseudoFermionActionExt : public GeneralEvenOddRatioRationalPseudoFermionActionExt<ImplD> {
+    private:
+      typedef typename ImplD::FermionField FermionFieldD;
+      typedef typename ImplF::FermionField FermionFieldF;
+
+      FermionOperator<ImplD> & NumOpD;
+      FermionOperator<ImplD> & DenOpD;
+
+      FermionOperator<ImplF> & NumOpF;
+      FermionOperator<ImplF> & DenOpF;
+
+      Integer ReliableUpdateFreq;
+    protected:
+
+      //Action evaluation
+      //Allow derived classes to override the multishift CG
+      virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, FermionFieldD &out){
+#if 1
+	SchurDifferentiableOperator<ImplD> schurOp(numerator ? NumOpD : DenOpD);
+	ConjugateGradientMultiShift<FermionFieldD> msCG(MaxIter, approx);
+	msCG(schurOp,in, out);
+#else
+	SchurDifferentiableOperator<ImplD> schurOpD(numerator ? NumOpD : DenOpD);
+	SchurDifferentiableOperator<ImplF> schurOpF(numerator ? NumOpF : DenOpF);
+	FermionFieldD inD(NumOpD.FermionRedBlackGrid());
+	FermionFieldD outD(NumOpD.FermionRedBlackGrid());
+
+	// Action better with higher precision?
+	ConjugateGradientMultiShiftMixedPrec<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
+	msCG(schurOpD, in, out);
+#endif
+      }
+      //Force evaluation
+      virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, std::vector<FermionFieldD> &out_elems, FermionFieldD &out){
+	SchurDifferentiableOperator<ImplD> schurOpD(numerator ? NumOpD : DenOpD);
+	SchurDifferentiableOperator<ImplF>  schurOpF(numerator ? NumOpF  : DenOpF);
+
+	FermionFieldD inD(NumOpD.FermionRedBlackGrid());
+	FermionFieldD outD(NumOpD.FermionRedBlackGrid());
+	std::vector<FermionFieldD> out_elemsD(out_elems.size(),NumOpD.FermionRedBlackGrid());
+	ConjugateGradientMultiShiftMixedPrecCleanup<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
+	msCG(schurOpD, in, out_elems, out);
+	std::cout << "multiShiftInverse done"<<std::endl;
+      }
+      //Allow derived classes to override the gauge import
+      virtual void ImportGauge(const typename ImplD::GaugeField &Ud){
+
+	typename ImplF::GaugeField Uf(NumOpF.GaugeGrid());
+	precisionChange(Uf, Ud);
+
+	std::cout << "Importing "<<norm2(Ud)<<" "<< norm2(Uf)<<" " <<std::endl;
+	
+	NumOpD.ImportGauge(Ud);
+	DenOpD.ImportGauge(Ud);
+
+	NumOpF.ImportGauge(Uf);
+	DenOpF.ImportGauge(Uf);
+      }
+      
+    public:
+      GeneralEvenOddRatioRationalMixedPrecPseudoFermionActionExt(FermionOperator<ImplD>  &_NumOpD, FermionOperator<ImplD>  &_DenOpD, 
+							      FermionOperator<ImplF>  &_NumOpF, FermionOperator<ImplF>  &_DenOpF, 
+							      const RationalActionParams & p, Integer _ReliableUpdateFreq
+							      ) : GeneralEvenOddRatioRationalPseudoFermionActionExt<ImplD>(_NumOpD, _DenOpD, p),
+								  ReliableUpdateFreq(_ReliableUpdateFreq),
+								  NumOpD(_NumOpD), DenOpD(_DenOpD),
+								  NumOpF(_NumOpF), DenOpF(_DenOpF)
+      {}
+      
+      virtual std::string action_name(){return "GeneralEvenOddRatioRationalMixedPrecPseudoFermionActionExt";}
     };
 
 NAMESPACE_END(Grid);
