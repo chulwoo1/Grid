@@ -262,6 +262,7 @@ public:
   };
 
 
+#if 0
   static void BLAS(void)
   {
     //int nbasis, int nrhs, int coarseVol
@@ -325,6 +326,7 @@ public:
     fprintf(FP,"\n\n\n");
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   };
+#endif
   
 
   static void SU4(void)
@@ -919,7 +921,8 @@ int main (int argc, char ** argv)
   }
 
   if ( do_blas ) {
-#if defined(GRID_CUDA) || defined(GRID_HIP)     || defined(GRID_SYCL)   
+//#if defined(GRID_CUDA) || defined(GRID_HIP)     || defined(GRID_SYCL)   
+#if 0
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
     std::cout<<GridLogMessage << " Batched BLAS benchmark " <<std::endl;
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
