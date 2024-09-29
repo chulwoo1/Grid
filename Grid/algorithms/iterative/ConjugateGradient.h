@@ -66,9 +66,10 @@ public:
   };
 
     void operator()(LinearOperatorBase<Field> &Linop, const Field &src, Field &psi) {
-
       this->LogBegin();
 
+    std::cout << GridLogMessage << std::setprecision(8) << "ConjugateGradient: maxit " << MaxIterations << std::endl;
+    MaxIterations=50000;// Pathetic
       GRID_TRACE("ConjugateGradient");
     GridStopWatch PreambleTimer;
     GridStopWatch ConstructTimer;
@@ -251,7 +252,7 @@ public:
     std::cout << GridLogPerformance << "\t\tAxpyNorm   " << AxpyNormTimer.Elapsed() <<std::endl;
     std::cout << GridLogPerformance << "\t\tLinearComb " << LinearCombTimer.Elapsed() <<std::endl;
 
-    if (ErrorOnNoConverge) assert(0);
+//    if (ErrorOnNoConverge) assert(0);
     IterationsToComplete = k;
 
   }

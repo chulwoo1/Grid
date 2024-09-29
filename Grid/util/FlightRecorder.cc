@@ -114,6 +114,12 @@ uint64_t FlightRecorder::ErrorCount(void)
 void FlightRecorder::NormLog(double value)
 {
   uint64_t hex = * ( (uint64_t *)&value );
+  if ( hex==0){
+  	std::cerr << "FlightRecorder::NormLog: hex=0!"<<value<<std::endl;
+        hex = * ( (uint64_t *)&value );
+  	std::cerr << "FlightRecorder::NormLog: 2nd try hex="<<std::hex<<" "<<hex<<std::dec<<std::endl;
+  }
+
   if(LoggingMode == LoggingModePrint) {
     std::cerr<<"FlightRecorder::NormLog : "<< NormLoggingCounter <<" "<<std::hex<< hex<<std::dec <<std::endl;
     NormLoggingCounter++;
@@ -133,6 +139,13 @@ void FlightRecorder::NormLog(double value)
 	std::cerr<<"FlightRecorder::NormLog Oops, I did it again "<< NormLoggingCounter
 		 <<std::hex<<" "<<hex<<" "<<hexref<<std::dec<<" "
 		 <<std::hexfloat<<value<<" "<< NormLogVector[NormLoggingCounter]<<std::endl;
+
+	if (hexref==0){
+      		hexref  = * ( (uint64_t *)&NormLogVector[NormLoggingCounter] );
+		std::cerr<<"FlightRecorder::NormLog Oops, 2nd try "<< NormLoggingCounter
+		 <<std::hex<<" "<<hex<<" "<<hexref<<std::dec<<" "
+		 <<std::hexfloat<<value<<" "<< NormLogVector[NormLoggingCounter]<<std::endl;
+	}
 
 	std::cerr << " Oops got norm "<< std::hexfloat<<value<<" expect "<<NormLogVector[NormLoggingCounter] <<std::endl;
 

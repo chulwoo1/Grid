@@ -349,7 +349,7 @@ int main(int argc, char **argv) {
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
-  const int MX_inner = 50000;
+  const Integer MX_inner = 50000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
@@ -526,7 +526,7 @@ int main(int argc, char **argv) {
     double conv  = DerivativeStoppingCondition;
     if (h<1) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
     MPCG.push_back(new MxPCG(conv,
-			     MX_inner,
+			     50000,
 			     MaxCGIterations,
 			     UGrid_f,
 			     FrbGridF,
@@ -535,7 +535,7 @@ int main(int argc, char **argv) {
 
 //    ActionMPCG.push_back(new MxPCG(ActionStoppingCondition,
     MxPCG *Mxtemp=new MxPCG(ActionStoppingCondition,
-				   MX_inner,
+				   50000,
 				   MaxCGIterations,
 				   UGrid_f,
 				   FrbGridF,
