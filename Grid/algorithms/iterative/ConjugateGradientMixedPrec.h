@@ -129,12 +129,6 @@ NAMESPACE_BEGIN(Grid);
       PrecChangeTimer.Start();
       precisionChange(src_f, src_d, pc_wk_dp_to_sp);
       PrecChangeTimer.Stop();
-      
-      sol_f = Zero();
-
-      //Optionally improve inner solver guess (eg using known eigenvectors)
-      if(guesser != NULL)
-	(*guesser)(src_f, sol_f);
 
       //Inner CG
       std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Outer iteration " << outer_iter << " starting inner CG with tolerance " << inner_tol << std::endl;
@@ -151,6 +145,10 @@ NAMESPACE_BEGIN(Grid);
     if(char *s=getenv("GRID_CHECKSUM_SEND_BUF")) FlightRecorder::ChecksumCommsSend  = atoi(s);
 
 for (int iter=0;iter<2;iter++){
+      sol_f = Zero();
+      //Optionally improve inner solver guess (eg using known eigenvectors)
+      if(guesser != NULL)
+	(*guesser)(src_f, sol_f);
       if ( iter == 0 ) {
         FlightRecorder::SetLoggingMode(FlightRecorder::LoggingModeRecord);
       } else {

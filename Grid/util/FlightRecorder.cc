@@ -114,7 +114,8 @@ uint64_t FlightRecorder::ErrorCount(void)
 void FlightRecorder::NormLog(double value)
 {
   uint64_t hex = * ( (uint64_t *)&value );
-  if ( hex==0){
+//  if ( hex==0){
+  if (0){
   	std::cerr << "FlightRecorder::NormLog: hex=0!"<<value<<std::endl;
         hex = * ( (uint64_t *)&value );
   	std::cerr << "FlightRecorder::NormLog: 2nd try hex="<<std::hex<<" "<<hex<<std::dec<<std::endl;
@@ -125,7 +126,7 @@ void FlightRecorder::NormLog(double value)
     NormLoggingCounter++;
   }
   if(LoggingMode == LoggingModeRecord) {
-    std::cerr<<"FlightRecorder::NormLog RECORDING : "<< NormLoggingCounter <<" "<<std::hex<< hex<<std::dec <<std::endl;
+//    std::cerr<<"FlightRecorder::NormLog RECORDING : "<< NormLoggingCounter <<" "<<std::hex<< hex<<std::dec <<std::endl;
     NormLogVector.push_back(value);
     NormLoggingCounter++;
   }
@@ -181,7 +182,7 @@ void FlightRecorder::CsumLog(uint64_t hex)
   }
 
   if(LoggingMode == LoggingModeRecord) {
-    std::cerr<<"FlightRecorder::CsumLog RECORDING : "<< NormLoggingCounter <<" "<<std::hex<< hex<<std::dec <<std::endl;
+//    std::cerr<<"FlightRecorder::CsumLog RECORDING : "<< NormLoggingCounter <<" "<<std::hex<< hex<<std::dec <<std::endl;
     CsumLogVector.push_back(hex);
     CsumLoggingCounter++;
   }
@@ -230,7 +231,7 @@ void FlightRecorder::ReductionLog(double local,double global)
     ReductionLoggingCounter++;
   }
   if(LoggingMode == LoggingModeRecord) {
-    std::cerr<<"FlightRecorder::ReductionLog RECORDING : "<< ReductionLoggingCounter <<" "<< std::hex << hex_l << " -> " <<hex_g<<std::dec <<std::endl;
+//    std::cerr<<"FlightRecorder::ReductionLog RECORDING : "<< ReductionLoggingCounter <<" "<< std::hex << hex_l << " -> " <<hex_g<<std::dec <<std::endl;
     ReductionLogVector.push_back(global);
     ReductionLoggingCounter++;
   }
@@ -273,7 +274,7 @@ void FlightRecorder::xmitLog(void *buf,uint64_t bytes)
     XmitLoggingCounter++;
   }
   if(LoggingMode == LoggingModeRecord) {
-    std::cerr<<"FlightRecorder::xmitLog RECORD : "<< XmitLoggingCounter <<" "<< std::hex << _xor <<std::dec <<std::endl;
+//    std::cerr<<"FlightRecorder::xmitLog RECORD : "<< XmitLoggingCounter <<" "<< std::hex << _xor <<std::dec <<std::endl;
     XmitLogVector.push_back(_xor);
     XmitLoggingCounter++;
   }
@@ -315,7 +316,7 @@ void FlightRecorder::recvLog(void *buf,uint64_t bytes,int rank)
     RecvLoggingCounter++;
   }
   if(LoggingMode == LoggingModeRecord) {
-    std::cerr<<"FlightRecorder::recvLog RECORD : "<< RecvLoggingCounter <<" "<< std::hex << _xor <<std::dec <<std::endl;
+//    std::cerr<<"FlightRecorder::recvLog RECORD : "<< RecvLoggingCounter <<" "<< std::hex << _xor <<std::dec <<std::endl;
     RecvLogVector.push_back(_xor);
     RecvLoggingCounter++;
   }
