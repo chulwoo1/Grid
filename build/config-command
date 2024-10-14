@@ -1,0 +1,22 @@
+#TOOLS=/home/chulwoo/CPS_LIBS/install/
+TOOLS=/home/chulwoo/LatticeQCD_aesp_CNDA/chulwoo/CPS_LIBS/install
+../configure \
+        --enable-simd=GPU \
+        --enable-gen-simd-width=64 \
+        --enable-comms=mpi-auto \
+        --disable-gparity \
+        --disable-fermion-reps \
+        --enable-shm=nvlink \
+        --enable-accelerator=sycl \
+        --enable-accelerator-aware-mpi=yes\
+        --enable-lap-MixedCG=no \
+        --enable-unified=no \
+         --enable-Sp \
+        MPICXX=mpicxx \
+        CXX=icpx \
+        LDFLAGS="-fiopenmp -fsycl -fsycl-device-code-split=per_kernel -fsycl-device-lib=all -lze_loader -L${MKLROOT}/lib -qmkl=parallel -lsycl -L${TOOLS}/lib " \
+        CXXFLAGS="-fiopenmp -fsycl-unnamed-lambda -fsycl -I$TOOLS/include -Wno-tautological-compare -I$HOME/ -qmkl=parallel"
+
+module list > module.list 2>&1
+
+

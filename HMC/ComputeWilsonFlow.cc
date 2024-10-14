@@ -107,7 +107,7 @@ int main(int argc, char **argv) {
 
   for (int conf = CPar.StartConfiguration; conf <= CPar.EndConfiguration; conf+= CPar.Skip){
 
-  CPNersc.CheckpointRestore(conf, Umu, sRNG, pRNG);
+  CPNersc.CheckpointRestore(conf, Umu, Umu, sRNG, pRNG);
 
   std::cout << std::setprecision(15);
   std::cout << GridLogMessage << "Initial plaquette: "<< WilsonLoops<PeriodicGimplR>::avgPlaquette(Umu) << std::endl;

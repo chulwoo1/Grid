@@ -1,0 +1,112 @@
+#!/bin/bash
+## qsub -q EarlyAppAccess -A Aurora_Deployment -I -l select=1 -l walltime=60:00
+
+#PBS -q EarlyAppAccess
+#PBS -l select=128
+#PBS -l walltime=0:30:00
+#PBS -A LatticeQCD_aesp_CNDA
+
+#export OMP_PROC_BIND=spread
+#unset OMP_PLACES
+
+#source /lus/flare/projects/LatticeQCD_aesp_CNDA/lehner/Grid/build/source.me
+#source /lus/flare/projects/LatticeQCD_aesp_CNDA/lehner/gpt/lib/cgpt/build/source.sh
+
+env |grep PBS
+cat $PBS_NODEFILE
+cd $PBS_O_WORKDIR
+cp  $PBS_NODEFILE hosts."$PBS_JOBID_SHORT"
+#DIR=/home/chulwoo/Sunspot/Grid/rmhmc_merge2_Sp2/double
+DIR=/home/chulwoo/LatticeQCD_aesp_CNDA/chulwoo/Grid/rmhmc_merge_nouvm/aurora3/
+#DIR=/home/chulwoo/LatticeQCD_aesp_CNDA/chulwoo/Grid/rmhmc_merge2_mixed/aurora/
+source ${DIR}/sourceme.sh
+
+#module load pti-gpu
+module list
+
+
+
+export OMP_NUM_THREADS=4
+
+export MPIR_CVAR_CH4_OFI_ENABLE_GPU_PIPELINE=1
+export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_BUFFER_SZ=16777216
+export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_D2H_ENGINE_TYPE=0
+
+export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_H2D_ENGINE_TYPE=0
+export MPIR_CVAR_GPU_USE_IMMEDIATE_COMMAND_LIST=1
+export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_THRESHOLD=131072
+export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_NUM_BUFFERS_PER_CHUNK=16
+export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_MAX_NUM_BUFFERS=16
+
+export MPICH_OFI_NIC_POLICY=GPU
+export SYCL_PROGRAM_COMPILE_OPTIONS="-ze-opt-large-register-file"
+
+#export OMP_PROC_BIND=spread
+#unset OMP_PLACES
+
+
+#unset MPIR_CVAR_CH4_OFI_GPU_PIPELINE_D2H_ENGINE_TYPE
+#unset MPIR_CVAR_CH4_OFI_GPU_PIPELINE_H2D_ENGINE_TYPE
+#unset MPIR_CVAR_GPU_USE_IMMEDIATE_COMMAND_LIST
+
+#export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_D2H_ENGINE_TYPE=0
+#export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_H2D_ENGINE_TYPE=0
+#export MPIR_CVAR_GPU_USE_IMMEDIATE_COMMAND_LIST=1
+#export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_THRESHOLD=131072
+#export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_NUM_BUFFERS_PER_CHUNK=16
+#export MPIR_CVAR_CH4_OFI_GPU_PIPELINE_MAX_NUM_BUFFERS=16
+export MPICH_OFI_NIC_POLICY=GPU
+
+#TOOLS=/home/chulwoo/CPS_LIBS/install
+TOOLS=/home/chulwoo/LatticeQCD_aesp_CNDA/chulwoo/CPS_LIBS/install
+LD_LIBRARY_PATH=${TOOLS}/lib:${LD_LIBRARY_PATH}
+
+NP=128
+PPN=12
+
+GEOM=4.4.8.12
+VOL=96.96.96.192
+OPT=' --comms-overlap  --comms-concurrent '
+
+#CFG=`ls -rt ckpoint_*lat* | tail -n 1  `
+#TRAJ="${CFG#*.}"
+
+TRAJ=0
+mkdir -p traj"$TRAJ"
+
+#HMCPARAMS="--StartingType CheckpointStart --StartingTrajectory $TRAJ "
+#--Trajectories 1"
+HMCPARAMS="--StartingType ColdStart --StartingTrajectory $TRAJ "
+#
+
+du --apparent-size -m config.* mom.* |grep -v 93313 |awk '{print $2}' |xargs echo rm -f 
+du --apparent-size -m config.* mom.* |grep -v 93313 |awk '{print $2}' |xargs rm -f
+
+
+mkdir -p traj"$TRAJ"
+
+NRANK=$((PPN*NP))
+
+#DIR=../rmhmc_merge2_mixed/aurora/
+#BIN=./Benchmark_dwf_fp32
+BIN1=${DIR}/benchmarks/Benchmark_usqcd
+#BIN1=${DIR}/tests/Test_lehner
+#BIN=./Mobius2p1p1fEOFA_5Gev.v1
+BIN=${DIR}/HMC/3Gev_HMC_v3/Mobius2p1p1fEOFA_3Gev
+#BIN=${DIR}/HMC/RNGstate
+
+CMD="mpiexec -np ${NRANK} -ppn ${PPN}  -envall \
+	     ${DIR}/gpu_tile_compact.sh \
+	     ${BIN1} --mpi $GEOM --grid $VOL \
+		--shm-mpi 0 --shm 2048 --device-mem 8192 --accelerator-threads 32"
+
+echo $CMD 
+$CMD 
+
+CMD="mpiexec -np ${NRANK} -ppn ${PPN}  -envall \
+	     ${DIR}/gpu_tile_compact.sh \
+	     ${BIN} ${HMCPARAMS} --mpi $GEOM --grid $VOL ${OPT} \
+		--shm-mpi 0 --shm 16384 --device-mem 8192 --accelerator-threads 32"
+
+echo $CMD 
+$CMD 
