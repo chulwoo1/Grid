@@ -944,17 +944,17 @@ public:
       t_P[level] = 0;
     }
 
+    std::string dir("./traj"+std::to_string(traj));
     bool if_checkpoint=false;
-
     int last_good=0;
     for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
-      std::string fileU("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileU(dir+"/config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsU(fileU);
-      std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileM(dir+"/mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsM(fileM);
-      std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileAM(dir+"/auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
 //      std::ifstream fsAM(fileAM);
-      std::string fileAF("./auxF."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileAF(dir+"/auxF."+std::to_string(traj)+"_"+std::to_string(stp+1) );
 //      std::ifstream fsAF(fileAF);
 //      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
       if ( fsU.good() && fsM.good()) {
@@ -967,8 +967,8 @@ public:
 
     if (last_good>0)
     {
-      std::string fileU("./config."+std::to_string(traj)+"_"+std::to_string(last_good) );
-      std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(last_good) );
+      std::string fileU(dir+"/config."+std::to_string(traj)+"_"+std::to_string(last_good) );
+      std::string fileM(dir+"/mom."+std::to_string(traj)+"_"+std::to_string(last_good) );
 	std::string config;
 	FieldMetaData header;
         NerscIO::readConfiguration(U,header,fileU);
@@ -986,8 +986,8 @@ public:
       if ( Params.ChkInt >0 )
       if ( (stp+1)%Params.ChkInt==0)  
       {
-        std::string fileU("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
-        std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+        std::string fileU(dir+"/config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+        std::string fileM(dir+"/mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
         int precision32 = 0;
         int tworow      = 0;
         NerscIO::writeConfiguration(U,fileU,tworow,precision32);
