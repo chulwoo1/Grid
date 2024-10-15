@@ -16,9 +16,7 @@ env |grep PBS
 cat $PBS_NODEFILE
 cd $PBS_O_WORKDIR
 cp  $PBS_NODEFILE hosts."$PBS_JOBID_SHORT"
-#DIR=/home/chulwoo/Sunspot/Grid/rmhmc_merge2_Sp2/double
-DIR=/home/chulwoo/LatticeQCD_aesp_CNDA/chulwoo/Grid/rmhmc_merge_nouvm/aurora3/
-#DIR=/home/chulwoo/LatticeQCD_aesp_CNDA/chulwoo/Grid/rmhmc_merge2_mixed/aurora/
+DIR=../build
 source ${DIR}/sourceme.sh
 
 #module load pti-gpu
@@ -79,9 +77,6 @@ mkdir -p traj"$TRAJ"
 HMCPARAMS="--StartingType ColdStart --StartingTrajectory $TRAJ "
 #
 
-du --apparent-size -m config.* mom.* |grep -v 93313 |awk '{print $2}' |xargs echo rm -f 
-du --apparent-size -m config.* mom.* |grep -v 93313 |awk '{print $2}' |xargs rm -f
-
 
 mkdir -p traj"$TRAJ"
 
@@ -89,19 +84,11 @@ NRANK=$((PPN*NP))
 
 #DIR=../rmhmc_merge2_mixed/aurora/
 #BIN=./Benchmark_dwf_fp32
-BIN1=${DIR}/benchmarks/Benchmark_usqcd
+#BIN1=${DIR}/benchmarks/Benchmark_usqcd
 #BIN1=${DIR}/tests/Test_lehner
 #BIN=./Mobius2p1p1fEOFA_5Gev.v1
-BIN=${DIR}/HMC/3Gev_HMC_v3/Mobius2p1p1fEOFA_3Gev
+BIN=${DIR}/HMC/Mobius2p1p1fEOFA_3Gev
 #BIN=${DIR}/HMC/RNGstate
-
-CMD="mpiexec -np ${NRANK} -ppn ${PPN}  -envall \
-	     ${DIR}/gpu_tile_compact.sh \
-	     ${BIN1} --mpi $GEOM --grid $VOL \
-		--shm-mpi 0 --shm 2048 --device-mem 8192 --accelerator-threads 32"
-
-echo $CMD 
-$CMD 
 
 CMD="mpiexec -np ${NRANK} -ppn ${PPN}  -envall \
 	     ${DIR}/gpu_tile_compact.sh \
