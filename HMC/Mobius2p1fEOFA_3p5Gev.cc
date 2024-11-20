@@ -205,9 +205,10 @@ int main(int argc, char **argv) {
 //  HMCparams.MD.name          =std::string("ImplicitOmelyan");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("ForceGradient");
+//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+  HMCparams.MD.name          =std::string("MinimumNorm2");
+//  HMCparams.MD.name          =std::string("ForceGradient");
 #endif
 
   std::cout << GridLogMessage<< HMCparams <<std::endl;

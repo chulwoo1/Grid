@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -205,10 +205,10 @@ int main(int argc, char **argv) {
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-//  HMCparams.MD.name          =std::string("ForceGradient");
-  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("MinimumNorm2");
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+  HMCparams.MD.name          =std::string("ForceGradient");
+//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+//  HMCparams.MD.name          =std::string("MinimumNorm2");
 #endif
 
   std::cout << GridLogMessage<< HMCparams <<std::endl;
@@ -542,19 +542,19 @@ int main(int argc, char **argv) {
 				   *LinOpF[h], *LinOpD[h]) );
 
     // Heatbath not mixed yet. As inverts numerators not so important as raised mass.
-    Quotients.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
+    Level1.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
 #else
     ////////////////////////////////////////////////////////////////////////////
     // Standard CG for 2f force
     ////////////////////////////////////////////////////////////////////////////
-    Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
+    Level1.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
 
   }
 
-  for(int h=0;h<n_hasenbusch+1;h++){
-    Level1.push_back(Quotients[h]);
-  }
+//  for(int h=0;h<n_hasenbusch+1;h++){
+//    Level1.push_back(Quotients[h]);
+//  }
 
   /////////////////////////////////////////////////////////////
   // Gauge action
@@ -575,12 +575,12 @@ int main(int argc, char **argv) {
     double scale=1.;
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-#include<g_x3_2_3.h.inc>
+//#include<g_x3_2_pol2.h.inc>
 //#include<g_poly.h.inc>     
 //#include<g_poly_fields.h.inc>     
 //#include<g_x3_2_poly.h.inc>     
 //#include<g_x3_2_pol2.h.inc>     
-//#include<poly_try_3.h.inc>
+#include<poly_try_3.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 
 #if 0
