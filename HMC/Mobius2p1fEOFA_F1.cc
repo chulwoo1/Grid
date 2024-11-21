@@ -205,19 +205,18 @@ int main(int argc, char **argv) {
 
   const int Ls      = 12;
   Real beta         = 2.31;
-  Real light_mass   = 0.002144;
-  Real strange_mass = 0.02144;
+  Real light_mass   = 0.00054;
+  Real strange_mass = 0.02132;
   Real pv_mass      = 1.0;
   RealD M5  = 1.8;
   RealD b   = 1.5; 
   RealD c   = 0.5;
 
+  std::vector<Real> hasenbusch({ 0.0039, 0.015, 0.046, 0.12, 0.275, 0.56 });
+//  std::vector<Real> hasenbusch({ 0.005, 0.017, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run
+
+
   // Copied from paper
-  std::vector<Real> hasenbusch({ 0.005, 0.017, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run
-  //  std::vector<Real> hasenbusch({ 0.004, 0.016, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run 120-130
-  //  std::vector<Real> hasenbusch({ 0.004, 0.015, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run 110-120
-  //  std::vector<Real> hasenbusch({ 0.005, 0.017, 0.07, 0.18, 0.45 }); // Paper values from F1 incorrect run
-  //  std::vector<Real> hasenbusch({  0.01, 0.07, 0.18, 0.45 }); // Experiment?
 
   ///////////////////////////////////////////////////////////////////////////////////////////////
   //Bad choices with large dH. Equalising force L2 norm was not wise.

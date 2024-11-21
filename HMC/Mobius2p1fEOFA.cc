@@ -226,16 +226,16 @@ int main(int argc, char **argv) {
   TheHMC.Resources.AddObservable<PlaqObs>();
   //////////////////////////////////////////////
 
-  const int Ls      = 16;
-  Real beta         = 2.13;
-  Real light_mass   = 0.01;
-  Real strange_mass = 0.04;
+  const int Ls      = 12;
+  Real beta         = 2.31;
+  Real light_mass   = 0.00054;
+  Real strange_mass = 0.02132;
   Real pv_mass      = 1.0;
   RealD M5  = 1.8;
-  RealD b   = 1.0; 
-  RealD c   = 0.0;
+  RealD b   = 1.5; 
+  RealD c   = 0.5;
 
-  std::vector<Real> hasenbusch({ 0.1, 0.3, 0.6 });
+  std::vector<Real> hasenbusch({ 0.0039, 0.015, 0.046, 0.12, 0.275, 0.56 });
 
   auto GridPtr   = TheHMC.Resources.GetCartesian();
   auto GridRBPtr = TheHMC.Resources.GetRBCartesian();
@@ -425,12 +425,12 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
-
-  }
-
-  for(int h=0;h<n_hasenbusch+1;h++){
     Level1.push_back(Quotients[h]);
+
   }
+
+//  for(int h=0;h<n_hasenbusch+1;h++){
+//  }
 
   /////////////////////////////////////////////////////////////
   // Gauge action
