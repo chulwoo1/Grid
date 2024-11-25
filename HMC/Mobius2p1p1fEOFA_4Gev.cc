@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -205,9 +205,10 @@ int main(int argc, char **argv) {
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("ForceGradient");
+//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+//  HMCparams.MD.name          =std::string("ForceGradient");
+  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+  HMCparams.MD.name          =std::string("MinimumNorm2");
 #endif
 
   std::cout << GridLogMessage<< HMCparams <<std::endl;
@@ -301,9 +302,9 @@ int main(int argc, char **argv) {
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-9;
-  double DerivativeStoppingConditionLoose = 1e-7;
+  double ActionStoppingCondition     = 1e-8;
+  double DerivativeStoppingCondition = 1e-8;
+  double DerivativeStoppingConditionLoose = 1e-8;
 
   double MaxCGIterations =  100000;
 
@@ -524,7 +525,7 @@ int main(int argc, char **argv) {
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 
     double conv  = DerivativeStoppingCondition;
-    if (h<1) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
+    if (h<3) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
     MPCG.push_back(new MxPCG(conv,
 			     MX_inner,
 			     MaxCGIterations,
@@ -578,7 +579,7 @@ int main(int argc, char **argv) {
 //#include<g_x3_2_3.h.inc>
 //#include<g_x3_2_pol4.h.inc>
 //#include<g_poly.h.inc>     
-#include<poly_try_3.h.inc>
+#include<poly_try_6.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 
 #if 0

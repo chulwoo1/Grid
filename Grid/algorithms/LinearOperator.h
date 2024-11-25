@@ -521,13 +521,13 @@ public:
   }
   void HermOp (const Field &in, Field &out){
     Field tmp1(in.Grid());
+//    if (a2 != 0) {
     _Mat.M(in,tmp1);
-    if (a2 != 0) {
     	_Mat.M(tmp1,out);
     	out *= (RealD) a2;
-    else {
-	out = Zero();
-    }
+//    else {
+//	out = Zero();
+//    }
     axpy(out, a1, tmp1, out);
     axpy(out, a0, in, out);
   }
