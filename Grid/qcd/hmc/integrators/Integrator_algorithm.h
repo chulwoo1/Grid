@@ -125,7 +125,7 @@ public:
       }
 
       if (level == fl) {  // lowest level
-        this->update_U(U, eps);
+        this->update_U(U, level, eps);
       } else {  // recursive function call
         this->step(U, level + 1, first_step, last_step);
       }
@@ -180,7 +180,7 @@ public:
       }
 
       if (level == fl) {  // lowest level
-        this->update_U(U, 0.5 * eps);
+        this->update_U(U, level, 0.5 * eps);
       } else {  // recursive function call
         this->step(U, level + 1, first_step, 0);
       }
@@ -188,7 +188,7 @@ public:
       this->update_P(U, level, (1.0 - 2.0 * lambda) * eps);
 
       if (level == fl) {  // lowest level
-        this->update_U(U, 0.5 * eps);
+        this->update_U(U, level, 0.5 * eps);
       } else {  // recursive function call
         this->step(U, level + 1, 0, last_step);
       }
@@ -237,7 +237,7 @@ public:
     // even without prediction.
     this->update_P(Pfg, Ufg, level, fg_dt);
     Pfg = Pfg*(1.0/fg_dt);
-    this->update_U(Pfg, Ufg, fg_dt);
+    this->update_U(Pfg, Ufg, level, fg_dt);
     this->update_P(Ufg, level, ep);
   }
 
@@ -261,7 +261,7 @@ public:
       }
 
       if (level == fl) {  // lowest level
-        this->update_U(U, 0.5 * eps);
+        this->update_U(U, level, 0.5 * eps);
       } else {  // recursive function call
         this->step(U, level + 1, first_step, 0);
       }
@@ -269,7 +269,7 @@ public:
       this->FG_update_P(U, level, 2 * Chi / ((1.0 - 2.0 * lambda) * eps), (1.0 - 2.0 * lambda) * eps);
 
       if (level == fl) {  // lowest level
-        this->update_U(U, 0.5 * eps);
+        this->update_U(U, level, 0.5 * eps);
       } else {  // recursive function call
         this->step(U, level + 1, 0, last_step);
       }
@@ -318,7 +318,7 @@ public:
     // even without prediction.
     this->update_P(Pfg, Ufg, level, fg_dt);
     Pfg = Pfg*(1.0/fg_dt);
-    this->update_U(Pfg, Ufg, fg_dt);
+    this->update_U(Pfg, Ufg, level, fg_dt);
     this->update_P(Ufg, level, ep);
   }
 
@@ -343,7 +343,7 @@ public:
       }
 
       if (level == fl) {  // lowest level
-        this->update_U(U, 0.5 * eps);
+        this->update_U(U, level, 0.5 * eps);
       } else {  // recursive function call
         this->step(U, level + 1, first_step, 0);
       }
@@ -351,7 +351,7 @@ public:
       this->FG_update_P(U, level, 2 * Chi / ((1.0 - 2.0 * lambda) * eps), (1.0 - 2.0 * lambda) * eps);
 
       if (level == fl) {  // lowest level
-        this->update_U(U, 0.5 * eps);
+        this->update_U(U, level, 0.5 * eps);
       } else {  // recursive function call
         this->step(U, level + 1, 0, last_step);
       }
@@ -379,11 +379,11 @@ public:
         this->implicit_update_P(U, level, lambda * eps);
       }
 
-      this->implicit_update_U(U, 0.5 * eps,lambda*eps);
+      this->implicit_update_U(U, level, 0.5 * eps,lambda*eps);
 
       this->implicit_update_P(U, level, (1.0 - 2.0 * lambda) * eps, true);
 
-      this->implicit_update_U(U, 0.5 * eps, (0.5-lambda)*eps);
+      this->implicit_update_U(U, level, 0.5 * eps, (0.5-lambda)*eps);
 
       if (last_step) {
         this->update_P2(U, level, eps * lambda);
@@ -443,7 +443,7 @@ class ImplicitLeapFrog : public Integrator<FieldImplementation, SmearingPolicy,
       }
 
       if (level == fl) {  // lowest level
-        this->implicit_update_U(U, eps,eps/2.);
+        this->implicit_update_U(U, level, eps,eps/2.);
       } else {  // recursive function call
         this->step(U, level + 1, first_step, last_step);
       }
@@ -537,11 +537,11 @@ class ImplicitMinimumNorm2 : public Integrator<FieldImplementation, SmearingPoli
         this->implicit_update_P(U, level, lambda * eps);
       }
 
-      this->implicit_update_U(U, 0.5 * eps,lambda*eps);
+      this->implicit_update_U(U, level, 0.5 * eps,lambda*eps);
 
       this->implicit_update_P(U, level, (1.0 - 2.0 * lambda) * eps, true);
 
-      this->implicit_update_U(U, 0.5 * eps, (0.5-lambda)*eps);
+      this->implicit_update_U(U, level, 0.5 * eps, (0.5-lambda)*eps);
 
       if (last_step) {
         this->update_P2(U, level, eps * lambda);
@@ -636,11 +636,11 @@ class ImplicitOmelyan : public Integrator<FieldImplementation, SmearingPolicy,
         this->implicit_update_P(U, level, lambda * eps);
       }
 
-      this->implicit_update_U(U, 0.5 * eps,lambda*eps);
+      this->implicit_update_U(U, level, 0.5 * eps,lambda*eps);
 
       this->implicit_update_P(U, level, (1.0 - 2.0 * lambda) * eps, true);
 
-      this->implicit_update_U(U, 0.5 * eps, (0.5-lambda)*eps);
+      this->implicit_update_U(U, level, 0.5 * eps, (0.5-lambda)*eps);
 
       if (last_step) {
         this->update_P2(U, level, eps * lambda);
@@ -730,11 +730,11 @@ class ImplicitCampostrini : public Integrator<FieldImplementation, SmearingPolic
       int last_step = _last && (e == multiplier - 1);
       // initial half step
       if (first_step) {  this->implicit_update_P(U, level, epsilon*0.5); }
-      this->implicit_update_U(U, epsilon,epsilon*0.5);
+      this->implicit_update_U(U, level, epsilon,epsilon*0.5);
       this->implicit_update_P(U, level, (1.0 - sigma) * epsilon *0.5, epsilon*0.5, true);
-      this->implicit_update_U(U, -epsilon*sigma, -epsilon*sigma*0.5);
+      this->implicit_update_U(U, level, -epsilon*sigma, -epsilon*sigma*0.5);
       this->implicit_update_P(U, level, (1.0 - sigma) * epsilon *0.5, -epsilon*sigma*0.5, true);
-      this->implicit_update_U(U, epsilon,epsilon*0.5);
+      this->implicit_update_U(U, level, epsilon,epsilon*0.5);
       if (last_step) { this->update_P2(U, level, epsilon*0.5 ); } 
       else
       this->implicit_update_P(U, level, epsilon,epsilon*0.5);

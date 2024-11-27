@@ -44,6 +44,7 @@ public:
 				  std::string, name,      // name of the integrator
 				  unsigned int, MDsteps,  // number of outer steps
 				  bool , AuxDynamic,
+				  unsigned int , AuxLevel,
 				  RealD, c1,             // GHMC/SMD
 				  RealD, RMHMCTol,
                                   RealD, RMHMCCGTol,
@@ -53,7 +54,7 @@ public:
 				  RealD, trajL)           // trajectory length
 
   IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
-  : MDsteps(MDsteps_),AuxDynamic(true),
+  : MDsteps(MDsteps_),AuxDynamic(true),AuxLevel(0),
    lambda0(0.1931833275037836),
    lambda1(0.1931833275037836),
    lambda2(0.1931833275037836),
@@ -197,6 +198,16 @@ public:
       std::cout << GridLogMessage << "["<<level<<"]["<<a<<"] P update elapsed time: " << time_full << " ms (force: " << time_force << " ms)"  << std::endl;
     }
 
+    // Auxiliary fields
+    if(level==Params.AuxLevel){
+      MomentaField MomDer(P.Mom.Grid());
+      if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
+      P.AuxiliaryFieldsDerivative(MomDer);
+      std::cout << GridLogIntegrator << "MomDer(Aux) update_P: " << std::sqrt(norm2(Mom)) << std::endl;
+      Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
+      if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
+    }
+
     {
       // total force
       Real force_abs   = std::sqrt(norm2(level_force)/U.Grid()->gSites()); //average per-site norm.  nb. norm2(latt) = \sum_x norm2(latt[x]) 
@@ -225,17 +236,18 @@ public:
     P.M.ImportGauge(U);
     P.DerivativeU(P.Mom, MomDer);
     std::cout << GridLogIntegrator << "MomDer update_P2: " << std::sqrt(norm2(MomDer)) << std::endl;
-//    Mom -= MomDer * ep;
+//      Mom -= MomDer * ep;
     Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
     std::cout << GridLogIntegrator << "Mom update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
 
     // Auxiliary fields
-    if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
-    P.AuxiliaryFieldsDerivative(MomDer);
-    std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
-//    Mom -= MomDer * ep;
-    Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
-    if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
+    if(level==Params.AuxLevel){
+      if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
+      P.AuxiliaryFieldsDerivative(MomDer);
+      std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
+      Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
+      if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
+    }
 
     for (int a = 0; a < as[level].actions.size(); ++a) {
       double start_full = usecond();
@@ -312,10 +324,12 @@ public:
     std::cout << GridLogIntegrator << "implicit_update_P ep "<<ep<<" ep1 "<<ep1<<" factor "<<factor << std::endl;
 
     // Auxiliary fields
-    if(P.AuxDynamic)
-    P.update_auxiliary_momenta(ep1);
-    P.AuxiliaryFieldsDerivative(AuxDer);
-    Msum += AuxDer;
+    if(level==Params.AuxLevel){
+      if(P.AuxDynamic)
+      P.update_auxiliary_momenta(ep1);
+      P.AuxiliaryFieldsDerivative(AuxDer);
+      Msum += AuxDer;
+    }
     
 
     // Here run recursively
@@ -347,6 +361,7 @@ public:
     std::cout << GridLogIntegrator << "U after implicit_update_P: " << std::sqrt(norm2(U)) << std::endl;
 
     // update the auxiliary fields momenta    
+    if(level==Params.AuxLevel)
     if(P.AuxDynamic)
     P.update_auxiliary_momenta(ep2);
   }
@@ -355,16 +370,16 @@ public:
       implicit_update_P( U, level, ep, ep*0.5, intermediate ); 
   }
 
-  void update_U(Field& U, double ep) 
+  void update_U(Field& U, int level, double ep) 
   {
-    update_U(P.Mom, U, ep);
+    update_U(P.Mom, U, level, ep);
 
     t_U += ep;
     int fl = levels - 1;
     std::cout << GridLogIntegrator << "   " << "[" << fl << "] U " << " dt " << ep << " : t_U " << t_U << std::endl;
   }
   
-  void update_U(MomentaField& Mom, Field& U, double ep) 
+  void update_U(MomentaField& Mom, Field& U, int level, double ep) 
   {
     // exponential of Mom*U in the gauge fields case
     FieldImplementation::update_field(Mom, U, ep);
@@ -374,9 +389,11 @@ public:
 
     // Update the higher representations fields
     Representations.update(U);  // void functions if fundamental representation
+    if(level==Params.AuxLevel)
+     if(P.AuxDynamic) P.update_auxiliary_fields(ep);
   }
 
-  void implicit_update_U(Field&U, double ep, double ep1 ){
+  void implicit_update_U(Field&U, int level, double ep, double ep1 ){
     double ep2=ep-ep1;
     t_U += ep;
     int fl = levels - 1;
@@ -398,6 +415,7 @@ public:
     P.DerivativeP(Mom1); // first term in the derivative 
     std::cout << GridLogIntegrator << "implicit_update_U: Mom1: " << std::sqrt(norm2(Mom1)) << std::endl;
 
+    if(level==Params.AuxLevel)
      if(P.AuxDynamic) P.update_auxiliary_fields(ep1);
 
 
@@ -432,6 +450,7 @@ public:
 
     U = NewU;
     std::cout << GridLogIntegrator << "U after implicit_update_U: " << std::sqrt(norm2(U)) << std::endl;
+    if(level==Params.AuxLevel)
     if(P.AuxDynamic) P.update_auxiliary_fields(ep2);
   }
 
