@@ -335,8 +335,8 @@ struct PFMunger {
       //////////////////////////////////////////////////////
       virtual RealD Sinitial(const GaugeField &U) {
 	std::cout << GridLogMessage << "Returning stored two flavour refresh action "<<RefreshAction<<std::endl;
-	if (this->keep_mom) return S(U);
-	else	return RefreshAction;
+//	if (this->keep_mom) return S(U);
+	return RefreshAction;
       }
       virtual RealD S(const GaugeField &U) {
 
