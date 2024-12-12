@@ -928,6 +928,7 @@ public:
         std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] action eval " << std::endl;
 
 	as[level].actions.at(actionID)->S_timer_start();
+//        Hterm = as[level].actions.at(actionID)->Sinitial(Smearer);
         Hterm = as[level].actions.at(actionID)->S(Smearer);
 	as[level].actions.at(actionID)->S_timer_stop();
 

@@ -199,7 +199,7 @@ private:
     // initial state action
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     std::cout << GridLogMessage << "--------------------------------------------------\n";
-    std::cout << GridLogMessage << "Compute initial action";
+    std::cout << GridLogMessage << "Compute initial action\n";
     RealD H0 = TheIntegrator.Sinitial(U);  
     std::cout << GridLogMessage << "--------------------------------------------------\n";
 
