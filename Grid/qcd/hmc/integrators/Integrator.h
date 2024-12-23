@@ -203,7 +203,7 @@ public:
       MomentaField MomDer(P.Mom.Grid());
       if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
       P.AuxiliaryFieldsDerivative(MomDer);
-      std::cout << GridLogIntegrator << "MomDer(Aux) update_P: " << std::sqrt(norm2(Mom)) << std::endl;
+      std::cout << GridLogIntegrator << "MomDer(Aux) level: "<<level<<" update_P: " << std::sqrt(norm2(Mom)) << std::endl;
       Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
       if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
     }
@@ -244,7 +244,7 @@ public:
     if(level==Params.AuxLevel){
       if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
       P.AuxiliaryFieldsDerivative(MomDer);
-      std::cout << GridLogIntegrator << "MomDer(Aux) update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
+      std::cout << GridLogIntegrator << "MomDer(Aux) level: "<<level<<"update_P2: " << std::sqrt(norm2(Mom)) << std::endl;
       Mom -= MomDer * ep * HMC_MOMENTUM_DENOMINATOR;
       if(P.AuxDynamic) P.update_auxiliary_momenta(ep*0.5 );
     }
@@ -328,6 +328,7 @@ public:
       if(P.AuxDynamic)
       P.update_auxiliary_momenta(ep1);
       P.AuxiliaryFieldsDerivative(AuxDer);
+      std::cout << GridLogIntegrator << "MomDer(Aux) level: "<<level<<" implicit_update_P: " << std::sqrt(norm2(AuxDer)) << std::endl;
       Msum += AuxDer;
     }
     

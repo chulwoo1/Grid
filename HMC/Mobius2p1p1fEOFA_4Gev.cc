@@ -302,7 +302,7 @@ int main(int argc, char **argv) {
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-8;
+  double ActionStoppingCondition     = 1e-12;
   double DerivativeStoppingCondition = 1e-8;
   double DerivativeStoppingConditionLoose = 1e-8;
 
@@ -313,6 +313,7 @@ int main(int argc, char **argv) {
   ////////////////////////////////////
   ActionLevel<HMCWrapper::Field> Level1(1);
   ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
+  ActionLevel<HMCWrapper::Field> Level3(HMCparams.SW2);
 
   ////////////////////////////////////
   // Strange action
@@ -327,11 +328,11 @@ int main(int argc, char **argv) {
 
   // DJM: setup for EOFA ratio (Mobius)
   OneFlavourRationalParams OFRp;
-  OFRp.lo       = 0.99; // How do I know this on F1?
+  OFRp.lo       = 0.999; // How do I know this on F1?
   OFRp.hi       = 20;
   OFRp.MaxIter  = 100000;
   OFRp.tolerance= 1.0e-12;
-  OFRp.degree   = 12;
+  OFRp.degree   = 14;
   OFRp.precision= 50;
 
   
@@ -560,9 +561,10 @@ int main(int argc, char **argv) {
   /////////////////////////////////////////////////////////////
   // Gauge action
   /////////////////////////////////////////////////////////////
-  Level2.push_back(&GaugeAction);
+  Level3.push_back(&GaugeAction);
   TheHMC.TheAction.push_back(Level1);
   TheHMC.TheAction.push_back(Level2);
+  TheHMC.TheAction.push_back(Level3);
   std::cout << GridLogMessage << " Action complete "<< std::endl;
 
   /////////////////////////////////////////////////////////////
@@ -579,7 +581,8 @@ int main(int argc, char **argv) {
 //#include<g_x3_2_3.h.inc>
 //#include<g_x3_2_pol4.h.inc>
 //#include<g_poly.h.inc>     
-#include<poly_try_3.h.inc>
+//#include<poly_try_3.h.inc>
+#include<poly_try_cheb_1.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 
 #if 0

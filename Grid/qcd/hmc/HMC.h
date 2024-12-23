@@ -57,6 +57,7 @@ struct HMCparameters: Serializable {
 				  bool, PerformRandomShift, /* @brief Randomly shift the gauge configuration at the start of a trajectory */
                                   std::string, StartingType,
 				  Integer, SW,
+				  Integer, SW2,
                                   RealD, Kappa,
 //                                  RealD, c1,
                                   IntegratorParameters, MD)
