@@ -138,7 +138,7 @@ public:
     }
     // Modify the distribution with the metric
 //    if(M.Trivial()) return;
-    if(0)
+    if(1)
     {
        MomentaField dU(Mom.Grid());
        Implementation::generate_momenta(dU, sRNG, pRNG);
@@ -148,7 +148,20 @@ public:
        M.MinvDerivTest (Mom, dU, 0.1);
     }
 
+    MomentaField MomOrig(Mom.Grid());
+    MomOrig=Mom;
     M.MSquareRoot(Mom);
+    MomentaField MomTemp(Mom.Grid());
+    MomTemp=Mom;
+
+    if(1){
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig) = " <<norm2(MomOrig) << "\n";
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig*M) = " <<norm2(Mom) << "\n";
+        M.MInvSquareRoot(MomTemp);
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig*M*Minv) = " <<norm2(MomTemp) << "\n";
+	MomTemp -=MomOrig;
+    	std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig*M*Minv-MomOrig) = " <<norm2(MomTemp) << "\n";
+    }
 
     if (1) {
       // Auxiliary momenta
