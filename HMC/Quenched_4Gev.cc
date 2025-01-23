@@ -573,7 +573,9 @@ int main(int argc, char **argv) {
     double scale=1.;
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-#include<g_poly.h.inc>     
+//#include<g_poly.h.inc>     
+//#include<poly_try_cheb_1.h.inc>
+#include<poly_try_3.h.inc>
 //#include<g_x3_2_3.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 

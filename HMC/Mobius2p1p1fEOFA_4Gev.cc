@@ -302,9 +302,9 @@ int main(int argc, char **argv) {
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-12;
-  double DerivativeStoppingCondition = 1e-8;
-  double DerivativeStoppingConditionLoose = 1e-8;
+  double ActionStoppingCondition     = 1e-14;
+  double DerivativeStoppingCondition = 1e-12;
+  double DerivativeStoppingConditionLoose = 1e-10;
 
   double MaxCGIterations =  100000;
 
@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
   ////////////////////////////////////
   ActionLevel<HMCWrapper::Field> Level1(1);
   ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
-  ActionLevel<HMCWrapper::Field> Level3(HMCparams.SW2);
+//  ActionLevel<HMCWrapper::Field> Level3(HMCparams.SW2);
 
   ////////////////////////////////////
   // Strange action
@@ -555,16 +555,17 @@ int main(int argc, char **argv) {
   }
 
   for(int h=0;h<n_hasenbusch+1;h++){
+//  for(int h=0;h<light_den.size();h++){
     Level1.push_back(Quotients[h]);
   }
 
   /////////////////////////////////////////////////////////////
   // Gauge action
   /////////////////////////////////////////////////////////////
-  Level3.push_back(&GaugeAction);
+  Level2.push_back(&GaugeAction);
   TheHMC.TheAction.push_back(Level1);
   TheHMC.TheAction.push_back(Level2);
-  TheHMC.TheAction.push_back(Level3);
+//  TheHMC.TheAction.push_back(Level3);
   std::cout << GridLogMessage << " Action complete "<< std::endl;
 
   /////////////////////////////////////////////////////////////

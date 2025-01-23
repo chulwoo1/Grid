@@ -138,7 +138,7 @@ public:
     }
     // Modify the distribution with the metric
 //    if(M.Trivial()) return;
-    if(0)
+    if(1)
     {
        MomentaField dU(Mom.Grid());
        Implementation::generate_momenta(dU, sRNG, pRNG);
