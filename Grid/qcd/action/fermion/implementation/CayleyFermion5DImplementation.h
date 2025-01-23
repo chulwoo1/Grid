@@ -48,7 +48,8 @@ CayleyFermion5D<Impl>::CayleyFermion5D(GaugeField &_Umu,
 			FourDimGrid,
 			FourDimRedBlackGrid,_M5,p),
   mass_plus(_mass), mass_minus(_mass)
-{ 
+{
+  // qmu defaults to zero size;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -271,14 +272,46 @@ void CayleyFermion5D<Impl>::MeooeDag5D    (const FermionField &psi, FermionField
 }
 
 template<class Impl>
+void CayleyFermion5D<Impl>::addQmu(const FermionField &psi,FermionField &chi, int dag)
+{
+  if ( qmu.size() ) {
+
+    Gamma::Algebra Gmu [] = {
+      Gamma::Algebra::GammaX,
+      Gamma::Algebra::GammaY,
+      Gamma::Algebra::GammaZ,
+      Gamma::Algebra::GammaT
+    };
+    std::vector<ComplexD> coeff(Nd);
+    ComplexD ci(0,1);
+
+    assert(qmu.size()==Nd);
+
+    for(int mu=0;mu<Nd;mu++){
+       coeff[mu] = ci*qmu[mu];
+       if ( dag ) coeff[mu] = conjugate(coeff[mu]);
+    }
+
+    chi = chi + Gamma(Gmu[0])*psi*coeff[0];
+    for(int mu=1;mu<Nd;mu++){
+      chi = chi + Gamma(Gmu[mu])*psi*coeff[mu];
+    }
+  }
+}
+
+template<class Impl>
 void CayleyFermion5D<Impl>::M    (const FermionField &psi, FermionField &chi)
 {
   FermionField Din(psi.Grid());
   
   // Assemble Din
   Meooe5D(psi,Din);
-  
+
   this->DW(Din,chi,DaggerNo);
+
+  // add i q_mu gamma_mu here
+  addQmu(Din,chi,DaggerNo);
+  
   // ((b D_W + D_w hop terms +1) on s-diag
   axpby(chi,1.0,1.0,chi,psi); 
   
@@ -295,6 +328,9 @@ void CayleyFermion5D<Impl>::Mdag (const FermionField &psi, FermionField &chi)
   FermionField Din(psi.Grid());
   // Apply Dw
   this->DW(psi,Din,DaggerYes); 
+
+  // add -i conj(q_mu) gamma_mu here ... if qmu is real, gammm_5 hermitian, otherwise not.
+  addQmu(psi,Din,DaggerYes);
   
   MeooeDag5D(Din,chi);
   
@@ -488,7 +524,7 @@ void CayleyFermion5D<Impl>::SetCoefficientsInternal(RealD zolo_hi,std::vector<Co
   leem.resize(Ls);
   uee.resize(Ls);
   ueem.resize(Ls);
-  
+
   for(int i=0;i<Ls;i++){
     
     dee[i] = bee[i];
@@ -529,6 +565,18 @@ void CayleyFermion5D<Impl>::SetCoefficientsInternal(RealD zolo_hi,std::vector<Co
     dee[Ls-1] += delta_d;
   }  
 
+  //////////////////////////////////////////
+  // Device buffers
+  //////////////////////////////////////////
+  d_diag.resize(Ls);
+  d_upper.resize(Ls);
+  d_lower.resize(Ls);
+
+  d_dee.resize(Ls);
+  d_lee.resize(Ls);
+  d_uee.resize(Ls);
+  d_leem.resize(Ls);
+  d_ueem.resize(Ls);
   //  int inv=1;
   //  this->MooeeInternalCompute(0,inv,MatpInv,MatmInv);
   //  this->MooeeInternalCompute(1,inv,MatpInvDag,MatmInvDag);

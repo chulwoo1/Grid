@@ -124,6 +124,11 @@ public:
   RealD                _b;
   RealD                _c;
 
+  // possible boost
+  std::vector<ComplexD> qmu;
+  void set_qmu(std::vector<ComplexD> _qmu) { qmu=_qmu; assert(qmu.size()==Nd);};
+  void addQmu(const FermionField &in, FermionField &out, int dag);
+  
   // Cayley form Moebius (tanh and zolotarev)
   std::vector<Coeff_t> omega;
   std::vector<Coeff_t> bs;    // S dependent coeffs
@@ -142,6 +147,17 @@ public:
   std::vector<Coeff_t> uee;
   std::vector<Coeff_t> ueem;
   std::vector<Coeff_t> dee;
+
+  // Device memory
+  deviceVector<Coeff_t> d_diag;
+  deviceVector<Coeff_t> d_upper;
+  deviceVector<Coeff_t> d_lower;
+
+  deviceVector<Coeff_t> d_lee;
+  deviceVector<Coeff_t> d_dee;
+  deviceVector<Coeff_t> d_uee;
+  deviceVector<Coeff_t> d_leem;
+  deviceVector<Coeff_t> d_ueem;
 
   // Matrices of 5d ee inverse params
   //  std::vector<iSinglet<Simd> >  MatpInv;

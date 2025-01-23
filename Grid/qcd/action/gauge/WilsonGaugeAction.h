@@ -45,6 +45,11 @@ public:
   typedef GaugeImplParams ImplParams;
   ImplParams Params;
 
+  using Action<GaugeField>::S;
+  using Action<GaugeField>::Sinitial;
+  using Action<GaugeField>::deriv;
+  using Action<GaugeField>::refresh;
+  
   /////////////////////////// constructors
   explicit WilsonGaugeAction(RealD beta_,
 		  const ImplParams &p = ImplParams()

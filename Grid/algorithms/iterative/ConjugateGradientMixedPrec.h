@@ -28,7 +28,7 @@ Author: Christopher Kelly <ckelly@phys.columbia.edu>
 #ifndef GRID_CONJUGATE_GRADIENT_MIXED_PREC_H
 #define GRID_CONJUGATE_GRADIENT_MIXED_PREC_H
 
-#define CG_REPRO_TESTING
+#undef CG_REPRO_TESTING
 NAMESPACE_BEGIN(Grid);
 
   //Mixed precision restarted defect correction CG

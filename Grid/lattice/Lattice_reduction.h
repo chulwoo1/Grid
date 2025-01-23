@@ -376,9 +376,9 @@ axpby_norm_fast(Lattice<vobj> &z,sobj a,sobj b,const Lattice<vobj> &x,const Latt
       coalescedWrite(z_v[ss],tmp);
   });
   bool ok;
+#ifdef GRID_SYCL
   uint64_t csum=0;
   uint64_t csum2=0;
-#ifdef GRID_SYCL
   if ( FlightRecorder::LoggingMode != FlightRecorder::LoggingModeNone)
   {
     // z_v
@@ -556,6 +556,8 @@ template<class vobj> inline void sliceSum(const Lattice<vobj> &Data,
   scalar_type * ptr = (scalar_type *) &result[0];
   int words = fd*sizeof(sobj)/sizeof(scalar_type);
   grid->GlobalSumVector(ptr, words);
+  //  std::cout << GridLogMessage << " sliceSum local"<<t_sum<<" us, host+mpi "<<t_rest<<std::endl;
+  
 }
 template<class vobj> inline
 std::vector<typename vobj::scalar_object> 
