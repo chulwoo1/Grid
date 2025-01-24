@@ -223,7 +223,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
 #endif
 
   void
-  MDerivInt (LaplacianRatParams & par, const GaugeField & left,
+  MDerivInt (const LaplacianRatParams & par, const GaugeField & left,
 	     const GaugeField & right, GaugeField & der,
 	     std::vector < std::vector < GaugeLinkField > >&prev_solns)
   {
@@ -529,13 +529,15 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
   }
 
 //JKY
-  void MinvDerivTest (const GaugeField & in, GaugeField &dU, RealD dt)
+//  void MinvDerivTest (const GaugeField & in, GaugeField &dU, RealD dt)
+  void DerivTestInt ( const LaplacianRatParams & param, 
+		  const GaugeField & in, GaugeField &dU, RealD dt)
   {
 
-    std::cout << GridLogMessage << "MinvDerivTest: in " << norm2(in)<< " dU "<<norm2(dU)<<std::endl;
+    std::cout << GridLogMessage << "DerivTest: in " << norm2(in)<< " dU "<<norm2(dU)<<std::endl;
     GaugeField der(in.Grid());der=Zero();
-    MDerivInt (Gparam, in, in, der, prev_solnsMinvDeriv);
-    std::cout << GridLogMessage << "MinvDerivTest: der " << norm2(der)<< std::endl;
+    MDerivInt (param, in, in, der, prev_solnsMinvDeriv);
+    std::cout << GridLogMessage << "DerivTest: der " << norm2(der)<< std::endl;
     LatticeComplex Hloc(in.Grid()); Hloc=Zero();
 
     for (int mu = 0; mu < Nd; mu++) {
@@ -547,9 +549,10 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
       Hloc += trace(Mom_mu * inv_mu);
     }
     auto Htmp1 = TensorRemove(sum(Hloc));
-    std::cout << GridLogMessage << "MinvDerivTest: der*dU " << Htmp1.real() << std::endl;
+    std::cout << GridLogMessage << "DerivTest: der*dU " << -2.*Htmp1.real() << std::endl;
     Hloc=Zero();
-    this->Minv(in, der);
+//    this->Minv(in, der);
+    this->Mint(param,in, der);
     for (int mu = 0; mu < Nd; mu++) {
       // This is not very general
       // hide in the metric
@@ -559,7 +562,7 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
       Hloc += trace(Mom_mu * inv_mu);
     }
     Htmp1 = TensorRemove(sum(Hloc));
-    std::cout << GridLogMessage << "MinvDerivTest: H " << Htmp1.real() << std::endl;
+    std::cout << GridLogMessage << "DerivTest: H " << Htmp1.real() << std::endl;
 
     GaugeField  Usav2=Usav; 
     GaugeField  Unew(Usav.Grid());
@@ -572,7 +575,8 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
     this->ImportGauge(Unew);
     
     Hloc=Zero();
-    this->Minv(in, der);
+//    this->Minv(in, der);
+    this->Mint(param,in, der);
     for (int mu = 0; mu < Nd; mu++) {
       // This is not very general
       // hide in the metric
@@ -582,15 +586,23 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
       Hloc += trace(Mom_mu * inv_mu);
     }
     auto Htmp2 = TensorRemove(sum(Hloc));
-    std::cout << GridLogMessage << "MinvDerivTest: dt "<<dt<< " dH " << Htmp2.real()-Htmp1.real() << std::endl;
+    std::cout << GridLogMessage << "DerivTest: dt "<<dt<< " dH " << Htmp2.real()-Htmp1.real() << std::endl;
     
     this->ImportGauge(Usav2);
 
   }
 
+  void MinvDerivTest (const GaugeField & in, GaugeField &dU, RealD dt){
+  DerivTestInt ( Gparam, in, dU, dt);
+  }
+
+  void MDerivTest (const GaugeField & in, GaugeField &dU, RealD dt){
+  DerivTestInt ( Mparam, in, dU, dt);
+  }
+
 
   void
-  MSquareRootInt (LaplacianRatParams & par, GaugeField & P,
+  MSquareRootInt (const LaplacianRatParams & par, GaugeField & P,
 		  std::vector < std::vector < GaugeLinkField > >&prev_solns)
   {
 
@@ -687,6 +699,18 @@ LaplacianAdjointRat (GridBase * _grid, GridBase * _grid_f, OperatorFunction < Ga
     MSquareRootInt (Gparam, P, prev_solns);
     std::
       cout << GridLogDebug << "MInvSquareRoot:norm2(P) = " << norm2 (P) <<
+      std::endl;
+  }
+
+  void
+  Mint (const LaplacianRatParams &param, const GaugeField & in, GaugeField & inverted)
+  {
+    inverted = in;
+    std::vector < std::vector < GaugeLinkField > >prev_solns (4);
+    MSquareRootInt (param, inverted, prev_solns);
+    MSquareRootInt (param, inverted, prev_solns);
+    std::
+      cout << GridLogDebug << "Mint:norm2(inverted) = " << norm2 (inverted) <<
       std::endl;
   }
 
