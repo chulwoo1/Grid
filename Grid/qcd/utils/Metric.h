@@ -49,6 +49,7 @@ public:
   virtual void MDeriv(const Field&, const Field&, Field&) = 0;
   virtual void MinvDeriv(const Field&, Field&) = 0;
   virtual void MinvDerivTest (const Field & , Field &, RealD )=0;
+  virtual void MDerivTest (const Field & , Field &, RealD )=0;
 //  virtual void MinvDeriv(const Field&, const Field&, Field&) = 0;
 };
 
@@ -90,6 +91,7 @@ public:
     out = Zero();
   }
   virtual void MinvDerivTest (const Field & , Field &, RealD ){}
+  virtual void MDerivTest (const Field & , Field &, RealD ){}
 
 };
 
@@ -171,6 +173,15 @@ public:
       if(this->AuxDynamic) Implementation::generate_momenta(AuxField, sRNG,pRNG);
       // Modify the distribution with the metric
       // Aux^dag M Aux
+      if(1)
+      {
+         MomentaField dU(Mom.Grid());
+         Implementation::generate_momenta(dU, sRNG, pRNG);
+         M.MDerivTest (AuxMom, dU, 0.0001);
+         M.MDerivTest (AuxMom, dU, 0.001);
+         M.MDerivTest (AuxMom, dU, 0.01);
+         M.MDerivTest (AuxMom, dU, 0.1);
+      }
       M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
     }
   }
