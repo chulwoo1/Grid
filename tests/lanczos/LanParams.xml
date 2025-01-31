@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<grid>
+  <LanczosParameters>
+    <mass>-3.5</mass>
+  </LanczosParameters>
+</grid>
