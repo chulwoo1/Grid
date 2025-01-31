@@ -332,22 +332,18 @@ void WilsonFermion5D<Impl>::DhopInternalOverlappedComms(StencilImpl & st,
   
   //  std::cout << " WilsonFermion5D Communicate Begin " <<std::endl;
   std::vector<std::vector<CommsRequest_t> > requests;
-  auto id=traceStart("Communicate overlapped");
-  st.CommunicateBegin(requests);
 
+#if 1
   /////////////////////////////
   // Overlap with comms
   /////////////////////////////
-  {
-    //  std::cout << " WilsonFermion5D Comms merge " <<std::endl;
-    GRID_TRACE("MergeSHM");
-    st.CommsMergeSHM(compressor);// Could do this inside parallel region overlapped with comms
-  }
-      
+  st.CommunicateBegin(requests);
+  st.CommsMergeSHM(compressor);// Could do this inside parallel region overlapped with comms 
+#endif
+
   /////////////////////////////
   // do the compute interior
   /////////////////////////////
-  //  std::cout << " WilsonFermion5D Interior " <<std::endl;
   int Opt = WilsonKernelsStatic::Opt; // Why pass this. Kernels should know
   if (dag == DaggerYes) {
     GRID_TRACE("DhopDagInterior");
@@ -356,13 +352,23 @@ void WilsonFermion5D<Impl>::DhopInternalOverlappedComms(StencilImpl & st,
     GRID_TRACE("DhopInterior");
     Kernels::DhopKernel   (Opt,st,U,st.CommBuf(),LLs,U.oSites(),in,out,1,0);
   }
-
+  
+  //ifdef GRID_ACCELERATED
+#if 0
+  /////////////////////////////
+  // Overlap with comms -- on GPU the interior kernel call is nonblocking
+  /////////////////////////////
+  st.CommunicateBegin(requests);
+  st.CommsMergeSHM(compressor);// Could do this inside parallel region overlapped with comms
+#endif
+  
+  
   /////////////////////////////
   // Complete comms
   /////////////////////////////
   //  std::cout << " WilsonFermion5D Comms Complete " <<std::endl;
   st.CommunicateComplete(requests);
-  traceStop(id);
+  //  traceStop(id);
 
   /////////////////////////////
   // do the compute exterior
