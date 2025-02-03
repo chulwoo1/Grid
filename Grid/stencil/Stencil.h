@@ -369,6 +369,15 @@ public:
     //    _grid->StencilBarrier();   // Everyone is here, so noone running slow and still using receive buffer
                                // But the HaloGather had a barrier too.
     for(int i=0;i<Packets.size();i++){
+      _grid->StencilSendToRecvFromPrepare(MpiReqs,
+					  Packets[i].send_buf,
+					  Packets[i].to_rank,Packets[i].do_send,
+					  Packets[i].recv_buf,
+					  Packets[i].from_rank,Packets[i].do_recv,
+					  Packets[i].xbytes,Packets[i].rbytes,i);
+    }
+    acceleratorCopySynchronise();
+    for(int i=0;i<Packets.size();i++){
       _grid->StencilSendToRecvFromBegin(MpiReqs,
 					Packets[i].send_buf,
 					Packets[i].to_rank,Packets[i].do_send,
@@ -393,8 +402,6 @@ public:
     else DslashLogFull();
     //    acceleratorCopySynchronise();// is in the StencilSendToRecvFromComplete
     //    accelerator_barrier(); 
-    _grid->StencilBarrier(); 
-    // run any checksums
     for(int i=0;i<Packets.size();i++){
       if ( Packets[i].do_recv )
 	FlightRecorder::recvLog(Packets[i].recv_buf,Packets[i].rbytes,Packets[i].from_rank);

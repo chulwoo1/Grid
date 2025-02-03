@@ -1,8 +1,9 @@
 #!/bin/bash
 
-##PBS -q EarlyAppAccess
-#PBS -q debug
-#PBS -l select=2
+##PBS -q LatticeQCD_aesp_CNDA
+#PBS -q debug-scaling
+##PBS -q prod
+#PBS -l select=16
 #PBS -l walltime=00:20:00
 #PBS -A LatticeQCD_aesp_CNDA
 
@@ -31,18 +32,49 @@ export MPICH_OFI_NIC_POLICY=GPU
 # Local vol 16.16.16.32
 #
 
-#VOL=32.64.64.96
+VOL 128.64.128.96
+MPI 4.4.4.3
+NPROC 192
+mpiexec -np 192 -ppn 12 -envall ./gpu_tile.sh ./Benchmark_dwf_fp32 --mpi 4.4.4.3 --grid 128.64.128.96 --shm-mpi 0 --shm 2048 --device-mem 32000 --accelerator-threads 32 --comms-overlap
 
-for VOL in 32.32.32.96 32.64.64.96
-do
-for AT in 32
-do
-CMD="mpiexec -np 24 -ppn 12  -envall \
-	     ./gpu_tile.sh ./Benchmark_dwf_fp32 --mpi 2.2.2.3 --grid $VOL \
+
+LX=32
+LY=16
+LZ=32
+LT=32
+
+NX=2
+NY=2
+NZ=4
+NT=1
+
+GX=2
+GY=2
+GZ=1
+GT=3
+
+PX=$((NX * GX ))
+PY=$((NY * GY ))
+PZ=$((NZ * GZ ))
+PT=$((NT * GT ))
+
+VX=$((PX * LX ))
+VY=$((PY * LY ))
+VZ=$((PZ * LZ ))
+VT=$((PT * LT ))
+
+NP=$((PX*PY*PZ*PT))
+VOL=${VX}.${VY}.${VZ}.${VT}
+AT=8
+MPI=${PX}.${PY}.${PZ}.${PT}
+
+CMD="mpiexec -np $NP -ppn 12  -envall \
+	     ./gpu_tile.sh ./Benchmark_dwf_fp32 --mpi $MPI --grid $VOL \
 		--shm-mpi 0 --shm 2048 --device-mem 32000 --accelerator-threads $AT --comms-overlap "
 
+echo VOL $VOL
+echo MPI $MPI
+echo NPROC $NP
 echo $CMD
 $CMD
-done
-done
 

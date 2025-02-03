@@ -72,6 +72,7 @@ AC_CHECK_HEADERS(malloc/malloc.h)
 AC_CHECK_HEADERS(malloc.h)
 AC_CHECK_HEADERS(endian.h)
 AC_CHECK_HEADERS(execinfo.h)
+AC_CHECK_HEADERS(numaif.h)
 AC_CHECK_DECLS([ntohll],[], [], [[#include <arpa/inet.h>]])
 AC_CHECK_DECLS([be64toh],[], [], [[#include <arpa/inet.h>]])
 
@@ -239,6 +240,20 @@ case ${ac_SFW_FP16} in
       AC_MSG_ERROR(["SFW FP16 option not supported ${ac_SFW_FP16}"]);;
 esac
 
+
+############### MPI BOUNCE TO HOST
+AC_ARG_ENABLE([accelerator-aware-mpi],
+    [AS_HELP_STRING([--enable-accelerator-aware-mpi=yes|no],[run mpi transfers from device])],
+    [ac_ACCELERATOR_AWARE_MPI=${enable_accelerator_aware_mpi}], [ac_ACCELERATOR_AWARE_MPI=yes])
+
+# Force accelerator CSHIFT now
+AC_DEFINE([ACCELERATOR_CSHIFT],[1],[ Cshift runs on device])
+
+case ${ac_ACCELERATOR_AWARE_MPI} in
+    yes)
+      AC_DEFINE([ACCELERATOR_AWARE_MPI],[1],[ Stencil can use device pointers]);;
+    *);;
+esac
 
 ############### SYCL/CUDA/HIP/none
 AC_ARG_ENABLE([accelerator],

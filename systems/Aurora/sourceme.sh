@@ -2,6 +2,7 @@
 #module load mpich/icc-all-debug-pmix-gpu/52.2
 #module load mpich-config/mode/deterministic
 #module load intel_compute_runtime/release/821.35
+module load pti-gpu
 
 source ~/spack/share/spack/setup-env.sh 
 spack load c-lime

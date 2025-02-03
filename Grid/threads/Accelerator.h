@@ -209,6 +209,17 @@ void Lambda6Apply(uint64_t num1, uint64_t num2, uint64_t num3,
     }									\
   }
 
+inline void *acceleratorAllocHost(size_t bytes)
+{
+  void *ptr=NULL;
+  auto err = cudaMallocHost((void **)&ptr,bytes);
+  if( err != cudaSuccess ) {
+    ptr = (void *) NULL;
+    printf(" cudaMallocHost failed for %d %s \n",bytes,cudaGetErrorString(err));
+    assert(0);
+  }
+  return ptr;
+}
 inline void *acceleratorAllocShared(size_t bytes)
 {
   void *ptr=NULL;
@@ -230,8 +241,10 @@ inline void *acceleratorAllocDevice(size_t bytes)
   }
   return ptr;
 };
+
 inline void acceleratorFreeShared(void *ptr){ cudaFree(ptr);};
 inline void acceleratorFreeDevice(void *ptr){ cudaFree(ptr);};
+inline void acceleratorFreeHost(void *ptr){ cudaFree(ptr);};
 inline void acceleratorCopyToDevice(void *from,void *to,size_t bytes)  { cudaMemcpy(to,from,bytes, cudaMemcpyHostToDevice);}
 inline void acceleratorCopyFromDevice(void *from,void *to,size_t bytes){ cudaMemcpy(to,from,bytes, cudaMemcpyDeviceToHost);}
 inline void acceleratorCopyToDeviceAsync(void *from, void *to, size_t bytes, cudaStream_t stream = copyStream) { cudaMemcpyAsync(to,from,bytes, cudaMemcpyHostToDevice, stream);}
@@ -322,12 +335,17 @@ accelerator_inline int acceleratorSIMTlane(int Nsimd) {
 #define accelerator_barrier(dummy) { theGridAccelerator->wait(); }
 
 inline void *acceleratorAllocShared(size_t bytes){ return malloc_shared(bytes,*theGridAccelerator);};
+inline void *acceleratorAllocHost(size_t bytes)  { return malloc_host(bytes,*theGridAccelerator);};
 inline void *acceleratorAllocDevice(size_t bytes){ return malloc_device(bytes,*theGridAccelerator);};
+inline void acceleratorFreeHost(void *ptr){free(ptr,*theGridAccelerator);};
 inline void acceleratorFreeShared(void *ptr){free(ptr,*theGridAccelerator);};
 inline void acceleratorFreeDevice(void *ptr){free(ptr,*theGridAccelerator);};
 
 inline void acceleratorCopySynchronise(void) {  theCopyAccelerator->wait(); }
+
 inline void acceleratorCopyDeviceToDeviceAsynch(void *from,void *to,size_t bytes)  {  theCopyAccelerator->memcpy(to,from,bytes);}
+inline void acceleratorCopyToDeviceAsynch(void *from,void *to,size_t bytes)  { theCopyAccelerator->memcpy(to,from,bytes); }
+inline void acceleratorCopyFromDeviceAsynch(void *from,void *to,size_t bytes){ theCopyAccelerator->memcpy(to,from,bytes); }
 inline void acceleratorCopyToDevice(void *from,void *to,size_t bytes)  { theCopyAccelerator->memcpy(to,from,bytes); theCopyAccelerator->wait();}
 inline void acceleratorCopyFromDevice(void *from,void *to,size_t bytes){ theCopyAccelerator->memcpy(to,from,bytes); theCopyAccelerator->wait();}
 inline void acceleratorMemSet(void *base,int value,size_t bytes) { theCopyAccelerator->memset(base,value,bytes); theCopyAccelerator->wait();}
@@ -438,6 +456,16 @@ void LambdaApply(uint64_t numx, uint64_t numy, uint64_t numz, lambda Lambda)
     }								\
   }
 
+inline void *acceleratorAllocHost(size_t bytes)
+{
+  void *ptr=NULL;
+  auto err = hipMallocHost((void **)&ptr,bytes);
+  if( err != hipSuccess ) {
+    ptr = (void *) NULL;
+    fprintf(stderr," hipMallocManaged failed for %ld %s \n",bytes,hipGetErrorString(err)); fflush(stderr);
+  }
+  return ptr;
+};
 inline void *acceleratorAllocShared(size_t bytes)
 {
   void *ptr=NULL;
@@ -461,12 +489,12 @@ inline void *acceleratorAllocDevice(size_t bytes)
   return ptr;
 };
 
+inline void acceleratorFreeHost(void *ptr){ auto discard=hipFree(ptr);};
 inline void acceleratorFreeShared(void *ptr){ auto discard=hipFree(ptr);};
 inline void acceleratorFreeDevice(void *ptr){ auto discard=hipFree(ptr);};
 inline void acceleratorCopyToDevice(void *from,void *to,size_t bytes)  { auto discard=hipMemcpy(to,from,bytes, hipMemcpyHostToDevice);}
 inline void acceleratorCopyFromDevice(void *from,void *to,size_t bytes){ auto discard=hipMemcpy(to,from,bytes, hipMemcpyDeviceToHost);}
-//inline void acceleratorCopyDeviceToDeviceAsynch(void *from,void *to,size_t bytes)  { hipMemcpy(to,from,bytes, hipMemcpyDeviceToDevice);}
-//inline void acceleratorCopySynchronise(void) {  }
+
 inline void acceleratorMemSet(void *base,int value,size_t bytes) { auto discard=hipMemset(base,value,bytes);}
 
 inline void acceleratorCopyDeviceToDeviceAsynch(void *from,void *to,size_t bytes) // Asynch
@@ -482,6 +510,13 @@ inline void acceleratorCopyFromDeviceAsync(void *from, void *to, size_t bytes, h
 inline void acceleratorCopySynchronise(void) { auto discard=hipStreamSynchronize(copyStream); };
 
 #endif
+
+inline void acceleratorPin(void *ptr,unsigned long bytes)
+{
+#ifdef GRID_SYCL
+  sycl::ext::oneapi::experimental::prepare_for_device_copy(ptr,bytes,theCopyAccelerator->get_context());
+#endif
+}
 
 //////////////////////////////////////////////
 // Common on all GPU targets
@@ -537,8 +572,10 @@ inline void acceleratorCopySynchronise(void) {};
 inline int  acceleratorIsCommunicable(void *ptr){ return 1; }
 inline void acceleratorMemSet(void *base,int value,size_t bytes) { memset(base,value,bytes);}
 #ifdef HAVE_MM_MALLOC_H
+inline void *acceleratorAllocHost(size_t bytes){return _mm_malloc(bytes,GRID_ALLOC_ALIGN);};
 inline void *acceleratorAllocShared(size_t bytes){return _mm_malloc(bytes,GRID_ALLOC_ALIGN);};
 inline void *acceleratorAllocDevice(size_t bytes){return _mm_malloc(bytes,GRID_ALLOC_ALIGN);};
+inline void acceleratorFreeHost(void *ptr){_mm_free(ptr);};
 inline void acceleratorFreeShared(void *ptr){_mm_free(ptr);};
 inline void acceleratorFreeDevice(void *ptr){_mm_free(ptr);};
 #else

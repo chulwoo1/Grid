@@ -467,8 +467,8 @@ public:
     send_buf.resize(buffer_size*2*depth);    
     recv_buf.resize(buffer_size*2*depth);
 
-    std::vector<CommsRequest_t> fwd_req;   
-    std::vector<CommsRequest_t> bwd_req;   
+    std::vector<MpiCommsRequest_t> fwd_req;   
+    std::vector<MpiCommsRequest_t> bwd_req;   
 
     int words = buffer_size;
     int bytes = words * sizeof(vobj);
