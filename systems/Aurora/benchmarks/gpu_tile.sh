@@ -30,8 +30,8 @@ echo "rank $PALS_RANKID ; local rank $PALS_LOCAL_RANKID ; ZE_AFFINITY_MASK=$ZE_A
 
 if [ $PALS_RANKID = "0" ]
 then
-    numactl -p $NUMAP -N $NUMAP unitrace --chrome-kernel-logging --chrome-mpi-logging --chrome-sycl-logging --demangle "$@"
-#    numactl -p $NUMAP -N $NUMAP  "$@"
+#    numactl -p $NUMAP -N $NUMAP unitrace --chrome-kernel-logging --chrome-mpi-logging --chrome-sycl-logging --demangle "$@"
+    numactl -p $NUMAP -N $NUMAP  "$@"
 else 
     numactl -p $NUMAP -N $NUMAP  "$@"
 fi
