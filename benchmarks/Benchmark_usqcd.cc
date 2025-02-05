@@ -975,14 +975,6 @@ int main (int argc, char ** argv)
     Benchmark::Comms();
   }
 
-  if ( do_blas ) {
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    std::cout<<GridLogMessage << " Batched BLAS benchmark " <<std::endl;
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    Benchmark::BLAS<ComplexD>();
-    Benchmark::BLAS<ComplexF>();
-  }
-  
   Grid_finalize();
   fclose(FP);
 }

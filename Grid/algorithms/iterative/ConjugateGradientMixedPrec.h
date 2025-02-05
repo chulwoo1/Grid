@@ -28,6 +28,7 @@ Author: Christopher Kelly <ckelly@phys.columbia.edu>
 #ifndef GRID_CONJUGATE_GRADIENT_MIXED_PREC_H
 #define GRID_CONJUGATE_GRADIENT_MIXED_PREC_H
 
+#undef CG_REPRO_TESTING
 NAMESPACE_BEGIN(Grid);
 
   //Mixed precision restarted defect correction CG
@@ -61,7 +62,7 @@ NAMESPACE_BEGIN(Grid);
 				    LinearOperatorBase<FieldF> &_Linop_f, 
 				    LinearOperatorBase<FieldD> &_Linop_d) :
       Linop_f(_Linop_f), Linop_d(_Linop_d),
-      Tolerance(tol), InnerTolerance(tol), MaxInnerIterations(maxinnerit), MaxOuterIterations(maxouterit), SinglePrecGrid(_sp_grid),
+      Tolerance(tol), InnerTolerance(1e-8), MaxInnerIterations(maxinnerit), MaxOuterIterations(maxouterit), SinglePrecGrid(_sp_grid),
       OuterLoopNormMult(100.), guesser(NULL){ };
 
     void useGuesser(LinearFunction<FieldF> &g){
@@ -128,18 +129,42 @@ NAMESPACE_BEGIN(Grid);
       PrecChangeTimer.Start();
       precisionChange(src_f, src_d, pc_wk_dp_to_sp);
       PrecChangeTimer.Stop();
-      
-      sol_f = Zero();
-
-      //Optionally improve inner solver guess (eg using known eigenvectors)
-      if(guesser != NULL)
-	(*guesser)(src_f, sol_f);
 
       //Inner CG
       std::cout<<GridLogMessage<<"MixedPrecisionConjugateGradient: Outer iteration " << outer_iter << " starting inner CG with tolerance " << inner_tol << std::endl;
       CG_f.Tolerance = inner_tol;
       InnerCGtimer.Start();
+
+#ifdef CG_REPRO_TESTING
+    FlightRecorder::ContinueOnFail = 0;
+    FlightRecorder::PrintEntireLog = 0;
+    FlightRecorder::ChecksumComms  = 1;
+    FlightRecorder::ChecksumCommsSend=0;
+    if(char *s=getenv("GRID_PRINT_ENTIRE_LOG"))  FlightRecorder::PrintEntireLog     = atoi(s);
+    if(char *s=getenv("GRID_CHECKSUM_RECV_BUF")) FlightRecorder::ChecksumComms      = atoi(s);
+    if(char *s=getenv("GRID_CHECKSUM_SEND_BUF")) FlightRecorder::ChecksumCommsSend  = atoi(s);
+
+for (int iter=0;iter<2;iter++){
+      sol_f = Zero();
+      //Optionally improve inner solver guess (eg using known eigenvectors)
+      if(guesser != NULL)
+	(*guesser)(src_f, sol_f);
+      if ( iter == 0 ) {
+        FlightRecorder::SetLoggingMode(FlightRecorder::LoggingModeRecord);
+      } else {
+        FlightRecorder::SetLoggingMode(FlightRecorder::LoggingModeVerify);
+      }
+#endif
+
       CG_f(Linop_f, src_f, sol_f);
+      
+#ifdef CG_REPRO_TESTING
+    assert(FlightRecorder::ErrorCount()==0);
+    std::cout << " FlightRecorder is OK! "<<std::endl;
+}
+#endif
+
+
       InnerCGtimer.Stop();
       TotalInnerIterations += CG_f.IterationsToComplete;
       
@@ -167,4 +192,5 @@ NAMESPACE_BEGIN(Grid);
 
 NAMESPACE_END(Grid);
 
+#undef CG_REPRO_TESTING
 #endif

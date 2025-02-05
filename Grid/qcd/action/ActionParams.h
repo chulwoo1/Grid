@@ -132,6 +132,8 @@ struct StaggeredImplParams {
     struct RationalActionParams : Serializable {
     GRID_SERIALIZABLE_CLASS_MEMBERS(RationalActionParams, 
 				    int, inv_pow, 
+				    RealD, NumShift,
+                                    RealD, DenShift,
 				    RealD, lo, //low eigenvalue bound of rational approx
 				    RealD, hi, //high eigenvalue bound of rational approx
 				    int,   MaxIter,  //maximum iterations in msCG
@@ -143,6 +145,8 @@ struct StaggeredImplParams {
 				    int,   BoundsCheckFreq); //frequency the approximation is tested (with Metropolis degree/tolerance); 0 disables the check
   // constructor 
   RationalActionParams(int _inv_pow = 2,
+                       RealD _NumShift = 0.,
+                       RealD _DenShift = 0.,
 		       RealD _lo      = 0.0, 
 		       RealD _hi      = 1.0, 
 		       int _maxit     = 1000,
@@ -153,6 +157,8 @@ struct StaggeredImplParams {
 		       int _precision = 64,
 		       int _BoundsCheckFreq=20)
     : inv_pow(_inv_pow), 
+      NumShift(_NumShift),
+      DenShift(_DenShift),
       lo(_lo),
       hi(_hi),
       MaxIter(_maxit),

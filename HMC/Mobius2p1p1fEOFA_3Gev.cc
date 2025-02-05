@@ -37,7 +37,7 @@ directory
 // second level EOFA
 #undef EOFA_H
 #undef USE_OBC
-#define DO_IMPLICIT
+#undef DO_IMPLICIT
 
 NAMESPACE_BEGIN(Grid);
 
@@ -205,10 +205,9 @@ int main(int argc, char **argv) {
 //  HMCparams.MD.name          =std::string("ForceGradientImplNested");
 #else
 //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
-//  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-//  HMCparams.MD.name          =std::string("ForceGradient");
-  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
-  HMCparams.MD.name          =std::string("MinimumNorm2");
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+//  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
+  HMCparams.MD.name          =std::string("ForceGradient");
 #endif
 
   std::cout << GridLogMessage<< HMCparams <<std::endl;
@@ -224,7 +223,7 @@ int main(int argc, char **argv) {
   
   CheckpointerParameters CPparams;
   CPparams.config_prefix = "ckpoint_lat";
-  CPparams.mom_prefix    = "ckpoint_mom";
+  CPparams.mom_prefix = "ckpoint_mom";
   CPparams.rng_prefix    = "ckpoint_rng";
   CPparams.saveInterval  = 1;
   CPparams.format        = "IEEE64BIG";
@@ -241,23 +240,21 @@ int main(int argc, char **argv) {
   TheHMC.Resources.AddObservable<PlaqObs>();
   //////////////////////////////////////////////
 
-  const int Ls      = 12;
-  Real beta         = 5.983;
+  const int Ls      = 16;
+  Real beta         = 5.889;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
-  Real light_mass   = 0.00049;
-  Real strange_mass = 0.0158;
-  Real charm_mass = 0.191;
+  Real light_mass   = 0.00046;
+  Real strange_mass = 0.0232;
+  Real charm_mass = 0.279;
   Real pv_mass    = 1.0;
   RealD M5  = 1.4;
   RealD b   = 2.0; 
   RealD c   = 1.0;
 
   // Copied from paper
-//  std::vector<Real> hasenbusch({ 0.045 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch({ 0.0038, 0.0145, 0.045, 0.108 , 0.25, 0.51 }); // Paper values from F1 incorrect run
-  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch({ 0.0036, 0.0145, 0.045, 0.108 , 0.22, 0.38, 0.64 }); // Paper values from F1 incorrect run
+  std::vector<Real> hasenbusch2({ 0.4,0.65 }); // Paper values from F1 incorrect run
 
-//  RealD eofa_mass=0.05 ;
 
   ///////////////////////////////////////////////////////////////////////////////////////////////
   //Bad choices with large dH. Equalising force L2 norm was not wise.
@@ -302,9 +299,9 @@ int main(int argc, char **argv) {
   FermionAction::ImplParams Params(boundary);
   FermionActionF::ImplParams ParamsF(boundary);
   
-  double ActionStoppingCondition     = 1e-14;
-  double DerivativeStoppingCondition = 1e-12;
-  double DerivativeStoppingConditionLoose = 1e-10;
+  double ActionStoppingCondition     = 1e-12;
+  double DerivativeStoppingCondition = 1e-9;
+  double DerivativeStoppingConditionLoose = 1e-7;
 
   double MaxCGIterations =  100000;
 
@@ -313,7 +310,6 @@ int main(int argc, char **argv) {
   ////////////////////////////////////
   ActionLevel<HMCWrapper::Field> Level1(1);
   ActionLevel<HMCWrapper::Field> Level2(HMCparams.SW);
-//  ActionLevel<HMCWrapper::Field> Level3(HMCparams.SW2);
 
   ////////////////////////////////////
   // Strange action
@@ -328,11 +324,11 @@ int main(int argc, char **argv) {
 
   // DJM: setup for EOFA ratio (Mobius)
   OneFlavourRationalParams OFRp;
-  OFRp.lo       = 0.999; // How do I know this on F1?
+  OFRp.lo       = 0.99; // How do I know this on F1?
   OFRp.hi       = 20;
   OFRp.MaxIter  = 100000;
   OFRp.tolerance= 1.0e-12;
-  OFRp.degree   = 14;
+  OFRp.degree   = 12;
   OFRp.precision= 50;
 
   
@@ -351,7 +347,7 @@ int main(int argc, char **argv) {
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
 #ifdef MIXED_PRECISION
-  const Integer MX_inner = 50000;
+  const int MX_inner = 50000;
 
   // Mixed precision EOFA
   LinearOperatorEOFAD Strange_LinOp_L (Strange_Op_L);
@@ -501,8 +497,10 @@ int main(int argc, char **argv) {
   // Same issue prevents using MxPCG in the Heatbath step
   //////////////////////////////////////////////////////////////
   std::vector<FermionAction *> Numerators;
+  std::vector<FermionAction *> NumeratorsF;
   std::vector<FermionAction *> Denominators;
   std::vector<TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy> *> Quotients;
+//  std::vector<TwoFlavourEvenOddRatioShiftedPseudoFermionAction<FermionImplPolicy> *> ShiftedQuotients;
   std::vector<MxPCG *> ActionMPCG;
   std::vector<MxPCG *> MPCG;
   std::vector<FermionActionF *> DenominatorsF;
@@ -526,9 +524,9 @@ int main(int argc, char **argv) {
     LinOpF.push_back(new LinearOperatorF(*DenominatorsF[h]));
 
     double conv  = DerivativeStoppingCondition;
-    if (h<3) conv= DerivativeStoppingConditionLoose; // Relax on first two hasenbusch factors
+    if (h<1) conv= DerivativeStoppingConditionLoose; // Relax on first hasenbusch factor
     MPCG.push_back(new MxPCG(conv,
-			     50000,
+			     MX_inner,
 			     MaxCGIterations,
 			     UGrid_f,
 			     FrbGridF,
@@ -536,8 +534,8 @@ int main(int argc, char **argv) {
 			     *LinOpF[h], *LinOpD[h]) );
 
 //    ActionMPCG.push_back(new MxPCG(ActionStoppingCondition,
-    MxPCG *Mxtemp=new MxPCG(ActionStoppingCondition,
-				   50000,
+    MxPCG *Mxtemp =new MxPCG(ActionStoppingCondition,
+				   MX_inner,
 				   MaxCGIterations,
 				   UGrid_f,
 				   FrbGridF,
@@ -548,6 +546,7 @@ int main(int argc, char **argv) {
 
     // Heatbath not mixed yet. As inverts numerators not so important as raised mass.
     Quotients.push_back (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
+//    ShiftedQuotients.push_back (new TwoFlavourEvenOddRatioShiftedPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],*MPCG[h],*ActionMPCG[h],ActionCG));
 #else
     ////////////////////////////////////////////////////////////////////////////
     // Standard CG for 2f force
@@ -555,10 +554,6 @@ int main(int argc, char **argv) {
     Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
 
-  }
-
-  for(int h=0;h<n_hasenbusch+1;h++){
-//  for(int h=0;h<light_den.size();h++){
     Level1.push_back(Quotients[h]);
 
   }
@@ -570,7 +565,6 @@ int main(int argc, char **argv) {
   Level2.push_back(&GaugeAction);
   TheHMC.TheAction.push_back(Level1);
   TheHMC.TheAction.push_back(Level2);
-//  TheHMC.TheAction.push_back(Level3);
   std::cout << GridLogMessage << " Action complete "<< std::endl;
 
   /////////////////////////////////////////////////////////////
@@ -584,11 +578,8 @@ int main(int argc, char **argv) {
     double scale=1.;
 //#include<g_x3_2.h.inc>
 //#include<g_x2.h.inc>
-//#include<g_x3_2_pol4.h.inc>
-//#include<g_x3_2_3.h.inc>
+#include<g_x3_2_3.h.inc>
 //#include<g_poly.h.inc>     
-//#include<poly_try_3.h.inc>
-#include<poly_try_cheb_1.h.inc>
 //    LaplacianRatParams gpar(2),mpar(2);
 
 #if 0

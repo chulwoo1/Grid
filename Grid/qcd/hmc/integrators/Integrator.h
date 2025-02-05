@@ -43,6 +43,7 @@ public:
   GRID_SERIALIZABLE_CLASS_MEMBERS(IntegratorParameters,
 				  std::string, name,      // name of the integrator
 				  unsigned int, MDsteps,  // number of outer steps
+				  unsigned int, ChkInt,  // Checkpoint interval
 				  bool , AuxDynamic,
 				  unsigned int , AuxLevel,
 				  RealD, c1,             // GHMC/SMD
@@ -54,7 +55,7 @@ public:
 				  RealD, trajL)           // trajectory length
 
   IntegratorParameters(int MDsteps_ = 10, RealD trajL_ = 1.0)
-  : MDsteps(MDsteps_),AuxDynamic(true),AuxLevel(0),
+  : MDsteps(MDsteps_),AuxDynamic(true),AuxLevel(0) ,ChkInt(0),
    lambda0(0.1931833275037836),
    lambda1(0.1931833275037836),
    lambda2(0.1931833275037836),
@@ -164,6 +165,7 @@ public:
 
       MemoryManager::Print();
       as[level].actions.at(a)->deriv_timer_start();
+//      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
       as[level].actions.at(a)->deriv(Smearer, force);  // deriv should NOT include Ta
 //      as[level].actions.at(a)->deriv(Us, force);  // deriv should NOT include Ta
       as[level].actions.at(a)->deriv_timer_stop();
@@ -938,7 +940,7 @@ public:
       for (int actionID = 0; actionID < as[level].actions.size(); ++actionID) {
         // get gauge field from the SmearingPolicy and
         // based on the boolean is_smeared in actionID
-        std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] action eval " << std::endl;
+        std::cout << GridLogMessage << "S [" << level << "][" << actionID << "] INITIAL action eval " << std::endl;
 
 	as[level].actions.at(actionID)->S_timer_start();
 //        Hterm = as[level].actions.at(actionID)->Sinitial(Smearer);
@@ -964,44 +966,63 @@ public:
       t_P[level] = 0;
     }
 
+    std::string dir("./traj"+std::to_string(traj));
     bool if_checkpoint=false;
+    int last_good=0;
     for (int stp = 0; stp < Params.MDsteps; ++stp) {  // MD step
-      int first_step = (stp == 0);
-      int last_step = (stp == Params.MDsteps - 1);
-      std::string fileU("./config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
-      std::string fileM("./mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+      std::string fileU(dir+"/config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsU(fileU);
+      std::string fileM(dir+"/mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
       std::ifstream fsM(fileM);
-      std::string fileAF("./auxF."+std::to_string(traj)+"_"+std::to_string(stp+1) );
-      std::string fileAM("./auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
-      std::ifstream fsAF(fileAF);
-      std::ifstream fsAM(fileAM);
-      if ( fsU.good() && fsM.good() && fsAM.good() ) {
+      std::string fileAM(dir+"/auxM."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+//      std::ifstream fsAM(fileAM);
+      std::string fileAF(dir+"/auxF."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+//      std::ifstream fsAF(fileAF);
 //      if ( fsU.good() && fsM.good() && fsAF.good() && fsAM.good() ) {
+      if ( fsU.good() && fsM.good()) {
 	if_checkpoint=true;
-	fsU.close();fsM.close();
-	fsAF.close();fsAM.close();
-      } else {
-	fsU.close();fsM.close();
-	fsAF.close();fsAM.close();
-        this->step(U, 0, first_step, last_step);
-        int precision32 = 0;
-        int tworow      = 0;
-        NerscIO::writeConfiguration(U,fileU,tworow,precision32);
-        NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
-	if(P.AuxDynamic)
-        NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
-        NerscIO::writeConfiguration(P.AuxMom,fileAM,tworow,precision32);
+	last_good= stp+1;
       }
-//      if ( if_checkpoint )
-      {
+	fsU.close();fsM.close();
+//	fsAF.close();fsAM.close();
+    }
+
+    if (last_good>0)
+    {
+      std::string fileU(dir+"/config."+std::to_string(traj)+"_"+std::to_string(last_good) );
+      std::string fileM(dir+"/mom."+std::to_string(traj)+"_"+std::to_string(last_good) );
 	std::string config;
 	FieldMetaData header;
         NerscIO::readConfiguration(U,header,fileU);
         NerscIO::readConfiguration(P.Mom,header,fileM);
-	if(P.AuxDynamic)
-        NerscIO::readConfiguration(P.AuxField,header,fileAF);
-        NerscIO::readConfiguration(P.AuxMom,header,fileAM);
+//	if(P.AuxDynamic) NerscIO::readConfiguration(P.AuxField,header,fileAF);
+//        NerscIO::readConfiguration(P.AuxMom,header,fileAM);
+    }
+      std::cout << GridLogIntegrator << " Integrator:  start from step "<<last_good<<" of "<<Params.MDsteps <<std::endl;
+
+    for (int stp=last_good; stp < Params.MDsteps; ++stp) {  // MD step
+      int first_step = (stp == 0);
+      int last_step = (stp == Params.MDsteps - 1);
+      this->step(U, 0, first_step, last_step);
+
+      if ( Params.ChkInt >0 )
+      if ( (stp+1)%Params.ChkInt==0)  
+      {
+        std::string fileU(dir+"/config."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+        std::string fileM(dir+"/mom."+std::to_string(traj)+"_"+std::to_string(stp+1) );
+        int precision32 = 0;
+        int tworow      = 0;
+        NerscIO::writeConfiguration(U,fileU,tworow,precision32);
+        NerscIO::writeConfiguration(P.Mom,fileM,tworow,precision32);
+//	if(P.AuxDynamic) NerscIO::writeConfiguration(P.AuxField,fileAF,tworow,precision32);
+//        NerscIO::writeConfiguration(P.AuxMom,fileAM,tworow,precision32);
+//
+	std::string config;
+	FieldMetaData header;
+        NerscIO::readConfiguration(U,header,fileU);
+        NerscIO::readConfiguration(P.Mom,header,fileM);
+//	if(P.AuxDynamic) NerscIO::readConfiguration(P.AuxField,header,fileAF);
+//        NerscIO::readConfiguration(P.AuxMom,header,fileAM);
       }
     }
 

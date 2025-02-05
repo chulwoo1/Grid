@@ -171,8 +171,10 @@ NAMESPACE_BEGIN(Grid);
         Lop.ImportGauge(U);
         Rop.ImportGauge(U);
 
+	// ignore c1. for now, until dH is understood
+	c1=0.;
 	RealD c2=sqrt(1.-c1*c1);
-        std::cout << GridLogMessage << " c1 "<<c1 <<" c2 "<<c2  << std::endl;
+        std::cout << GridLogMessage << " c1 (reset) "<<c1 <<" c2 "<<c2  << std::endl;
 
         FermionField CG_src      (Lop.FermionGrid());
         FermionField CG_soln     (Lop.FermionGrid());
@@ -192,7 +194,7 @@ NAMESPACE_BEGIN(Grid);
         for(int k=0; k<param.degree; ++k){ N += PowerNegHalf.residues[k] / ( 1.0 + PowerNegHalf.poles[k] ); }
 
 	int fnum=Grid::FieldNum();
-	std::string fileO("./PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
+	std::string fileO("./traj"+std::to_string(Grid::traj_num)+"/PhiEOFA."+std::to_string(Grid::traj_num)+"_"+std::to_string(fnum) );
         std::ifstream fsO(fileO);
 
         GridBase* grid = Phi.Grid();
@@ -544,6 +546,9 @@ if ( fsO.good() ) {
         Rop.Omega(tmp[1], tmp[0], 1, 1);
         action += Rop.k * innerProduct(spProj_Phi, tmp[0]).real();
 
+	
+	std::cout << GridLogMessage << action_name() << " initial action check ignored: initial_action " << initial_action << " keep_mom " << this->keep_mom << std::endl;
+//	initial_action=false;
 	if(initial_action ){
 	  //For the first call to S after refresh,  S = |eta|^2. We can use this to ensure the rational approx is good
 	  RealD diff = action - norm2_eta;

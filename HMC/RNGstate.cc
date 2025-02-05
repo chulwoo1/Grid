@@ -43,8 +43,15 @@ int main(int argc, char **argv)
   GridSerialRNG   sRNG;         sRNG.SeedUniqueString(std::string("The Serial RNG"));
   GridParallelRNG pRNG(UGrid);  pRNG.SeedUniqueString(std::string("The 4D RNG"));
 
+  LatticeGaugeField Umu(UGrid); random(pRNG,Umu);
+
   std::string rngfile("ckpoint_rng.0");
   NerscIO::writeRNGState(sRNG, pRNG, rngfile);
+
+  int tworow=0;
+  int precision32=0;
+  std::string latfile("ckpoint_lat.0");
+  NerscIO::writeConfiguration(Umu,latfile,tworow,precision32);
   
   Grid_finalize();
 }
