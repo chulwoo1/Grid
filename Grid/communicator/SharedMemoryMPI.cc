@@ -542,7 +542,7 @@ void GlobalSharedMemory::SharedMemoryAllocate(uint64_t bytes, int flags)
   // Each MPI rank should allocate our own buffer
   ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifndef ACCELERATOR_AWARE_MPI
-  printf("Host buffer allocate for GPU non-aware MPI\n");
+  // printf("Host buffer allocate for GPU non-aware MPI\n");
 #if 0
   HostCommBuf= acceleratorAllocHost(bytes);
 #else 
