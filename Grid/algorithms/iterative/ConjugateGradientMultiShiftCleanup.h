@@ -153,7 +153,9 @@ public:
     // Handle trivial case of zero src.
     if( cp == 0. ){
       for(int s=0;s<nshift;s++){
+        psi_d[s].Checkerboard()=src_d.Checkerboard();
 	psi_d[s] = Zero();
+        psi_f[s].Checkerboard()=src_d.Checkerboard();
 	psi_f[s] = Zero();
 	IterationsToCompleteShift[s] = 1;
 	TrueResidualShift[s] = 0.;
@@ -173,13 +175,18 @@ public:
     r_d = p_d;
     
     //MdagM+m[0]
+    //
     precisionChange(p_f,p_d);
     Linop_f.HermOpAndNorm(p_f,mmp_f,d,qq); // mmp = MdagM p        d=real(dot(p, mmp)),  qq=norm2(mmp)
     precisionChange(tmp_d,mmp_f);
     Linop_d.HermOpAndNorm(p_d,mmp_d,d,qq); // mmp = MdagM p        d=real(dot(p, mmp)),  qq=norm2(mmp)
     tmp_d = tmp_d - mmp_d;
-    std::cout << GridLogMessage << " Testing operators match "<<norm2(mmp_d)<<" f "<<norm2(mmp_f)<<" diff "<< norm2(tmp_d)<<std::endl;
-    //    assert(norm2(tmp_d)< 1.0e-4);
+    std::cout << GridLogMessage << " Cleanup: Testing operators match "<<norm2(mmp_d)<<" f "<<norm2(mmp_f)<<" diff "<< norm2(tmp_d)<<std::endl;
+    if (nshift<1) {
+	    std::cout << GridLogMessage <<"shifts.order "<<nshift<<" return "<<std::endl;
+	    return;
+    }
+    assert(norm2(tmp_d)< 1.0e-4);
 
     axpy(mmp_d,mass[0],p_d,mmp_d);
     RealD rn = norm2(p_d);

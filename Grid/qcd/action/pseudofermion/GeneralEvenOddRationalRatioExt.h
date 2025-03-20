@@ -447,7 +447,7 @@ NAMESPACE_BEGIN(Grid);
 
 	std::cout<<GridLogMessage << action_name() << " deriv: doing (M^dag M)^{-1/" << param.inv_pow << "} ( (V^dag V)^{1/" << 2*param.inv_pow << "} Phi)" << std::endl;
 	multiShiftInverse(Denominator, ApproxNegPowerMD, param.MaxIter, MpvPhi,MfMpvPhi_k,MfMpvPhi);
-
+//        exit(-42);
 	std::cout<<GridLogMessage << action_name() << " deriv: doing (V^dag V)^{1/" << 2*param.inv_pow << "} ( (M^dag M)^{-1/" << param.inv_pow << "} (V^dag V)^{1/" << 2*param.inv_pow << "} Phi)" << std::endl;
 	multiShiftInverse(Numerator, ApproxHalfPowerMD, param.MaxIter, MfMpvPhi,MpvMfMpvPhi_k,MpvMfMpvPhi);
 		

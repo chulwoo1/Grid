@@ -56,6 +56,7 @@ NAMESPACE_BEGIN(Grid);
       //Action evaluation
       //Allow derived classes to override the multishift CG
       virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, FermionFieldD &out){
+	std::cout << "NoEXT multiShiftInverse (b,MSF,i,V,V)"<<std::endl;
          
 #if 1
 	SchurDifferentiableOperator<ImplD> schurOp(numerator ? NumOpD : DenOpD);
@@ -71,18 +72,21 @@ NAMESPACE_BEGIN(Grid);
 	ConjugateGradientMultiShiftMixedPrec<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
 	msCG(schurOpD, in, out);
 #endif
+	std::cout << "NoEXT multiShiftInverse (b,MSF,i,V,V) done"<<std::endl;
       }
       //Force evaluation
       virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, std::vector<FermionFieldD> &out_elems, FermionFieldD &out){
+	std::cout << "NoEXT multiShiftInverse (b,MSF,i,V,V*,V) order="<<approx.order<<" poly= "<<approx.poly.size()<<std::endl;
 	SchurDifferentiableOperator<ImplD> schurOpD(numerator ? NumOpD : DenOpD);
 	SchurDifferentiableOperator<ImplF>  schurOpF(numerator ? NumOpF  : DenOpF);
 
 	FermionFieldD inD(NumOpD.FermionRedBlackGrid());
 	FermionFieldD outD(NumOpD.FermionRedBlackGrid());
-	std::vector<FermionFieldD> out_elemsD(out_elems.size(),NumOpD.FermionRedBlackGrid());
+//	std::vector<FermionFieldD> out_elemsD(out_elems.size(),NumOpD.FermionRedBlackGrid());
 	ConjugateGradientMultiShiftMixedPrecCleanup<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
+	out.Checkerboard()=in.Checkerboard();
 	msCG(schurOpD, in, out_elems, out);
-	std::cout << "multiShiftInverse done"<<std::endl;
+	std::cout << "NoEXT multiShiftInverse (b,MSF,i,V,V*,V) done "<<std::endl;
       }
       //Allow derived classes to override the gauge import
       virtual void ImportGauge(const typename ImplD::GaugeField &Ud){
@@ -130,6 +134,9 @@ NAMESPACE_BEGIN(Grid);
       //Action evaluation
       //Allow derived classes to override the multishift CG
       virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, FermionFieldD &out){
+	std::cout << "EXT multiShiftInverse (b,MSF,i,V,V) order="<<approx.order <<
+		" poly= "<<approx.poly.size()<<std::endl;
+	out.Checkerboard()== in.Checkerboard();
 #if 1
 	SchurDifferentiableOperator<ImplD> schurOp(numerator ? NumOpD : DenOpD);
 	ConjugateGradientMultiShift<FermionFieldD> msCG(MaxIter, approx);
@@ -144,18 +151,29 @@ NAMESPACE_BEGIN(Grid);
 	ConjugateGradientMultiShiftMixedPrec<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
 	msCG(schurOpD, in, out);
 #endif
+	std::cout << "EXT multiShiftInverse (b,MSF,i,V,V) done"<<std::endl;
       }
       //Force evaluation
       virtual void multiShiftInverse(bool numerator, const MultiShiftFunction &approx, const Integer MaxIter, const FermionFieldD &in, std::vector<FermionFieldD> &out_elems, FermionFieldD &out){
+
+	std::cout << "EXT multiShiftInverse (b,MSF,i,V,V*,V) order="<<approx.order <<
+		" out_elems.size()= "<< out_elems.size() <<
+		" poly= "<<approx.poly.size()<<std::endl;
+	out.Checkerboard()== in.Checkerboard();
+	for(int i=0;i<out_elems.size();i++)
+	    out_elems[i].Checkerboard() == in.Checkerboard();
+
 	SchurDifferentiableOperator<ImplD> schurOpD(numerator ? NumOpD : DenOpD);
 	SchurDifferentiableOperator<ImplF>  schurOpF(numerator ? NumOpF  : DenOpF);
 
-	FermionFieldD inD(NumOpD.FermionRedBlackGrid());
-	FermionFieldD outD(NumOpD.FermionRedBlackGrid());
-	std::vector<FermionFieldD> out_elemsD(out_elems.size(),NumOpD.FermionRedBlackGrid());
+//	FermionFieldD inD(NumOpD.FermionRedBlackGrid());
+//	FermionFieldD outD(NumOpD.FermionRedBlackGrid());
+//	std::vector<FermionFieldD> out_elemsD(out_elems.size(),NumOpD.FermionRedBlackGrid());
 	ConjugateGradientMultiShiftMixedPrecCleanup<FermionFieldD, FermionFieldF> msCG(MaxIter, approx, NumOpF.FermionRedBlackGrid(), schurOpF, ReliableUpdateFreq);
+	std::cout << "msCG "<<std::endl;
 	msCG(schurOpD, in, out_elems, out);
-	std::cout << "multiShiftInverse done"<<std::endl;
+	std::cout << "msCG done "<<std::endl;
+	std::cout << "EXT multiShiftInverse (b,MSF,i,V,V*,V) done"<<std::endl;
       }
       //Allow derived classes to override the gauge import
       virtual void ImportGauge(const typename ImplD::GaugeField &Ud){
