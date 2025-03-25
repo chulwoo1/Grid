@@ -118,7 +118,7 @@ public:
     fprintf(FP,"Packet bytes, direction, GB/s per node\n");
     for(int lat=16;lat<=maxlat;lat+=8){
       //      for(int Ls=8;Ls<=8;Ls*=2){
-      { int Ls=12;
+      { int Ls=8;
 
 	Coordinate latt_size  ({lat*mpi_layout[0],
 	      lat*mpi_layout[1],
@@ -175,8 +175,8 @@ public:
 	    timestat.statistics(t_time);
 	  
 	    dbytes=dbytes*ppn;
-	    double xbytes    = dbytes*0.5;
-	    double bidibytes = dbytes;
+	    double xbytes    = dbytes;
+	    double bidibytes = dbytes*2.0;
 	  
 	    std::cout<<GridLogMessage << lat<<"\t"<<Ls<<"\t "
 		     << bytes << " \t "
@@ -261,23 +261,25 @@ public:
     fprintf(FP,"\n\n");
   };
 
-
+  template<class CComplex>
   static void BLAS(void)
   {
     //int nbasis, int nrhs, int coarseVol
     int  basis[] = { 16,32,64 };
-    int  rhs[]   = { 8,16,32 };
-    int  vol  = 4*4*4*4;
+    int  rhs[]   = { 8,12,16 };
+    int  vol  = 8*8*8*8;
+    int  blk  = 4*4*4*4;
 
     GridBLAS blas;
-    
+
+    int fpbits = sizeof(CComplex)*4;
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    std::cout<<GridLogMessage << "= batched GEMM (double precision) "<<std::endl;
+    std::cout<<GridLogMessage << "= batched GEMM fp"<<fpbits<<std::endl;
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
     std::cout<<GridLogMessage << "  M  "<<"\t\t"<<"N"<<"\t\t\t"<<"K"<<"\t\t"<<"Gflop/s / rank (coarse mrhs)"<<std::endl;
     std::cout<<GridLogMessage << "----------------------------------------------------------"<<std::endl;
   
-    fprintf(FP,"GEMM\n\n M, N, K, BATCH, GF/s per rank\n");
+    fprintf(FP,"GEMM\n\n M, N, K, BATCH, GF/s per rank fp%d\n",fpbits);
 
     for(int b=0;b<3;b++){
     for(int r=0;r<3;r++){
@@ -285,7 +287,7 @@ public:
       int N=rhs[r];
       int K=basis[b];
       int BATCH=vol;
-      double p=blas.benchmark(M,N,K,BATCH);
+      double p=blas.benchmark<CComplex>(M,N,K,BATCH);
 
       fprintf(FP,"%d, %d, %d, %d, %f\n", M, N, K, BATCH, p);
       
@@ -299,9 +301,9 @@ public:
     for(int r=0;r<3;r++){
       int M=basis[b];
       int N=rhs[r];
-      int K=vol;
+      int K=blk;
       int BATCH=vol;
-      double p=blas.benchmark(M,N,K,BATCH);
+      double p=blas.benchmark<CComplex>(M,N,K,BATCH);
 
       fprintf(FP,"%d, %d, %d, %d, %f\n", M, N, K, BATCH, p);
       std::cout<<GridLogMessage<<std::setprecision(3) 
@@ -313,10 +315,10 @@ public:
     for(int b=0;b<3;b++){
     for(int r=0;r<3;r++){
       int M=rhs[r];
-      int N=vol;
+      int N=blk;
       int K=basis[b];
       int BATCH=vol;
-      double p=blas.benchmark(M,N,K,BATCH);
+      double p=blas.benchmark<CComplex>(M,N,K,BATCH);
 
       fprintf(FP,"%d, %d, %d, %d, %f\n", M, N, K, BATCH, p);
       std::cout<<GridLogMessage<<std::setprecision(3) 
@@ -490,17 +492,18 @@ public:
 	}
 	FGrid->Barrier();
 	double t1=usecond();
-	uint64_t ncall = 500;
-
-	FGrid->Broadcast(0,&ncall,sizeof(ncall));
+	uint64_t no    = 50;
+	uint64_t ni    = 100;
 
 	//	std::cout << GridLogMessage << " Estimate " << ncall << " calls per second"<<std::endl;
 
 	time_statistics timestat;
-	std::vector<double> t_time(ncall);
-	for(uint64_t i=0;i<ncall;i++){
+	std::vector<double> t_time(no);
+	for(uint64_t i=0;i<no;i++){
 	  t0=usecond();
-	  Dw.DhopEO(src_o,r_e,DaggerNo);
+	  for(uint64_t j=0;j<ni;j++){
+	    Dw.DhopEO(src_o,r_e,DaggerNo);
+	  }
 	  t1=usecond();
 	  t_time[i] = t1-t0;
 	}
@@ -518,11 +521,11 @@ public:
 	double mf_hi, mf_lo, mf_err;
 
 	timestat.statistics(t_time);
-	mf_hi = flops/timestat.min;
-	mf_lo = flops/timestat.max;
+	mf_hi = flops/timestat.min*ni;
+	mf_lo = flops/timestat.max*ni;
 	mf_err= flops/timestat.min * timestat.err/timestat.mean;
 
-	mflops = flops/timestat.mean;
+	mflops = flops/timestat.mean*ni;
 	mflops_all.push_back(mflops);
 	if ( mflops_best == 0   ) mflops_best = mflops;
 	if ( mflops_worst== 0   ) mflops_worst= mflops;
@@ -533,6 +536,7 @@ public:
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo mflop/s =   "<< mflops << " ("<<mf_err<<") " << mf_lo<<"-"<<mf_hi <<std::endl;
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo mflop/s per rank   "<< mflops/NP<<std::endl;
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo mflop/s per node   "<< mflops/NN<<std::endl;
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo us per call   "<< timestat.mean/ni<<std::endl;
 
       }
 
@@ -652,17 +656,19 @@ public:
 	}
 	FGrid->Barrier();
 	double t1=usecond();
-	uint64_t ncall = 500;
 
-	FGrid->Broadcast(0,&ncall,sizeof(ncall));
+	uint64_t no    = 50;
+	uint64_t ni    = 100;
 
 	//	std::cout << GridLogMessage << " Estimate " << ncall << " calls per second"<<std::endl;
 
 	time_statistics timestat;
-	std::vector<double> t_time(ncall);
-	for(uint64_t i=0;i<ncall;i++){
+	std::vector<double> t_time(no);
+	for(uint64_t i=0;i<no;i++){
 	  t0=usecond();
-	  Ds.DhopEO(src_o,r_e,DaggerNo);
+	  for(uint64_t j=0;j<ni;j++){
+	    Ds.DhopEO(src_o,r_e,DaggerNo);
+	  }
 	  t1=usecond();
 	  t_time[i] = t1-t0;
 	}
@@ -673,11 +679,11 @@ public:
 	double mf_hi, mf_lo, mf_err;
 	
 	timestat.statistics(t_time);
-	mf_hi = flops/timestat.min;
-	mf_lo = flops/timestat.max;
+	mf_hi = flops/timestat.min*ni;
+	mf_lo = flops/timestat.max*ni;
 	mf_err= flops/timestat.min * timestat.err/timestat.mean;
 
-	mflops = flops/timestat.mean;
+	mflops = flops/timestat.mean*ni;
 	mflops_all.push_back(mflops);
 	if ( mflops_best == 0   ) mflops_best = mflops;
 	if ( mflops_worst== 0   ) mflops_worst= mflops;
@@ -687,6 +693,7 @@ public:
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo mflop/s =   "<< mflops << " ("<<mf_err<<") " << mf_lo<<"-"<<mf_hi <<std::endl;
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo mflop/s per rank   "<< mflops/NP<<std::endl;
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo mflop/s per node   "<< mflops/NN<<std::endl;
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Deo us per call   "<< timestat.mean/ni<<std::endl;
       
       }
 
@@ -790,19 +797,18 @@ public:
 	  Dc.M(src,r);
 	}
 	FGrid->Barrier();
-	double t1=usecond();
-	uint64_t ncall = 500;
-
-	FGrid->Broadcast(0,&ncall,sizeof(ncall));
+	uint64_t ni = 100;
+	uint64_t no = 50;
 
 	//	std::cout << GridLogMessage << " Estimate " << ncall << " calls per second"<<std::endl;
-
 	time_statistics timestat;
-	std::vector<double> t_time(ncall);
-	for(uint64_t i=0;i<ncall;i++){
-	  t0=usecond();
-	  Dc.M(src,r);
-	  t1=usecond();
+	std::vector<double> t_time(no);
+	for(uint64_t i=0;i<no;i++){
+	  double t0=usecond();
+	  for(uint64_t j=0;j<ni;j++){
+	    Dc.M(src,r);
+	  }
+	  double t1=usecond();
 	  t_time[i] = t1-t0;
 	}
 	FGrid->Barrier();
@@ -812,20 +818,21 @@ public:
 	double mf_hi, mf_lo, mf_err;
 	
 	timestat.statistics(t_time);
-	mf_hi = flops/timestat.min;
-	mf_lo = flops/timestat.max;
+	mf_hi = flops/timestat.min*ni;
+	mf_lo = flops/timestat.max*ni;
 	mf_err= flops/timestat.min * timestat.err/timestat.mean;
 
-	mflops = flops/timestat.mean;
+	mflops = flops/timestat.mean*ni;
 	mflops_all.push_back(mflops);
 	if ( mflops_best == 0   ) mflops_best = mflops;
 	if ( mflops_worst== 0   ) mflops_worst= mflops;
 	if ( mflops>mflops_best ) mflops_best = mflops;
 	if ( mflops<mflops_worst) mflops_worst= mflops;
 	
-	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Dclov mflop/s =   "<< mflops << " ("<<mf_err<<") " << mf_lo<<"-"<<mf_hi <<std::endl;
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Dclov mflop/s =   "<< mflops << " ("<<mf_err<<") " << mf_lo<<"-"<<mf_hi <<" "<<timestat.mean<<" us"<<std::endl;
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Dclov mflop/s per rank   "<< mflops/NP<<std::endl;
 	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Dclov mflop/s per node   "<< mflops/NN<<std::endl;
+	std::cout<<GridLogMessage << std::fixed << std::setprecision(1)<<"Dclov us per call   "<< timestat.mean/ni<<std::endl;
       
       }
 
@@ -859,7 +866,7 @@ int main (int argc, char ** argv)
   }
 
   CartesianCommunicator::SetCommunicatorPolicy(CartesianCommunicator::CommunicatorPolicySequential);
-  LebesgueOrder::Block = std::vector<int>({2,2,2,2});
+  //  LebesgueOrder::Block = std::vector<int>({2,2,2,2});
 
   Benchmark::Decomposition();
 
@@ -867,6 +874,7 @@ int main (int argc, char ** argv)
   int do_memory=1;
   int do_comms =1;
   int do_blas  =1;
+  int do_dslash=1;
 
   int sel=4;
   std::vector<int> L_list({8,12,16,24,32});
@@ -877,6 +885,7 @@ int main (int argc, char ** argv)
   std::vector<double> staggered;
 
   int Ls=1;
+  if (do_dslash){
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   std::cout<<GridLogMessage << " Clover dslash 4D vectorised (temporarily Wilson)" <<std::endl;
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
@@ -901,6 +910,7 @@ int main (int argc, char ** argv)
     staggered.push_back(result);
   }
 
+
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   std::cout<<GridLogMessage << " Summary table Ls="<<Ls <<std::endl;
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
@@ -909,22 +919,38 @@ int main (int argc, char ** argv)
     std::cout<<GridLogMessage << L_list[l] <<" \t\t "<< clover[l]<<" \t\t "<<dwf4[l] << " \t\t "<< staggered[l]<<std::endl;
   }
   std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+  }
 
   int NN=NN_global;
+  if(do_dslash){
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+    std::cout<<GridLogMessage << " Per Node Summary table Ls="<<Ls <<std::endl;
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+    std::cout<<GridLogMessage << " L \t\t Clover\t\t DWF4\t\t Staggered (GF/s per node)" <<std::endl;
+    fprintf(FP,"Per node summary table\n");
+    fprintf(FP,"\n");
+    fprintf(FP,"L , Wilson, DWF4, Staggered, GF/s per node\n");
+    fprintf(FP,"\n");
+    for(int l=0;l<L_list.size();l++){
+      std::cout<<GridLogMessage << L_list[l] <<" \t\t "<< clover[l]/NN<<" \t "<<dwf4[l]/NN<< " \t "<<staggered[l]/NN<<std::endl;
+      fprintf(FP,"%d , %.0f, %.0f, %.0f\n",L_list[l],clover[l]/NN/1000.,dwf4[l]/NN/1000.,staggered[l]/NN/1000.);
+    }
+    fprintf(FP,"\n");
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+    std::cout<<GridLogMessage << " Comparison point     result: "  << 0.5*(dwf4[sel]+dwf4[selm1])/NN << " Mflop/s per node"<<std::endl;
+    std::cout<<GridLogMessage << " Comparison point is 0.5*("<<dwf4[sel]/NN<<"+"<<dwf4[selm1]/NN << ") "<<std::endl;
+    std::cout<<std::setprecision(3);
+    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
+  }
+
+  
   if ( do_memory ) {
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
     std::cout<<GridLogMessage << " Memory benchmark " <<std::endl;
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
     Benchmark::Memory();
-  }
-
-  if ( do_blas ) {
-#if defined(GRID_CUDA) || defined(GRID_HIP)     || defined(GRID_SYCL)   
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    std::cout<<GridLogMessage << " Batched BLAS benchmark " <<std::endl;
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    Benchmark::BLAS();
-#endif
   }
 
   if ( do_su4 ) {
@@ -941,28 +967,14 @@ int main (int argc, char ** argv)
     Benchmark::Comms();
   }
 
+  if ( do_blas ) {
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    std::cout<<GridLogMessage << " Per Node Summary table Ls="<<Ls <<std::endl;
+    std::cout<<GridLogMessage << " Batched BLAS benchmark " <<std::endl;
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    std::cout<<GridLogMessage << " L \t\t Clover\t\t DWF4\t\t Staggered (GF/s per node)" <<std::endl;
-    fprintf(FP,"Per node summary table\n");
-    fprintf(FP,"\n");
-    fprintf(FP,"L , Wilson, DWF4, Staggered, GF/s per node\n");
-    fprintf(FP,"\n");
-    for(int l=0;l<L_list.size();l++){
-      std::cout<<GridLogMessage << L_list[l] <<" \t\t "<< clover[l]/NN<<" \t "<<dwf4[l]/NN<< " \t "<<staggered[l]/NN<<std::endl;
-      fprintf(FP,"%d , %.0f, %.0f, %.0f\n",L_list[l],clover[l]/NN/1000.,dwf4[l]/NN/1000.,staggered[l]/NN/1000.);
-    }
-    fprintf(FP,"\n");
-
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-    std::cout<<GridLogMessage << " Comparison point     result: "  << 0.5*(dwf4[sel]+dwf4[selm1])/NN << " Mflop/s per node"<<std::endl;
-    std::cout<<GridLogMessage << " Comparison point is 0.5*("<<dwf4[sel]/NN<<"+"<<dwf4[selm1]/NN << ") "<<std::endl;
-    std::cout<<std::setprecision(3);
-    std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
-
+    Benchmark::BLAS<ComplexD>();
+    Benchmark::BLAS<ComplexF>();
+  }
+  
   Grid_finalize();
   fclose(FP);
 }
