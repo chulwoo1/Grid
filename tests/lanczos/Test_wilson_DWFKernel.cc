@@ -40,9 +40,79 @@ RealD AllZero(RealD x) { return 0.; }
 
 namespace Grid {
 
+#if 0
+template<typename Field>
+class RationalHermOp : public LinearFunction<Field> {
+public:
+  using LinearFunction<Field>::operator();  
+//  OperatorFunction<Field>   & _poly;
+  LinearOperatorBase<Field> &_Linop;
+  RealD _massDen, _massNum;
+   
+  FunctionHermOp(LinearOperatorBase<Field>& linop, RealD massDen,RealD massNum)
+    :  _Linop(linop) ,_massDen(massDen),_massNum(massNum) {};
+      
+  void operator()(const Field& in, Field& out) {
+//    _poly(_Linop,in,out);
+  } 
+};
+#endif
+
+template<class Matrix,class Field>
+class InvG5LinearOperator : public LinearOperatorBase<Field> {
+  Matrix &_Mat;
+  RealD _num;
+  RealD _Tol;
+  Integer _MaxIt;
+  Gamma g5;
+
+public:
+  InvG5LinearOperator(Matrix &Mat,RealD num): _Mat(Mat),_num(num), _Tol(1e-12),_MaxIt(10000), g5(Gamma::Algebra::Gamma5) {};
+
+  // Support for coarsening to a multigrid
+  void OpDiag (const Field &in, Field &out) {
+    assert(0);
+    _Mat.Mdiag(in,out);
+  }
+  void OpDir  (const Field &in, Field &out,int dir,int disp) {
+    assert(0);
+    _Mat.Mdir(in,out,dir,disp);
+  }
+  void OpDirAll  (const Field &in, std::vector<Field> &out){
+    assert(0);
+    _Mat.MdirAll(in,out);
+  };
+  void Op     (const Field &in, Field &out){
+    assert(0);
+    _Mat.M(in,out);
+  }
+  void AdjOp     (const Field &in, Field &out){
+    assert(0);
+    _Mat.Mdag(in,out);
+  }
+  void HermOpAndNorm(const Field &in, Field &out,RealD &n1,RealD &n2){
+    HermOp(in,out);
+    ComplexD dot = innerProduct(in,out);
+    n1=real(dot);
+    n2=norm2(out);
+  }
+  void HermOp(const Field &in, Field &out){
+     Field tmp(in.Grid());
+     MdagMLinearOperator<Matrix,Field> denom(_Mat);
+     ConjugateGradient<Field> CG(_Tol,_MaxIt); 
+     _Mat.M(in,tmp);
+     tmp += _num*in;
+     _Mat.Mdag(tmp,out);
+     CG(denom,out,tmp);
+     out = g5*tmp;
+  }
+};
+
+
 struct LanczosParameters: Serializable {
   GRID_SERIALIZABLE_CLASS_MEMBERS(LanczosParameters,
 		  		RealD, mass , 
+				RealD, resid,
 	  			RealD, ChebyLow,
 	  			RealD, ChebyHigh,
 	  			Integer, ChebyOrder)
@@ -131,9 +201,9 @@ int main(int argc, char** argv) {
   }
 */
 
-  int Nstop = 10;
-  int Nk = 20;
-  int Np = 80;
+  int Nstop = 5;
+  int Nk = 10;
+  int Np = 90;
   int Nm = Nk + Np;
   int MaxIt = 10000;
   RealD resid = 1.0e-5;
@@ -158,29 +228,25 @@ int main(int argc, char** argv) {
   }
 
   mass=LanParams.mass;
+  resid=LanParams.resid;
 
 
 while ( mass > - 5.0){
-  FermionOp WilsonOperator(Umu,*FGrid,*FrbGrid,mass);
-  MdagMLinearOperator<FermionOp,LatticeFermion> HermOp(WilsonOperator); /// <-----
-//  MdagMLinearOperator<FermionOp,FermionField> HermOp(WilsonOperator); /// <-----
+  FermionOp WilsonOperator(Umu,*FGrid,*FrbGrid,2.+mass);
+  InvG5LinearOperator<FermionOp,LatticeFermion> HermOp(WilsonOperator,-2.); /// <-----
   //SchurDiagTwoOperator<FermionOp,FermionField> HermOp(WilsonOperator);
-  Gamma5HermitianLinearOperator <FermionOp,LatticeFermion> HermOp2(WilsonOperator); /// <-----
+//  Gamma5HermitianLinearOperator <FermionOp,LatticeFermion> HermOp2(WilsonOperator); /// <-----
 
-  std::vector<double> Coeffs{0, 1.};
+  std::vector<double> Coeffs{0, 0, 1.};
   Polynomial<FermionField> PolyX(Coeffs);
-//  Chebyshev<FermionField> Cheby(0.5, 60., 31);
-//                                  RealD, ChebyLow,
-//                                RealD, ChebyHigh,
-//                                Integer, ChebyOrder)
-
   Chebyshev<FermionField> Cheby(LanParams.ChebyLow,LanParams.ChebyHigh,LanParams.ChebyOrder);
 
-  FunctionHermOp<FermionField> OpCheby(Cheby,HermOp);
+       FunctionHermOp<FermionField> OpCheby(Cheby,HermOp);
+//     InvHermOp<FermionField> Op(WilsonOperator,HermOp);
      PlainHermOp<FermionField> Op     (HermOp);
-     PlainHermOp<FermionField> Op2     (HermOp2);
+//     PlainHermOp<FermionField> Op2     (HermOp2);
 
-  ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op2, Nstop, Nk, Nm, resid, MaxIt);
+  ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op, Nstop, Nk, Nm, resid, MaxIt);
 
   std::vector<RealD> eval(Nm);
   FermionField src(FGrid);
