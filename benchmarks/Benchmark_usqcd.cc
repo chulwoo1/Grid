@@ -118,7 +118,7 @@ public:
     fprintf(FP,"Packet bytes, direction, GB/s per node\n");
     for(int lat=16;lat<=maxlat;lat+=8){
       //      for(int Ls=8;Ls<=8;Ls*=2){
-      { int Ls=12;
+      { int Ls=8;
 
 	Coordinate latt_size  ({lat*mpi_layout[0],
 	      lat*mpi_layout[1],
@@ -261,6 +261,7 @@ public:
     fprintf(FP,"\n\n");
   };
 
+#if 0
   template<class CComplex>
   static void BLAS(void)
   {
@@ -327,6 +328,7 @@ public:
     fprintf(FP,"\n\n\n");
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
   };
+#endif
   
 
   static void SU4(void)
@@ -861,7 +863,7 @@ int main (int argc, char ** argv)
   }
 
   CartesianCommunicator::SetCommunicatorPolicy(CartesianCommunicator::CommunicatorPolicySequential);
-  LebesgueOrder::Block = std::vector<int>({2,2,2,2});
+  //  LebesgueOrder::Block = std::vector<int>({2,2,2,2});
 
   Benchmark::Decomposition();
 
@@ -872,7 +874,7 @@ int main (int argc, char ** argv)
   int do_dslash=1;
 
   int sel=4;
-  std::vector<int> L_list({8,12,16,24,32});
+  std::vector<int> L_list({8,12,16,24});
   int selm1=sel-1;
 
   std::vector<double> clover;
@@ -962,6 +964,7 @@ int main (int argc, char ** argv)
     Benchmark::Comms();
   }
 
+#if 0
   if ( do_blas ) {
     std::cout<<GridLogMessage << "=================================================================================="<<std::endl;
     std::cout<<GridLogMessage << " Batched BLAS benchmark " <<std::endl;
@@ -969,6 +972,7 @@ int main (int argc, char ** argv)
     Benchmark::BLAS<ComplexD>();
     Benchmark::BLAS<ComplexF>();
   }
+#endif
   
   Grid_finalize();
   fclose(FP);

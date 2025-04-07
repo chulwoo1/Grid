@@ -127,7 +127,6 @@ public:
   void GlobalSumVector(ComplexD *c,int N);
   void GlobalXOR(uint32_t &);
   void GlobalXOR(uint64_t &);
-
   template<class obj> void GlobalSumP2P(obj &o)
   {
     std::vector<obj> column;
