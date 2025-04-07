@@ -98,10 +98,10 @@ struct EvolParameters: Serializable {
 				  RealD, TrajectoryLength,
                                   bool, MetropolisTest,
 				  std::string, StartingType,
-				  std::vector<Integer>, GparityDirs,
 				  std::vector<EOFAparameters>, eofa_l,
 				  RatQuoParameters, rat_quo_s,
 				  RatQuoParameters, rat_quo_DSDR);
+//				  std::vector<Integer>, GparityDirs,
 
   EvolParameters() {
     //For initial thermalization; afterwards user should switch Metropolis on and use StartingType=CheckpointStart
@@ -110,7 +110,7 @@ struct EvolParameters: Serializable {
     Trajectories      = 50;
     SaveInterval = 5;
     StartingType      = "ColdStart";
-    GparityDirs.resize(3, 1); //1 for G-parity, 0 for periodic
+ //   GparityDirs.resize(3, 1); //1 for G-parity, 0 for periodic
     Steps = 5;
     TrajectoryLength = 1.0;
   }
@@ -561,6 +561,7 @@ int main(int argc, char **argv) {
   }
 
   //Check the parameters
+#if 0
   if(user_params.GparityDirs.size() != Nd-1){
     std::cerr << "Error in input parameters: expect GparityDirs to have size = " << Nd-1 << std::endl;
     exit(1);
@@ -570,8 +571,11 @@ int main(int argc, char **argv) {
       std::cerr << "Error in input parameters: expect GparityDirs values to be 0 (periodic) or 1 (G-parity)" << std::endl;
       exit(1);
     }
+#endif
 
 
+//  typedef GparityMobiusEOFAFermionD EOFAactionD;
+//  typedef GparityMobiusFermionD FermionActionD;
   typedef GparityMobiusEOFAFermionD EOFAactionD;
   typedef GparityMobiusFermionD FermionActionD;
   typedef typename FermionActionD::Impl_t FermionImplPolicyD;
