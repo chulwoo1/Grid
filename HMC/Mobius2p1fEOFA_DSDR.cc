@@ -185,31 +185,53 @@ int main(int argc, char **argv) {
   typedef Grid::XmlReader       Serialiser;
   
   //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
-  IntegratorParameters MD;
+//  IntegratorParameters MD;
   //  typedef GenericHMCRunner<LeapFrog> HMCWrapper; 
   //  MD.name    = std::string("LeapFrog");
-  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
-  MD.name    = std::string("ForceGradient");
   //  typedef GenericHMCRunner<MinimumNorm2> HMCWrapper; 
   //  MD.name    = std::string("MinimumNorm2");
-  MD.MDsteps = 6;
-  MD.trajL   = 1.0;
+//  MD.MDsteps = 6;
+//  MD.trajL   = 1.0;
   
   HMCparameters HMCparams;
-  HMCparams.StartTrajectory  = 590;
-  HMCparams.Trajectories     = 1000;
-  HMCparams.NoMetropolisUntil=  0;
+#if 1
+  {
+    XmlReader  HMCrd("HMCparameters.xml");
+    read(HMCrd,"HMCparameters",HMCparams);
+  }
+#else
+  {
+//    HMCparameters HMCparams;
   //  "[HotStart, ColdStart, TepidStart, CheckpointStart]\n";
   //  HMCparams.StartingType     =std::string("ColdStart");
-  HMCparams.StartingType     =std::string("CheckpointStart");
-  HMCparams.MD = MD;
+    HMCparams.StartingType     =std::string("CheckpointStart");
+    HMCparams.StartTrajectory  =7;
+    HMCparams.SW  =4;
+    HMCparams.Trajectories     =1000;
+    HMCparams.NoMetropolisUntil=0;
+    HMCparams.MD.name          =std::string("Force Gradient");
+    HMCparams.MD.MDsteps       = 10;
+    HMCparams.MD.trajL         = 1.0;
+  }
+//  HMCparams.MD = MD;
+#endif
+  std::cout << GridLogMessage<< HMCparams <<std::endl;
+  typedef GenericHMCRunner<ForceGradient> HMCWrapper; 
+  HMCparams.MD.name    = std::string("ForceGradient");
   HMCWrapper TheHMC(HMCparams);
+
+  TheHMC.ReadCommandLine(argc, argv);
+  {
+    XmlWriter HMCwr("HMCparameters.xml.out");
+    write(HMCwr,"HMCparameters",TheHMC.Parameters);
+  }
 
   // Grid from the command line arguments --grid and --mpi
   TheHMC.Resources.AddFourDimGrid("gauge"); // use default simd lanes decomposition
   
   CheckpointerParameters CPparams;
   CPparams.config_prefix = "ckpoint_EODWF_lat";
+//  CPparams.mom_prefix = "ckpoint_EODWF_mom";
   CPparams.rng_prefix    = "ckpoint_EODWF_rng";
   CPparams.saveInterval  = 10;
   CPparams.format        = "IEEE64BIG";
@@ -430,8 +452,8 @@ int main(int argc, char **argv) {
 
   }
 // DSDR
-  light_num[0]=0.5;
   light_den[0]=0.02;
+  light_num[0]=0.5;
   typedef WilsonTMFermionD TMAction;
   typedef WilsonTMFermionF TMActionF;
   typedef typename TMAction::FermionField  TMField;
