@@ -2,7 +2,7 @@
 
 Grid physics library, www.github.com/paboyle/Grid
 
-Source file: ./tests/Test_dwf_lanczos.cc
+Source file: ./tests/Test_dwf_G5R5.cc
 
 Copyright (C) 2015
 
@@ -32,8 +32,9 @@ using namespace std;
 using namespace Grid;
  ;
 
-typedef WilsonFermionD FermionOp;
-typedef typename WilsonFermionD::FermionField FermionField;
+//typedef WilsonFermionD FermionOp;
+typedef DomainWallFermionD FermionOp;
+typedef typename DomainWallFermionD::FermionField FermionField;
 
 
 RealD AllZero(RealD x) { return 0.; }
@@ -43,6 +44,11 @@ namespace Grid {
 struct LanczosParameters: Serializable {
   GRID_SERIALIZABLE_CLASS_MEMBERS(LanczosParameters,
 		  		RealD, mass , 
+		  		RealD, M5 , 
+	  			Integer, Ls,
+	  			Integer, Nstop,
+	  			Integer, Nk,
+	  			Integer, Np,
 	  			RealD, ChebyLow,
 	  			RealD, ChebyHigh,
 	  			Integer, ChebyOrder)
@@ -95,51 +101,6 @@ struct LanczosParameters: Serializable {
 int main(int argc, char** argv) {
   Grid_init(&argc, &argv);
 
-  GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
-      GridDefaultLatt(), GridDefaultSimd(Nd, vComplex::Nsimd()),
-      GridDefaultMpi());
-  GridRedBlackCartesian* UrbGrid =
-      SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
-  GridCartesian* FGrid = UGrid;
-  GridRedBlackCartesian* FrbGrid = UrbGrid;
-//  printf("UGrid=%p UrbGrid=%p FGrid=%p FrbGrid=%p\n", UGrid, UrbGrid, FGrid, FrbGrid);
-
-  std::vector<int> seeds4({1, 2, 3, 4});
-  std::vector<int> seeds5({5, 6, 7, 8});
-  GridParallelRNG RNG5(FGrid);
-  RNG5.SeedFixedIntegers(seeds5);
-  GridParallelRNG RNG4(UGrid);
-  RNG4.SeedFixedIntegers(seeds4);
-  GridParallelRNG RNG5rb(FrbGrid);
-  RNG5.SeedFixedIntegers(seeds5);
-
-  LatticeGaugeField Umu(UGrid);
-//  SU<Nc>::HotConfiguration(RNG4, Umu);
-
-  FieldMetaData header;
-  std::string file("./config");
-
-  int precision32 = 0;
-  int tworow      = 0;
-//  NerscIO::writeConfiguration(Umu,file,tworow,precision32);
-  NerscIO::readConfiguration(Umu,header,file);
-
-/*
-  std::vector<LatticeColourMatrix> U(4, UGrid);
-  for (int mu = 0; mu < Nd; mu++) {
-    U[mu] = PeekIndex<LorentzIndex>(Umu, mu);
-  }
-*/
-
-  int Nstop = 10;
-  int Nk = 20;
-  int Np = 80;
-  int Nm = Nk + Np;
-  int MaxIt = 10000;
-  RealD resid = 1.0e-5;
-
-  RealD mass = -1.0;
-
   LanczosParameters LanParams;
 #if 1
   {
@@ -157,30 +118,75 @@ int main(int argc, char** argv) {
     write(HMCwr,"LanczosParameters",LanParams);
   }
 
+  int Ls=16;
+  RealD M5=1.8;
+  RealD mass = -1.0;
+
   mass=LanParams.mass;
+  Ls=LanParams.Ls;
+  M5=LanParams.M5;
+
+  GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
+      GridDefaultLatt(), GridDefaultSimd(Nd, vComplex::Nsimd()),
+      GridDefaultMpi());
+  GridRedBlackCartesian* UrbGrid =
+      SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
+//  GridCartesian* FGrid = UGrid;
+//  GridRedBlackCartesian* FrbGrid = UrbGrid;
+  GridCartesian * FGrid = SpaceTimeGrid::makeFiveDimGrid(Ls, UGrid);
+  GridRedBlackCartesian * FrbGrid = SpaceTimeGrid::makeFiveDimRedBlackGrid(Ls, UGrid);
+//  printf("UGrid=%p UrbGrid=%p FGrid=%p FrbGrid=%p\n", UGrid, UrbGrid, FGrid, FrbGrid);
+
+  std::vector<int> seeds4({1, 2, 3, 4});
+  std::vector<int> seeds5({5, 6, 7, 8});
+  GridParallelRNG RNG5(FGrid); RNG5.SeedFixedIntegers(seeds5);
+  GridParallelRNG RNG4(UGrid); RNG4.SeedFixedIntegers(seeds4);
+  GridParallelRNG RNG5rb(FrbGrid); RNG5.SeedFixedIntegers(seeds5);
+
+  LatticeGaugeField Umu(UGrid);
+
+  FieldMetaData header;
+  std::string file("./config");
+
+  int precision32 = 0;
+  int tworow      = 0;
+  NerscIO::readConfiguration(Umu,header,file);
+
+/*
+  std::vector<LatticeColourMatrix> U(4, UGrid);
+  for (int mu = 0; mu < Nd; mu++) {
+    U[mu] = PeekIndex<LorentzIndex>(Umu, mu);
+  }
+*/
+
+  int Nstop = 10;
+  int Nk = 20;
+  int Np = 80;
+  Nstop=LanParams.Nstop;
+  Nk=LanParams.Nk;
+  Np=LanParams.Np;
+
+  int Nm = Nk + Np;
+  int MaxIt = 10000;
+  RealD resid = 1.0e-5;
 
 
-while ( mass > - 5.0){
-  FermionOp WilsonOperator(Umu,*FGrid,*FrbGrid,mass);
-  MdagMLinearOperator<FermionOp,FermionField> HermOp(WilsonOperator); /// <-----
-  //SchurDiagTwoOperator<FermionOp,FermionField> HermOp(WilsonOperator);
-  Gamma5HermitianLinearOperator <FermionOp,LatticeFermion> HermOp2(WilsonOperator); /// <----
-
-
+//while ( mass > - 5.0){
+  FermionOp Ddwf(Umu,*FGrid,*FrbGrid,*UGrid,*UrbGrid,mass,M5);
+  MdagMLinearOperator<FermionOp,FermionField> HermOp(Ddwf); /// <-----
+//  Gamma5HermitianLinearOperator <FermionOp,LatticeFermion> HermOp2(WilsonOperator); /// <-----
+  Gamma5R5HermitianLinearOperator<FermionOp, LatticeFermion> G5R5Herm(Ddwf);
+//  Gamma5R5HermitianLinearOperator
   std::vector<double> Coeffs{0, 1.};
   Polynomial<FermionField> PolyX(Coeffs);
-//  Chebyshev<FermionField> Cheby(0.5, 60., 31);
-//                                  RealD, ChebyLow,
-//                                RealD, ChebyHigh,
-//                                Integer, ChebyOrder)
 
   Chebyshev<FermionField> Cheby(LanParams.ChebyLow,LanParams.ChebyHigh,LanParams.ChebyOrder);
 
   FunctionHermOp<FermionField> OpCheby(Cheby,HermOp);
-     PlainHermOp<FermionField> Op     (HermOp);
-     PlainHermOp<FermionField> Op2     (HermOp2);
+  PlainHermOp<FermionField> Op     (HermOp);
+//  PlainHermOp<FermionField> Op2     (HermOp2);
 
-  ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op2, Nstop, Nk, Nm, resid, MaxIt);
+  ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op, Nstop, Nk, Nm, resid, MaxIt);
 
   std::vector<RealD> eval(Nm);
   FermionField src(FGrid);
@@ -199,14 +205,21 @@ while ( mass > - 5.0){
   Gamma g5(Gamma::Algebra::Gamma5) ;
   ComplexD dot;
   FermionField tmp(FGrid);
+  RealD eMe,eMMe;
   for (int i = 0; i < Nstop ; i++) {
-    tmp = g5*evec[i];
-    dot = innerProduct(tmp,evec[i]);
-    std::cout << mass << " : " << eval[i]  << " " << real(dot) << " " << imag(dot)  << std::endl ;
+//    tmp = g5*evec[i];
+    dot = innerProduct(evec[i],evec[i]);
+//    G5R5(tmp,evec[i]);
+    G5R5Herm.HermOpAndNorm(evec[i],tmp,eMe,eMMe);
+    std::cout <<"Norm "<<M5<<" "<< mass << " : " << i << " " << real(dot) << " " << imag(dot)  << " "<< eMe << " " <<eMMe<< std::endl ;
+    for (int j = 0; j < Nstop ; j++) {
+      dot = innerProduct(tmp,evec[j]);
+      std::cout <<"G5R5 "<<M5<<" "<< mass << " : " << i << " " <<j<<" " << real(dot) << " " << imag(dot)  << std::endl ;
+    }
   }
-  src  = evec[0]+evec[1]+evec[2];
-  mass += -0.1;
-}
+//  src  = evec[0]+evec[1]+evec[2];
+//  mass += -0.1;
+//
 
   Grid_finalize();
 }
