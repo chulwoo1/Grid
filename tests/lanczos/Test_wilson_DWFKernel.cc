@@ -99,7 +99,7 @@ public:
   void HermOp(const Field &in, Field &out){
      Field tmp(in.Grid());
      MdagMLinearOperator<Matrix,Field> denom(_Mat);
-     ConjugateGradient<Field> CG(_Tol,_MaxIt); 
+     ConjugateGradient<Field> CG(_Tol,_MaxIt,false); 
      _Mat.M(in,tmp);
      tmp += _num*in;
      _Mat.Mdag(tmp,out);

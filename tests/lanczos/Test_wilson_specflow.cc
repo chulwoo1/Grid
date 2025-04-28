@@ -162,8 +162,7 @@ int main(int argc, char** argv) {
 
 while ( mass > - 5.0){
   FermionOp WilsonOperator(Umu,*FGrid,*FrbGrid,mass);
-  MdagMLinearOperator<FermionOp,LatticeFermion> HermOp(WilsonOperator); /// <-----
-//  MdagMLinearOperator<FermionOp,FermionField> HermOp(WilsonOperator); /// <-----
+  MdagMLinearOperator<FermionOp,FermionField> HermOp(WilsonOperator); /// <-----
   //SchurDiagTwoOperator<FermionOp,FermionField> HermOp(WilsonOperator);
   Gamma5HermitianLinearOperator <FermionOp,LatticeFermion> HermOp2(WilsonOperator); /// <-----
 
