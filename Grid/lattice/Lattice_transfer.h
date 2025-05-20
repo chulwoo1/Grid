@@ -26,6 +26,9 @@ Author: Christoph Lehner <christoph@lhnr.de>
 *************************************************************************************/
 /*  END LEGAL */
 #pragma once
+#ifndef MIN
+#define MIN(x,y) ((x)>(y)?(y):(x))
+#endif
 
 NAMESPACE_BEGIN(Grid);
 
