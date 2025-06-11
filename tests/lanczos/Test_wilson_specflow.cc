@@ -131,9 +131,9 @@ int main(int argc, char** argv) {
   }
 */
 
-  int Nstop = 10;
-  int Nk = 20;
-  int Np = 80;
+  int Nstop = 20;
+  int Nk = 25;
+  int Np = 75;
   int Nm = Nk + Np;
   int MaxIt = 10000;
   RealD resid = 1.0e-5;

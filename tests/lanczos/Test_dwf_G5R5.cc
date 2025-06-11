@@ -7,6 +7,7 @@ Source file: ./tests/Test_dwf_G5R5.cc
 Copyright (C) 2015
 
 Author: Chulwoo Jung <chulwoo@bnl.gov>
+From Duo and Bob's Chirality study
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -184,7 +185,7 @@ int main(int argc, char** argv) {
 
   FunctionHermOp<FermionField> OpCheby(Cheby,HermOp);
   PlainHermOp<FermionField> Op     (HermOp);
-//  PlainHermOp<FermionField> Op2     (HermOp2);
+  PlainHermOp<FermionField> Op2     (G5R5Herm);
 
   ImplicitlyRestartedLanczos<FermionField> IRL(OpCheby, Op, Nstop, Nk, Nm, resid, MaxIt);
 
@@ -202,10 +203,11 @@ int main(int argc, char** argv) {
 
   std::cout << mass <<" : " << eval << std::endl;
 
+#if 0
   Gamma g5(Gamma::Algebra::Gamma5) ;
   ComplexD dot;
   FermionField tmp(FGrid);
-  RealD eMe,eMMe;
+//  RealD eMe,eMMe;
   for (int i = 0; i < Nstop ; i++) {
 //    tmp = g5*evec[i];
     dot = innerProduct(evec[i],evec[i]);
@@ -219,7 +221,126 @@ int main(int argc, char** argv) {
   }
 //  src  = evec[0]+evec[1]+evec[2];
 //  mass += -0.1;
-//
+#endif
+
+  //**********************************************************************
+  //orthogonalization
+  //calculat the matrix
+  cout << "Start orthogonalization " << endl;
+  cout << "calculate the matrix element" << endl;
+  vector<LatticeFermion> G5R5Mevec(Nconv, FGrid);
+  vector<LatticeFermion> finalevec(Nconv, FGrid);
+  vector<RealD> eMe(Nconv), eMMe(Nconv);
+  for(int i = 0; i < Nconv; i++){
+    G5R5Herm.HermOpAndNorm(evec[i], G5R5Mevec[i], eMe[i], eMMe[i]);
+  }
+  cout << "Re<evec, G5R5M(evec)>: " << endl;
+  cout << eMe << endl;
+  cout << "<G5R5M(evec), G5R5M(evec)>" << endl;
+  cout << eMMe << endl;
+  vector<vector<ComplexD>> VevecG5R5Mevec(Nconv);
+  Eigen::MatrixXcd evecG5R5Mevec = Eigen::MatrixXcd::Zero(Nconv, Nconv);
+  for(int i = 0; i < Nconv; i++){
+    VevecG5R5Mevec[i].resize(Nconv);
+    for(int j = 0; j < Nconv; j++){
+      VevecG5R5Mevec[i][j] = innerProduct(evec[i], G5R5Mevec[j]);
+      evecG5R5Mevec(i, j) = VevecG5R5Mevec[i][j];
+    }
+  }
+  //calculate eigenvector
+  cout << "Eigen solver" << endl;
+  Eigen::SelfAdjointEigenSolver<Eigen::MatrixXcd> eigensolver(evecG5R5Mevec);
+  vector<RealD> eigeneval(Nconv);
+  vector<vector<ComplexD>> eigenevec(Nconv);
+  for(int i = 0; i < Nconv; i++){
+    eigeneval[i] = eigensolver.eigenvalues()[i];
+    eigenevec[i].resize(Nconv);
+    for(int j = 0; j < Nconv; j++){
+      eigenevec[i][j] = eigensolver.eigenvectors()(i, j);
+    }
+  }
+  //rotation
+  cout << "Do rotation" << endl;
+  for(int i = 0; i < Nconv; i++){
+    finalevec[i] = finalevec[i] - finalevec[i];
+    for(int j = 0; j < Nconv; j++){
+      finalevec[i] = eigenevec[j][i]*evec[j] + finalevec[i];
+    }
+  }
+  //normalize again;
+  for(int i = 0; i < Nconv; i++){
+    RealD tmp_RealD = norm2(finalevec[i]);
+    tmp_RealD = 1./pow(tmp_RealD, 0.5);
+    finalevec[i] = finalevec[i]*tmp_RealD;
+  }
+
+  //check
+  for(int i = 0; i < Nconv; i++){
+    G5R5Herm.HermOpAndNorm(finalevec[i], G5R5Mevec[i], eMe[i], eMMe[i]);
+  }
+
+  //**********************************************************************
+  //sort the eigenvectors
+  vector<LatticeFermion> finalevec_copy(Nconv, FGrid);
+  for(int i = 0; i < Nconv; i++){
+    finalevec_copy[i] = finalevec[i];
+  }
+  vector<RealD> eMe_copy(eMe);
+  for(int i = 0; i < Nconv; i++){
+    eMe[i] = fabs(eMe[i]);
+    eMe_copy[i] = eMe[i];
+  }
+  sort(eMe_copy.begin(), eMe_copy.end());
+  for(int i = 0; i < Nconv; i++){
+    for(int j = 0; j < Nconv; j++){
+      if(eMe[j] == eMe_copy[i]){
+        finalevec[i] = finalevec_copy[j];
+      }
+    }
+  }
+    for(int i = 0; i < Nconv; i++){
+    G5R5Herm.HermOpAndNorm(finalevec[i], G5R5Mevec[i], eMe[i], eMMe[i]);
+  }
+  cout << "Re<evec, G5R5M(evec)>: " << endl;
+  cout << eMe << endl;
+  cout << "<G5R5M(evec), G5R5M(evec)>" << endl;
+  cout << eMMe << endl;
+
+
+//  vector<LatticeFermion> finalevec(Nconv, FGrid);
+// temporary, until doing rotation
+//  for(int i = 0; i < Nconv; i++)
+//	  finalevec[i]=evec[i];
+  //**********************************************************************
+  //calculate chirality matrix
+  vector<LatticeFermion> G5evec(Nconv, FGrid);
+  vector<vector<ComplexD>> chiral_matrix(Nconv);
+  vector<vector<RealD>> chiral_matrix_real(Nconv);
+  for(int i = 0; i < Nconv; i++){
+//    G5evec[i] = G5evec[i] - G5evec[i];
+    G5evec[i] = Zero();
+    for(int j = 0; j < Ls/2; j++){
+      axpby_ssp(G5evec[i], 1., finalevec[i], 0., G5evec[i], j, j);
+    }
+    for(int j = Ls/2; j < Ls; j++){
+      axpby_ssp(G5evec[i], -1., finalevec[i], 0., G5evec[i], j, j);
+    }
+  }
+  for(int i = 0; i < Nconv; i++){
+    chiral_matrix_real[i].resize(Nconv);
+    chiral_matrix[i].resize(Nconv);
+    for(int j = 0; j < Nconv; j++){
+      chiral_matrix[i][j] = innerProduct(finalevec[i], G5evec[j]);
+      chiral_matrix_real[i][j] = abs(chiral_matrix[i][j]);
+      std::cout <<" chiral_matrix_real "<<i<<" "<<j<<" "<< chiral_matrix_real[i][j] << std::endl;
+    }
+  }
+  for(int i = 0; i < Nconv; i++){
+    if(chiral_matrix[i][i].real() < 0.){
+      chiral_matrix_real[i][i] = -1. * chiral_matrix_real[i][i];
+    }
+  }
+
 
   Grid_finalize();
 }

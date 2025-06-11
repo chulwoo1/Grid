@@ -31,6 +31,13 @@ directory
 
 #pragma once
 
+#ifndef MAX
+#define MAX(x,y) ((x)>(y)?(x):(y))
+#define MIN(x,y) ((x)>(y)?(y):(x))
+#endif
+
+
+
 NAMESPACE_BEGIN(Grid);
 
 template<class Field>

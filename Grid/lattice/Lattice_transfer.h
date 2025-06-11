@@ -27,6 +27,11 @@ Author: Christoph Lehner <christoph@lhnr.de>
 /*  END LEGAL */
 #pragma once
 
+#ifndef MIN
+//#define MAX(x,y) ((x)>(y)?(x):(y))
+#define MIN(x,y) ((x)>(y)?(y):(x))
+#endif
+
 NAMESPACE_BEGIN(Grid);
 
 inline void subdivides(GridBase *coarse,GridBase *fine)
