@@ -122,8 +122,10 @@ public:
   };
 
   void CheckpointRestore(int traj, Field &U, GridSerialRNG &sRNG, GridParallelRNG &pRNG) {
-    std::string config, mom, rng;
-    this->build_filenames(traj, Params, config, mom, rng);
+//    std::string config, mom, rng;
+//    this->build_filenames(traj, Params, config, mom, rng);
+    std::string config, rng, smr;
+    this->build_filenames(traj, Params, config, smr, rng);
     this->check_filename(rng);
     this->check_filename(config);
 
