@@ -35,6 +35,8 @@ directory
 #define MIXED_PRECISION
 #endif
 // second level EOFA
+#undef EVOL_24I
+#define EVOL_32Ifine
 #define EOFA_H
 #undef USE_OBC
 
@@ -230,23 +232,33 @@ int main(int argc, char **argv) {
   typedef PlaquetteMod<HMCWrapper::ImplPolicy> PlaqObs;
   TheHMC.Resources.AddObservable<PlaqObs>();
   //////////////////////////////////////////////
-
+#ifdef EVOL_24I
+  const int Ls      = 16;
+  Real light_mass   = 0.005;
+  Real strange_mass = 0.04;
+  RealD b   = 1.0;
+  RealD c   = 0.0;
+  // Copied from paper
+  std::vector<Real> hasenbusch({ 0.017, 0.07, 0.18, 0.45 });
+#else
   const int Ls      = 24;
-  Real beta         = 2.13;
-  std::cout << GridLogMessage << " beta  "<< beta << std::endl;
   Real light_mass   = 0.00078;
   Real strange_mass = 0.0362;
-  Real pv_mass      = 1.0;
-  RealD M5  = 1.8;
   RealD b   = 1.5;
   RealD c   = 0.5;
-
   // Copied from paper
   std::vector<Real> hasenbusch({ 0.005, 0.017, 0.07, 0.18, 0.45 });
+#endif
+  Real beta         = 2.13;
+  std::cout << GridLogMessage << " beta  "<< beta << std::endl;
+  Real pv_mass      = 1.0;
+  RealD M5  = 1.8;
+
+
 
 //  std::vector<Real> hasenbusch2({ 0.4 }); // Paper values from F1 incorrect run
 //EOFA Hasenbusch
-  RealD eofa_mass=0.183 ;
+  RealD eofa_mass=0.2 ;
 
   auto GridPtr   = TheHMC.Resources.GetCartesian();
   auto GridRBPtr = TheHMC.Resources.GetRBCartesian();
