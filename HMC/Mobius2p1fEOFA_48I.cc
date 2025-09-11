@@ -233,6 +233,7 @@ int main(int argc, char **argv) {
   TheHMC.Resources.AddObservable<PlaqObs>();
   //////////////////////////////////////////////
 #ifdef EVOL_24I
+  Real beta         = 2.13;
   const int Ls      = 16;
   Real light_mass   = 0.005;
   Real strange_mass = 0.04;
@@ -240,7 +241,17 @@ int main(int argc, char **argv) {
   RealD c   = 0.0;
   // Copied from paper
   std::vector<Real> hasenbusch({ 0.017, 0.07, 0.18, 0.45 });
+#elif defined(EVOL_32Ifine)
+  Real beta         = 2.37;
+  const int Ls      = 12;
+  Real light_mass   = 0.0047;
+  Real strange_mass = 0.0186;
+  RealD b   = 1.0;
+  RealD c   = 0.0;
+  // Copied from paper
+  std::vector<Real> hasenbusch({ 0.017, 0.07, 0.18, 0.45 });
 #else
+  Real beta         = 2.13;
   const int Ls      = 24;
   Real light_mass   = 0.00078;
   Real strange_mass = 0.0362;
@@ -249,7 +260,6 @@ int main(int argc, char **argv) {
   // Copied from paper
   std::vector<Real> hasenbusch({ 0.005, 0.017, 0.07, 0.18, 0.45 });
 #endif
-  Real beta         = 2.13;
   std::cout << GridLogMessage << " beta  "<< beta << std::endl;
   Real pv_mass      = 1.0;
   RealD M5  = 1.8;
