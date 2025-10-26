@@ -203,7 +203,8 @@ private:
 
     Smearing.set_Field(U);
 
-    HybridMonteCarlo<TheIntegrator> HMC(Parameters, MDynamics,
+///    HybridMonteCarlo<TheIntegrator> HMC(Parameters, MDynamics,
+    FFFHybridMonteCarlo<TheIntegrator> HMC(Parameters, MDynamics,
                                         Resources.GetSerialRNG(),
                                         Resources.GetParallelRNG(), 
                                         Resources.GetObservables(), U,Mom);
