@@ -341,12 +341,6 @@ int main(int argc, char **argv) {
   MobiusEOFAFermionD Strange_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , charm_mass, strange_mass,      charm_mass, -1.0, 1, M5, b, c);
   MobiusEOFAFermionF Strange_Op_RF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, charm_mass, strange_mass,      charm_mass, -1.0, 1, M5, b, c);
   
-#ifdef EOFA_H
-  MobiusEOFAFermionD Strange2_Op_L (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , eofa_mass, eofa_mass, charm_mass , 0.0, -1, M5, b, c);
-  MobiusEOFAFermionF Strange2_Op_LF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, eofa_mass, eofa_mass, charm_mass , 0.0, -1, M5, b, c);
-  MobiusEOFAFermionD Strange2_Op_R (U , *FGrid , *FrbGrid , *GridPtr , *GridRBPtr , charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
-  MobiusEOFAFermionF Strange2_Op_RF(UF, *FGridF, *FrbGridF, *UGrid_f, *GridRBPtrF, charm_mass , eofa_mass,      charm_mass , -1.0, 1, M5, b, c);
-#endif
 
   ConjugateGradient<FermionField>      ActionCG(ActionStoppingCondition,MaxCGIterations);
   ConjugateGradient<FermionField>  DerivativeCG(DerivativeStoppingCondition,MaxCGIterations);
@@ -359,13 +353,6 @@ int main(int argc, char **argv) {
   LinearOperatorEOFAF Strange_LinOp_LF(Strange_Op_LF);
   LinearOperatorEOFAF Strange_LinOp_RF(Strange_Op_RF);
 
-#ifdef EOFA_H
-  // Mixed precision EOFA
-  LinearOperatorEOFAD Strange2_LinOp_L (Strange2_Op_L);
-  LinearOperatorEOFAD Strange2_LinOp_R (Strange2_Op_R);
-  LinearOperatorEOFAF Strange2_LinOp_LF(Strange2_Op_LF);
-  LinearOperatorEOFAF Strange2_LinOp_RF(Strange2_Op_RF);
-#endif
 
   MxPCG_EOFA ActionCGL(ActionStoppingCondition,
 		       MX_inner,
@@ -375,15 +362,6 @@ int main(int argc, char **argv) {
 		       Strange_Op_LF,Strange_Op_L,
 		       Strange_LinOp_LF,Strange_LinOp_L);
 
-#ifdef EOFA_H
-  MxPCG_EOFA ActionCGL2(ActionStoppingCondition,
-		       MX_inner,
-		       MaxCGIterations,
-		       UGrid_f,
-		       FrbGridF,
-		       Strange2_Op_LF,Strange2_Op_L,
-		       Strange2_LinOp_LF,Strange2_LinOp_L);
-#endif
 
   MxPCG_EOFA DerivativeCGL(DerivativeStoppingCondition,
 			   MX_inner,
@@ -393,15 +371,6 @@ int main(int argc, char **argv) {
 			   Strange_Op_LF,Strange_Op_L,
 			   Strange_LinOp_LF,Strange_LinOp_L);
 
-#ifdef EOFA_H
-  MxPCG_EOFA DerivativeCGL2(DerivativeStoppingCondition,
-			   MX_inner,
-			   MaxCGIterations,
-			   UGrid_f,
-			   FrbGridF,
-			   Strange2_Op_LF,Strange2_Op_L,
-			   Strange2_LinOp_LF,Strange2_LinOp_L);
-#endif
   
   MxPCG_EOFA ActionCGR(ActionStoppingCondition,
 		       MX_inner,
@@ -411,15 +380,6 @@ int main(int argc, char **argv) {
 		       Strange_Op_RF,Strange_Op_R,
 		       Strange_LinOp_RF,Strange_LinOp_R);
   
-#ifdef EOFA_H
-  MxPCG_EOFA ActionCGR2(ActionStoppingCondition,
-		       MX_inner,
-		       MaxCGIterations,
-		       UGrid_f,
-		       FrbGridF,
-		       Strange2_Op_RF,Strange2_Op_R,
-		       Strange2_LinOp_RF,Strange2_LinOp_R);
-#endif
   
   MxPCG_EOFA DerivativeCGR(DerivativeStoppingCondition,
 			   MX_inner,
@@ -429,15 +389,6 @@ int main(int argc, char **argv) {
 			   Strange_Op_RF,Strange_Op_R,
 			   Strange_LinOp_RF,Strange_LinOp_R);
   
-#ifdef EOFA_H
-  MxPCG_EOFA DerivativeCGR2(DerivativeStoppingCondition,
-			   MX_inner,
-			   MaxCGIterations,
-			   UGrid_f,
-			   FrbGridF,
-			   Strange2_Op_RF,Strange2_Op_R,
-			   Strange2_LinOp_RF,Strange2_LinOp_R);
-#endif
   
   ExactOneFlavourRatioPseudoFermionAction<FermionImplPolicy> 
     EOFA(Strange_Op_L, Strange_Op_R, 
@@ -446,19 +397,8 @@ int main(int argc, char **argv) {
 	 DerivativeCGL, DerivativeCGR,
 	 OFRp, true);
   
-#ifdef EOFA_H
-  ExactOneFlavourRatioPseudoFermionAction<FermionImplPolicy> 
-    EOFA2(Strange2_Op_L, Strange2_Op_R, 
-	 ActionCG, 
-	 ActionCGL2, ActionCGR2,
-	 DerivativeCGL2, DerivativeCGR2,
-	 OFRp, true);
-#endif
 
   Level1.push_back(&EOFA);
-#ifdef EOFA_H
-  Level1.push_back(&EOFA2);
-#endif
 
 #else
   ExactOneFlavourRatioPseudoFermionAction<FermionImplPolicy> 
@@ -554,11 +494,6 @@ int main(int argc, char **argv) {
     ////////////////////////////////////////////////////////////////////////////
     Quotients.push_back   (new TwoFlavourEvenOddRatioPseudoFermionAction<FermionImplPolicy>(*Numerators[h],*Denominators[h],DerivativeCG,ActionCG));
 #endif
-
-  }
-
-  for(int h=0;h<n_hasenbusch+1;h++){
-//  for(int h=0;h<light_den.size();h++){
     Level1.push_back(Quotients[h]);
 
   }
@@ -589,31 +524,6 @@ int main(int argc, char **argv) {
 //#include<g_poly.h.inc>     
 //#include<poly_try_3.h.inc>
 #include<poly_try_cheb_1.h.inc>
-//    LaplacianRatParams gpar(2),mpar(2);
-
-#if 0
-    double shift=-0;// not working for poly
-		    
-    for(int i=0;i<gpar.order;i++){
-       double a0 = gpar.a0[i] + shift*gpar.a1[i];
-       double a1 = gpar.a1[i];
-       gpar.a0[i] =a0;
-       gpar.a1[i] =a1;
-       double b0 = gpar.b0[i] + shift*gpar.b1[i]+shift*shift*gpar.b2[i];
-       double b1 = gpar.b1[i] + 2*shift*gpar.b2[i];
-       gpar.b0[i] =b0;
-       gpar.b1[i] =b1;
-    }
-
-      for(int i=0;i<mpar.order;i++){
-       double a0 = mpar.a0[i] + shift*mpar.a1[i];
-       mpar.a0[i] =a0;
-       double b0 = mpar.b0[i] + shift*mpar.b1[i]+shift*shift*(RealD)mpar.b2[i];
-       double b1 = mpar.b1[i] + 2*shift*(RealD)mpar.b2[i];
-       mpar.b0[i] =b0;
-       mpar.b1[i] =b1;
-    }
-#endif
 
     for(int i=0;i<gpar.order;i++){
        gpar.a1[i] *=16.;
