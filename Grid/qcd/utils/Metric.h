@@ -150,7 +150,22 @@ public:
        M.MinvDerivTest (Mom, dU, 0.1);
     }
 
+    MomentaField MomOrig(Mom.Grid());
+    MomOrig=Mom;
     M.MSquareRoot(Mom);
+    MomentaField MomTemp(Mom.Grid());
+    MomTemp=Mom;
+
+    if(1){
+        std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig) = " <<norm2(MomOrig) << "\n";
+        std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig*M) = " <<norm2(Mom) << "\n";
+        M.MInvSquareRoot(MomTemp);
+        std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig*M*Minv) = " <<norm2(MomTemp) << "\n";
+        MomTemp -=MomOrig;
+        std::cout << GridLogMessage << "MomentaDistribution:norm2(MomOrig*M*Minv-MomOrig) = " <<norm2(MomTemp) << "\n";
+    }
+
+
 
     if (1) {
       // Auxiliary momenta
@@ -169,7 +184,21 @@ public:
          M.MDerivTest (AuxMom, dU, 0.01);
          M.MDerivTest (AuxMom, dU, 0.1);
       }
+
+      MomOrig=AuxMom;
       M.MInvSquareRoot(AuxMom);  // AuxMom = M^{-1/2} AuxMomTemp
+      MomTemp=AuxMom;
+
+      if(1){
+          std::cout << GridLogMessage << "MomentaDistribution:norm2(AuxMomOrig) = " <<norm2(MomOrig) << "\n";
+          std::cout << GridLogMessage << "MomentaDistribution:norm2(AuxMomOrig*Minv) = " <<norm2(AuxMom) << "\n";
+          M.MSquareRoot(MomTemp);
+          std::cout << GridLogMessage << "MomentaDistribution:norm2(AuxMomOrig*M*Minv) = " <<norm2(MomTemp) << "\n";
+          MomTemp -=MomOrig;
+          std::cout << GridLogMessage << "MomentaDistribution:norm2(AuxMomOrig*M*Minv-MomOrig) = " <<norm2(MomTemp) << "\n";
+      }
+
+
     }
   }
 

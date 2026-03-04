@@ -32,6 +32,7 @@ using namespace Grid;
 
 int main(int argc, char **argv)
 {
+#if 0
   std::cout << std::setprecision(12);
   
   Grid_init(&argc, &argv);
@@ -220,6 +221,7 @@ int main(int argc, char **argv)
   TheHMC.Run(SmearingPolicy); // for smearing
 
   Grid_finalize();
+#endif
 } // main
 
 

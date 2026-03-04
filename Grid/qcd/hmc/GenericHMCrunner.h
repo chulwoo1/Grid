@@ -177,6 +177,11 @@ public:
       exit(1);
     }
   }
+  void initializeGaugeFieldAndRNGs(Field &U){
+    auto UGrid = Resources.GetCartesian();
+    Field Mom(UGrid);
+    initializeGaugeFieldAndRNGs(U,Mom);
+  }
 
 
 
