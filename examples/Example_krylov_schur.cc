@@ -351,8 +351,8 @@ int main (int argc, char ** argv)
 //    BlockKrylovSchur KrySchur (Dwilson, UGrid, resid,EvalImNormSmall);
     HarmonicBlockKrylovSchur KrySchur (Dwilson, UGrid, resid,shift,EvalNormSmall);
     KrySchur.doEvalCheck=true;
-    KrySchur.useParityFlip=true; std::cout << GridLogMessage << "useParityFlip= " <<KrySchur.useParityFlip<< std::endl;
-    KrySchur.useGamma5=true; std::cout << GridLogMessage << "useGamma5= " <<KrySchur.useGamma5<< std::endl;
+//    KrySchur.useParityFlip=true; std::cout << GridLogMessage << "useParityFlip= " <<KrySchur.useParityFlip<< std::endl;
+//    KrySchur.useGamma5=true; std::cout << GridLogMessage << "useGamma5= " <<KrySchur.useGamma5<< std::endl;
     KrySchur.gamma5Func = [](const FermionField& v, FermionField& out) {
       Gamma g5(Gamma::Algebra::Gamma5);
       out = g5 * v;

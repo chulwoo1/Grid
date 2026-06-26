@@ -228,11 +228,13 @@ public:
       ComplexSchurDecomposition schur(Hshift, false, ritzFilter);
       schur.schurReorder(Nk);
 
+      CMat S = schur.getMatrixS();
+#if 0
       std::cout << GridLogMessage
                 << "HarmonicBlockKrylovSchur: Ritz values nearest shift (first Nk):" << std::endl;
-      CMat S = schur.getMatrixS();
       for (int i = 0; i < Nk; i++)
         std::cout << GridLogMessage << "  [" << i << "] " << S(i, i) + shift << std::endl;
+#endif
 
       CMat Q  = schur.getMatrixQ();
       CMat Qt = Q.adjoint();
