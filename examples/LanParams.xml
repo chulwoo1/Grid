@@ -13,7 +13,7 @@
     <reorthog>1</reorthog>
     <Nblock>4</Nblock>
     <verify>0</verify>
-    <shift>1.5</shift>
+    <shift>0.8</shift>
     <resid>1e-8</resid>
     <ChebyLow>1</ChebyLow>
     <ChebyHigh>100</ChebyHigh>

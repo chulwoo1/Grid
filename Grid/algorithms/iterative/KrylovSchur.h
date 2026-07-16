@@ -31,6 +31,8 @@ See the full license in the file "LICENSE" in the top level distribution directo
 #ifndef GRID_KRYLOVSCHUR_H
 #define GRID_KRYLOVSCHUR_H
 
+#include <fstream>
+
 NAMESPACE_BEGIN(Grid);
 
 #if defined(GRID_CUDA) || defined(GRID_HIP)
@@ -54,6 +56,29 @@ struct KSCoeffMat {
   KSCoeffMat(int _n) : a(_n*_n), n(_n) {}
   ComplexD&       operator()(int i, int j)       { return a[i*n+j]; }
   const ComplexD& operator()(int i, int j) const { return a[i*n+j]; }
+};
+
+/**
+ * Sidecar metadata for a (non-block) KrylovSchur job-level checkpoint
+ * (see bks_checkpoint_restart.md).  The small quantities Rayleigh[0:Nk,0:Nk]
+ * and the b vector are stored as flat re/im-interleaved double vectors so the
+ * format is independent of the build's complex type (std::complex vs
+ * thrust::complex).  Written as XML by the boss rank only, at full precision.
+ */
+class KSCheckpointMeta : Serializable {
+public:
+  GRID_SERIALIZABLE_CLASS_MEMBERS(KSCheckpointMeta,
+                                  int,    Nm,
+                                  int,    Nk,
+                                  int,    Nstop,
+                                  int,    iter,
+                                  int,    ritzFilter,
+                                  double, rtol,
+                                  double, ssq,
+                                  double, beta_k,
+                                  double, shift,
+                                  std::vector<double>, Rdata,
+                                  std::vector<double>, bdata);
 };
 
 /**
@@ -350,8 +375,30 @@ class KrylovSchur {
 
     RitzFilter ritzFilter;                  // how to sort evals
 
+    int checkpointCounter = 0;              // alternates the A/B checkpoint slot
+
   public:
     bool doEvalCheck = false;
+
+    //------------------------------------------------------------------
+    // Job-level checkpoint / resume  (see bks_checkpoint_restart.md)
+    //------------------------------------------------------------------
+    // Non-empty prefix enables checkpoint writing every checkpointInterval
+    // restart iterations, at the post-truncation point where the resumable
+    // state is smallest: basis[0:Nk], u, Rayleigh[0:Nk,0:Nk], b, beta_k, rtol.
+    // Writes alternate between slots <prefix>.A and <prefix>.B so a crash
+    // mid-write never loses the only copy; the sidecar meta file is written
+    // last, so an incomplete slot is never selected on resume.
+    std::string checkpointPrefix   = "";
+    int         checkpointInterval = 1;
+    // When true, operator() ignores v0, loads the newest valid slot and
+    // continues from the saved restart iteration.
+    bool        resumeFromCheckpoint = false;
+    // Lattice-field I/O hooks (must be set when checkpointing/resuming).
+    // std::function for the same layering reason as elsewhere: ScidacWriter/
+    // ScidacReader live in an include layer above Algorithms.h.
+    std::function<void(Field&, const std::string&)> fieldWrite;
+    std::function<void(Field&, const std::string&)> fieldRead;
 
     KrylovSchur(LinearOperatorBase<Field> &_Linop, GridBase *_Grid, RealD _Tolerance, RitzFilter filter = EvalReSmall)
       : Linop(_Linop), Grid(_Grid), Tolerance(_Tolerance), ritzFilter(filter), u(_Grid), MaxIter(-1), Nm(-1), Nk(-1), Nstop (-1),
@@ -384,18 +431,28 @@ class KrylovSchur {
       Nm = _Nm; Nk = _Nk;
       Nstop = _Nstop;
 
-      ssq = norm2(v0);
-      RealD approxLambdaMax = approxMaxEval(v0);
-      rtol = Tolerance * approxLambdaMax;
-      std::cout << GridLogMessage << "Approximate max eigenvalue: " << approxLambdaMax << std::endl;
-
-      b = Eigen::VectorXcd::Zero(Nm);       // start as e_{k+1}
-      b(Nm-1) = 1.0;
-
       int start = 0;
-      Field startVec = v0;
+      int i0    = 0;
+      Field startVec(Grid);
       littleEvecs = Eigen::MatrixXcd::Zero(Nm, Nm);
-      for (int i = 0; i < MaxIter; i++) {
+
+      if (resumeFromCheckpoint) {
+        loadCheckpoint(i0, start, startVec);
+        std::cout << GridLogMessage << cname << ": resuming at restart iteration "
+                  << i0 << ", rtol = " << rtol << std::endl;
+      } else {
+        ssq = norm2(v0);
+        RealD approxLambdaMax = approxMaxEval(v0);
+        rtol = Tolerance * approxLambdaMax;
+        std::cout << GridLogMessage << "Approximate max eigenvalue: " << approxLambdaMax << std::endl;
+
+        b = Eigen::VectorXcd::Zero(Nm);       // start as e_{k+1}
+        b(Nm-1) = 1.0;
+
+        startVec = v0;
+      }
+
+      for (int i = i0; i < MaxIter; i++) {
         std::cout << GridLogMessage << "Restart Iteration " << i << std::endl;
 
         // Perform Arnoldi steps to compute Krylov basis and Rayleigh quotient (Hess)
@@ -445,6 +502,10 @@ class KrylovSchur {
         computeEigensystem(Rayleigh);
         std::cout << GridLogMessage << "Eigenvalues (first Nk sorted): " << std::endl << evals << std::endl;
 
+        // Job-level checkpoint at the post-truncation point.
+        if (!checkpointPrefix.empty() && ((i + 1) % checkpointInterval == 0))
+          saveCheckpoint(i, 0.0);
+
         if (checkConvergedAndReport(i)) return;
       }
     }
@@ -463,18 +524,32 @@ class KrylovSchur {
       Nm = _Nm; Nk = _Nk;
       Nstop = _Nstop;
 
-      ssq = norm2(v0);
-      RealD approxLambdaMax = approxMaxEval(v0);
-      rtol = Tolerance * approxLambdaMax;
-      std::cout << GridLogMessage << "Approximate max eigenvalue: " << approxLambdaMax << std::endl;
-
-      b = Eigen::VectorXcd::Zero(Nm);       // start as e_{k+1}
-      b(Nm-1) = 1.0;
-
       int start = 0;
-      Field startVec = v0;
+      int i0    = 0;
+      Field startVec(Grid);
       littleEvecs = Eigen::MatrixXcd::Zero(Nm, Nm);
-      for (int i = 0; i < MaxIter; i++) {
+
+      if (resumeFromCheckpoint) {
+        double loadedShift = 0.0;
+        loadCheckpoint(i0, start, startVec, &loadedShift);
+        if (loadedShift != shiftVal)
+          std::cout << GridLogWarning << cname << ": checkpoint shift = " << loadedShift
+                    << " differs from requested shift = " << shiftVal << std::endl;
+        std::cout << GridLogMessage << cname << ": resuming at restart iteration "
+                  << i0 << ", rtol = " << rtol << ", shift = " << shiftVal << std::endl;
+      } else {
+        ssq = norm2(v0);
+        RealD approxLambdaMax = approxMaxEval(v0);
+        rtol = Tolerance * approxLambdaMax;
+        std::cout << GridLogMessage << "Approximate max eigenvalue: " << approxLambdaMax << std::endl;
+
+        b = Eigen::VectorXcd::Zero(Nm);       // start as e_{k+1}
+        b(Nm-1) = 1.0;
+
+        startVec = v0;
+      }
+
+      for (int i = i0; i < MaxIter; i++) {
         std::cout << GridLogMessage << "Restart Iteration " << i << std::endl;
 
         // Perform Arnoldi steps to compute Krylov basis and Rayleigh quotient (Hess)
@@ -546,11 +621,158 @@ class KrylovSchur {
         computeEigensystem(Rayleigh);
         std::cout << GridLogMessage << "Eigenvalues (first Nk sorted): " << std::endl << evals << std::endl;
 
+        // Job-level checkpoint at the post-restart point.
+        if (!checkpointPrefix.empty() && ((i + 1) % checkpointInterval == 0))
+          saveCheckpoint(i, shiftVal);
+
         if (checkConvergedAndReport(i)) return;
       }
     }
 
   private:
+
+    //------------------------------------------------------------------
+    // Job-level checkpoint / resume
+    //------------------------------------------------------------------
+    /**
+     * Write the resumable state to the next A/B slot:
+     *   <prefix>.<slot>.basis.<i>  i = 0..Nk-1   (lattice fields)
+     *   <prefix>.<slot>.u          residual field
+     *   <prefix>.<slot>.meta.xml   Rayleigh[0:Nk,0:Nk], b, rtol, ssq, beta_k, ...
+     *
+     * Fields are written first and the sidecar last: a crash mid-write leaves
+     * the slot without a fresh meta file, so loadCheckpoint never selects an
+     * incomplete slot.  Called at the post-truncation point, where
+     * A V_k = V_k Rayleigh_k + u b^dag holds exactly with the stored quantities.
+     */
+    void saveCheckpoint(int iter, double shiftVal)
+    {
+      assert(fieldWrite && "checkpoint: fieldWrite hook must be set");
+      assert((int)basis.size() == Nk);
+
+      std::string slot = (checkpointCounter % 2 == 0) ? "A" : "B";
+      checkpointCounter++;
+      std::string base = checkpointPrefix + "." + slot;
+
+      std::cout << GridLogMessage << cname << ": writing checkpoint to slot "
+                << base << " (iter " << iter << ")" << std::endl;
+
+      for (int i = 0; i < Nk; i++)
+        fieldWrite(basis[i], base + ".basis." + std::to_string(i));
+      fieldWrite(u, base + ".u");
+
+      KSCheckpointMeta meta;
+      meta.Nm         = Nm;
+      meta.Nk         = Nk;
+      meta.Nstop      = Nstop;
+      meta.iter       = iter;
+      meta.ritzFilter = (int)ritzFilter;
+      meta.rtol       = rtol;
+      meta.ssq        = ssq;
+      meta.beta_k     = beta_k;
+      meta.shift      = shiftVal;
+
+      meta.Rdata.resize(2 * Nk * Nk);
+      for (int i = 0; i < Nk; i++)
+        for (int j = 0; j < Nk; j++) {
+          meta.Rdata[2*(i*Nk + j)    ] = Rayleigh(i, j).real();
+          meta.Rdata[2*(i*Nk + j) + 1] = Rayleigh(i, j).imag();
+        }
+      meta.bdata.resize(2 * Nk);
+      for (int j = 0; j < Nk; j++) {
+        meta.bdata[2*j    ] = b(j).real();
+        meta.bdata[2*j + 1] = b(j).imag();
+      }
+
+      if (Grid->IsBoss()) {
+        XmlWriter WR(base + ".meta.xml");
+        // Full double precision: the default 6-digit formatting would truncate
+        // Rayleigh/b/rtol and break the exactness of the resumed KS relation.
+        WR.setPrecision(17);
+        WR.scientificFormat(true);
+        write(WR, "KSCheckpoint", meta);
+      }
+      Grid->Barrier();
+
+      std::cout << GridLogMessage << cname << ": checkpoint slot "
+                << base << " complete." << std::endl;
+    }
+
+    /**
+     * Load the newest valid checkpoint slot, restoring basis, u, Rayleigh, b,
+     * rtol, ssq, beta_k; returns the restart iteration to continue from in
+     * iter0, sets start = Nk and startVec = u.  If shiftOut != nullptr the
+     * stored shift is returned there.  Nk must match the checkpoint; Nm may
+     * differ (the loop re-extends the factorisation to the new Nm).
+     */
+    void loadCheckpoint(int& iter0, int& start, Field& startVec, double* shiftOut = nullptr)
+    {
+      assert(fieldRead && "checkpoint: fieldRead hook must be set");
+      assert(!checkpointPrefix.empty() && "checkpoint: checkpointPrefix must be set");
+
+      auto metaExists = [](const std::string& fn) {
+        std::ifstream f(fn);
+        return f.good();
+      };
+
+      KSCheckpointMeta metaA, metaB;
+      bool haveA = metaExists(checkpointPrefix + ".A.meta.xml");
+      bool haveB = metaExists(checkpointPrefix + ".B.meta.xml");
+      if (haveA) { XmlReader RD(checkpointPrefix + ".A.meta.xml"); read(RD, "KSCheckpoint", metaA); }
+      if (haveB) { XmlReader RD(checkpointPrefix + ".B.meta.xml"); read(RD, "KSCheckpoint", metaB); }
+      assert((haveA || haveB) && "checkpoint: no meta file found for either slot");
+
+      KSCheckpointMeta meta;
+      std::string base;
+      if (haveA && (!haveB || metaA.iter >= metaB.iter)) {
+        base = checkpointPrefix + ".A";
+        meta = metaA;
+        checkpointCounter = 1;   // next write goes to slot B
+      } else {
+        base = checkpointPrefix + ".B";
+        meta = metaB;
+        checkpointCounter = 0;   // next write goes to slot A
+      }
+
+      std::cout << GridLogMessage << cname << ": loading checkpoint from slot "
+                << base << " (saved at iter " << meta.iter << ")" << std::endl;
+
+      assert(meta.Nk == Nk && "checkpoint: Nk mismatch");
+      if (meta.Nm != Nm)
+        std::cout << GridLogMessage << cname << ": checkpoint Nm = " << meta.Nm
+                  << " -> continuing with Nm = " << Nm << std::endl;
+      if (meta.Nstop != Nstop)
+        std::cout << GridLogMessage << cname << ": checkpoint Nstop = " << meta.Nstop
+                  << " -> continuing with Nstop = " << Nstop << std::endl;
+      if (meta.ritzFilter != (int)ritzFilter)
+        std::cout << GridLogWarning << cname << ": checkpoint ritzFilter = "
+                  << meta.ritzFilter << " differs from current = " << (int)ritzFilter << std::endl;
+
+      rtol   = meta.rtol;
+      ssq    = meta.ssq;
+      beta_k = meta.beta_k;
+      iter0  = meta.iter + 1;
+      start  = Nk;
+      if (shiftOut) *shiftOut = meta.shift;
+
+      Rayleigh = Eigen::MatrixXcd::Zero(Nk, Nk);
+      for (int i = 0; i < Nk; i++)
+        for (int j = 0; j < Nk; j++)
+          Rayleigh(i, j) = std::complex<double>(meta.Rdata[2*(i*Nk + j)],
+                                                meta.Rdata[2*(i*Nk + j) + 1]);
+      b = Eigen::VectorXcd::Zero(Nk);
+      for (int j = 0; j < Nk; j++)
+        b(j) = std::complex<double>(meta.bdata[2*j], meta.bdata[2*j + 1]);
+
+      basis.clear();
+      for (int i = 0; i < Nk; i++) {
+        Field tmp(Grid);
+        fieldRead(tmp, base + ".basis." + std::to_string(i));
+        basis.push_back(tmp);
+      }
+      fieldRead(u, base + ".u");
+      startVec = u;
+    }
 
     /**
      * Shared post-restart convergence check. On convergence (or the final
