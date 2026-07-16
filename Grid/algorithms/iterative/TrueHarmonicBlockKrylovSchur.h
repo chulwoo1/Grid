@@ -129,12 +129,19 @@ public:
   using Base::useGamma5;
   using Base::gamma5Func;
   using Base::verify;
+  using Base::checkpointPrefix;
+  using Base::checkpointInterval;
+  using Base::resumeFromCheckpoint;
+  using Base::saveCheckpoint;
+  using Base::loadCheckpoint;
 
   TrueHarmonicBlockKrylovSchur(LinearOperatorBase<Field>& _Linop, GridBase* _Grid,
                                RealD _Tolerance, ComplexD _shift = 0.0,
                                RitzFilter _rf = EvalNormSmall)
     : Base(_Linop, _Grid, _Tolerance, _shift, _rf)
-  {}
+  {
+    this->className = "TrueHarmonicBlockKrylovSchur";
+  }
 
   //--------------------------------------------------------------------
   // Main entry point (same signature and outer structure as the base;
@@ -150,7 +157,7 @@ public:
     Nstop   = _Nstop;
     Nblock  = _Nblock;
 
-    {
+    if (!resumeFromCheckpoint) {
       int divisor = 1;
       if (useParityFlip) divisor *= 2;
       if (useGamma5)     divisor *= 2;
@@ -163,20 +170,37 @@ public:
 
     int N = Nm;
 
-    RealD approxLambdaMax = approxMaxEval(v0[0]);
-    rtol = Tolerance * approxLambdaMax;
-    std::cout << GridLogMessage
-              << "TrueHarmonicBlockKrylovSchur: approx max eval = " << approxLambdaMax
-              << ", rtol = " << rtol
-              << ", shift = " << shift << std::endl;
-
-    H = CMat::Zero(N, N);
-    B = CMat::Zero(N, Nblock);
-
+    int iter0 = 0;
     int start = 0;
-    std::vector<Field> startBlock = expandStartBlock(v0);
+    std::vector<Field> startBlock;
 
-    for (int iter = 0; iter < MaxIter; iter++) {
+    if (resumeFromCheckpoint) {
+      // The post-harmonicRestart state (basis Nk, F, dense H_k, B rows) is
+      // exactly what the base checkpoint stores; blockArnoldiIteration
+      // handles the dense H_k via the coupling rows from B.
+      loadCheckpoint(iter0);
+      start      = Nk / Nblock;
+      startBlock = F;
+      std::cout << GridLogMessage
+                << "TrueHarmonicBlockKrylovSchur: resuming at restart iteration "
+                << iter0 << ", rtol = " << rtol
+                << ", shift = " << shift << std::endl;
+      if (doVerify) verify("resume from checkpoint");
+    } else {
+      RealD approxLambdaMax = approxMaxEval(v0[0]);
+      rtol = Tolerance * approxLambdaMax;
+      std::cout << GridLogMessage
+                << "TrueHarmonicBlockKrylovSchur: approx max eval = " << approxLambdaMax
+                << ", rtol = " << rtol
+                << ", shift = " << shift << std::endl;
+
+      H = CMat::Zero(N, N);
+      B = CMat::Zero(N, Nblock);
+
+      startBlock = expandStartBlock(v0);
+    }
+
+    for (int iter = iter0; iter < MaxIter; iter++) {
       std::cout << GridLogMessage
                 << "TrueHarmonicBlockKrylovSchur: restart iteration " << iter << std::endl;
 
@@ -196,6 +220,10 @@ public:
 
       // Restart from the residual block W (exact by identity (3))
       startBlock = F;
+
+      // ---- Job-level checkpoint at the post-restart point ----
+      if (!checkpointPrefix.empty() && ((iter + 1) % checkpointInterval == 0))
+        saveCheckpoint(iter);
 
       if (doVerify) {
         std::string lbl = "iter " + std::to_string(iter) + " after harmonic restart";

@@ -29,6 +29,7 @@ See the full license in the file "LICENSE" in the top level distribution directo
 #ifndef GRID_BLOCKED_KRYLOV_SCHUR_H
 #define GRID_BLOCKED_KRYLOV_SCHUR_H
 
+#include <fstream>
 #include <iomanip>
 #include <numeric>
 
@@ -70,6 +71,28 @@ NAMESPACE_BEGIN(Grid);
  * MaxIter : maximum number of outer (restart) iterations
  * Tolerance : relative convergence tolerance (||r|| < Tolerance * |lambda_max|)
  */
+/**
+ * Sidecar metadata for a BlockKrylovSchur job-level checkpoint
+ * (see bks_checkpoint_restart.md).  The small matrices H[0:Nk,0:Nk] and
+ * B[0:Nk,0:Nblock] are stored as flat re/im-interleaved double vectors so the
+ * format does not depend on the complex type of the build (std::complex vs
+ * thrust::complex).  Written as XML by the boss rank only.
+ */
+class BKSCheckpointMeta : Serializable {
+public:
+  GRID_SERIALIZABLE_CLASS_MEMBERS(BKSCheckpointMeta,
+                                  int,    Nm,
+                                  int,    Nk,
+                                  int,    Nblock,
+                                  int,    Nstop,
+                                  int,    iter,
+                                  int,    ritzFilter,
+                                  double, rtol,
+                                  double, beta_k,
+                                  std::vector<double>, Hdata,
+                                  std::vector<double>, Bdata);
+};
+
 template<class Field>
 class BlockKrylovSchur {
 
@@ -126,9 +149,46 @@ protected:
   CMat               littleEvecs;   // Nm columns
   std::vector<RealD> ritzEstimates;
 
+  // Batched-BLAS linalg helper (used only when useBlasLinalg == true).
+  // Kept as a member so its device buffers persist and are reused across
+  // Arnoldi steps ("cost free if size doesn't change").
+  MultiRHSBlockCGLinalg<Field> mrhsLinalg;
+
+  // Alternates the A/B checkpoint slot; after a resume it is set so the
+  // next write goes to the slot NOT just loaded from.
+  int checkpointCounter = 0;
+
 public:
   std::vector<Field> evecs;
   bool doEvalCheck  = false;
+  // When true, the block Arnoldi orthogonalisation uses batched BLAS
+  // (MultiRHSBlockCGLinalg / GridBLAS gemmBatched) instead of the scalar
+  // Gram-Schmidt double loop.  Requires a build with the BLAS backend; the
+  // scalar path (default) is always available as a fallback.
+  bool useBlasLinalg = false;
+
+  //--------------------------------------------------------------------
+  // Job-level checkpoint / resume  (see bks_checkpoint_restart.md)
+  //--------------------------------------------------------------------
+  // Non-empty prefix enables checkpoint writing every checkpointInterval
+  // restart iterations, at the post-truncation point where the state is
+  // smallest: basis[0:Nk], F, H[0:Nk,0:Nk], B[0:Nk,:], rtol, iter.
+  // Writes alternate between slots <prefix>.A and <prefix>.B so a crash
+  // mid-write never loses the only copy; the sidecar meta file is written
+  // last, so an incomplete slot is never selected on resume.
+  std::string checkpointPrefix   = "";
+  int         checkpointInterval = 1;
+  // When true, operator() ignores v0, loads the newest valid slot and
+  // continues from the saved restart iteration.
+  bool        resumeFromCheckpoint = false;
+  // Lattice-field I/O hooks (must be set when checkpointing/resuming).
+  // Kept as std::function for the same layering reason as gamma5Func:
+  // ScidacWriter/ScidacReader live in an include layer above Algorithms.h,
+  // so the caller supplies e.g.
+  //   bks.fieldWrite = [](Field& f, const std::string& fn){ ... ScidacWriter ... };
+  //   bks.fieldRead  = [](Field& f, const std::string& fn){ ... ScidacReader ... };
+  std::function<void(Field&, const std::string&)> fieldWrite;
+  std::function<void(Field&, const std::string&)> fieldRead;
   // When true (and Nblock even), only Nblock/2 starting vectors are required.
   // The remaining Nblock/2 slots are filled by pairing each supplied vector
   // with its parity-flipped partner (sign negated on odd checkerboard sites).
@@ -177,7 +237,7 @@ public:
     Nstop   = _Nstop;
     Nblock  = _Nblock;
 
-    {
+    if (!resumeFromCheckpoint) {
       int divisor = 1;
       if (useParityFlip) divisor *= 2;
       if (useGamma5)     divisor *= 2;
@@ -192,20 +252,35 @@ public:
 
     int N = Nm;   // total Krylov dimension
 
-    // Approximate largest eigenvalue for tolerance normalisation
-    RealD approxLambdaMax = approxMaxEval(v0[0]);
-    rtol = Tolerance * approxLambdaMax;
-    std::cout << GridLogMessage << className << ": approx max eval = "
-              << approxLambdaMax << ", rtol = " << rtol << std::endl;
-
-    // Initialise
-    H = CMat::Zero(N, N);
-    B = CMat::Zero(N, Nblock);
-
+    int iter0 = 0;
     int start = 0;
-    std::vector<Field> startBlock = expandStartBlock(v0);
+    std::vector<Field> startBlock;
 
-    for (int iter = 0; iter < MaxIter; iter++) {
+    if (resumeFromCheckpoint) {
+      // Restore basis[0:Nk], F, H, B, rtol, beta_k from the newest valid slot.
+      // rtol is restored (not recomputed) so convergence declarations are
+      // consistent across jobs.
+      loadCheckpoint(iter0);
+      start      = Nk / Nblock;
+      startBlock = F;
+      std::cout << GridLogMessage << className << ": resuming at restart iteration "
+                << iter0 << ", rtol = " << rtol << std::endl;
+      if (doVerify) verify("resume from checkpoint");
+    } else {
+      // Approximate largest eigenvalue for tolerance normalisation
+      RealD approxLambdaMax = approxMaxEval(v0[0]);
+      rtol = Tolerance * approxLambdaMax;
+      std::cout << GridLogMessage << className << ": approx max eval = "
+                << approxLambdaMax << ", rtol = " << rtol << std::endl;
+
+      // Initialise
+      H = CMat::Zero(N, N);
+      B = CMat::Zero(N, Nblock);
+
+      startBlock = expandStartBlock(v0);
+    }
+
+    for (int iter = iter0; iter < MaxIter; iter++) {
       std::cout << GridLogMessage << className << ": restart iteration " << iter << std::endl;
 
       // ---- Block Arnoldi: extend from block start to block Nm/Nblock ----
@@ -256,6 +331,10 @@ public:
 
       // Restart: the new starting block is F (the residual block from Arnoldi)
       startBlock = F;
+
+      // ---- Job-level checkpoint at the post-truncation point ----
+      if (!checkpointPrefix.empty() && ((iter + 1) % checkpointInterval == 0))
+        saveCheckpoint(iter);
 
       if (doVerify) {
         std::string lbl = "iter " + std::to_string(iter) + " after restart+truncation";
@@ -312,6 +391,157 @@ public:
     vodd = -vodd;
     setCheckerboard(out, veven);
     setCheckerboard(out, vodd);
+  }
+
+  //--------------------------------------------------------------------
+  // Job-level checkpoint / resume
+  //--------------------------------------------------------------------
+  /**
+   * Write the resumable state to the next A/B slot:
+   *   <prefix>.<slot>.basis.<i>   i = 0..Nk-1      (lattice fields)
+   *   <prefix>.<slot>.F.<t>      t = 0..Nblock-1  (lattice fields)
+   *   <prefix>.<slot>.meta.xml   H, B, rtol, beta_k, iter, parameters
+   *
+   * Fields are written first and the sidecar last: a crash mid-write leaves
+   * the slot without a fresh meta file, so loadCheckpoint never selects an
+   * incomplete slot.  Called at the post-truncation point, where
+   * A V_k = V_k H_k + F B_k^dag holds exactly with the stored quantities.
+   */
+  void saveCheckpoint(int iter)
+  {
+    assert(fieldWrite && "checkpoint: fieldWrite hook must be set");
+    assert((int)basis.size() == Nk && (int)F.size() == Nblock);
+
+    std::string slot = (checkpointCounter % 2 == 0) ? "A" : "B";
+    checkpointCounter++;
+    std::string base = checkpointPrefix + "." + slot;
+
+    std::cout << GridLogMessage << className << ": writing checkpoint to slot "
+              << base << " (iter " << iter << ")" << std::endl;
+
+    for (int i = 0; i < Nk; i++)
+      fieldWrite(basis[i], base + ".basis." + std::to_string(i));
+    for (int t = 0; t < Nblock; t++)
+      fieldWrite(F[t], base + ".F." + std::to_string(t));
+
+    BKSCheckpointMeta meta;
+    meta.Nm         = Nm;
+    meta.Nk         = Nk;
+    meta.Nblock     = Nblock;
+    meta.Nstop      = Nstop;
+    meta.iter       = iter;
+    meta.ritzFilter = (int)ritzFilter;
+    meta.rtol       = rtol;
+    meta.beta_k     = beta_k;
+
+    meta.Hdata.resize(2 * Nk * Nk);
+    for (int i = 0; i < Nk; i++)
+      for (int j = 0; j < Nk; j++) {
+        meta.Hdata[2*(i*Nk + j)    ] = H(i, j).real();
+        meta.Hdata[2*(i*Nk + j) + 1] = H(i, j).imag();
+      }
+    meta.Bdata.resize(2 * Nk * Nblock);
+    for (int i = 0; i < Nk; i++)
+      for (int t = 0; t < Nblock; t++) {
+        meta.Bdata[2*(i*Nblock + t)    ] = B(i, t).real();
+        meta.Bdata[2*(i*Nblock + t) + 1] = B(i, t).imag();
+      }
+
+    if (Grid_->IsBoss()) {
+      XmlWriter WR(base + ".meta.xml");
+      // Full double precision: XmlWriter's default 6-digit formatting would
+      // truncate H/B/rtol and break the exactness of the resumed KS relation.
+      WR.setPrecision(17);
+      WR.scientificFormat(true);
+      write(WR, "BKSCheckpoint", meta);
+    }
+    Grid_->Barrier();
+
+    std::cout << GridLogMessage << className << ": checkpoint slot "
+              << base << " complete." << std::endl;
+  }
+
+  /**
+   * Load the newest valid checkpoint slot (<prefix>.A or <prefix>.B, chosen
+   * by the larger saved iter among slots whose meta file exists), restoring
+   * basis, F, H, B, rtol and beta_k, and returning the restart iteration to
+   * continue from in iter0.  Nk and Nblock must match the checkpoint; Nm may
+   * differ (the loop simply re-extends the factorisation to the new Nm).
+   */
+  void loadCheckpoint(int& iter0)
+  {
+    assert(fieldRead && "checkpoint: fieldRead hook must be set");
+    assert(!checkpointPrefix.empty() && "checkpoint: checkpointPrefix must be set");
+
+    auto metaExists = [](const std::string& fn) {
+      std::ifstream f(fn);
+      return f.good();
+    };
+
+    BKSCheckpointMeta metaA, metaB;
+    bool haveA = metaExists(checkpointPrefix + ".A.meta.xml");
+    bool haveB = metaExists(checkpointPrefix + ".B.meta.xml");
+    if (haveA) { XmlReader RD(checkpointPrefix + ".A.meta.xml"); read(RD, "BKSCheckpoint", metaA); }
+    if (haveB) { XmlReader RD(checkpointPrefix + ".B.meta.xml"); read(RD, "BKSCheckpoint", metaB); }
+    assert((haveA || haveB) && "checkpoint: no meta file found for either slot");
+
+    BKSCheckpointMeta meta;
+    std::string base;
+    if (haveA && (!haveB || metaA.iter >= metaB.iter)) {
+      base = checkpointPrefix + ".A";
+      meta = metaA;
+      checkpointCounter = 1;   // next write goes to slot B
+    } else {
+      base = checkpointPrefix + ".B";
+      meta = metaB;
+      checkpointCounter = 0;   // next write goes to slot A
+    }
+
+    std::cout << GridLogMessage << className << ": loading checkpoint from slot "
+              << base << " (saved at iter " << meta.iter << ")" << std::endl;
+
+    // Hard requirements: the state layout depends on Nk and Nblock.
+    assert(meta.Nk == Nk         && "checkpoint: Nk mismatch");
+    assert(meta.Nblock == Nblock && "checkpoint: Nblock mismatch");
+    // Soft differences: allowed, but report them.
+    if (meta.Nm != Nm)
+      std::cout << GridLogMessage << className << ": checkpoint Nm = " << meta.Nm
+                << " -> continuing with Nm = " << Nm << std::endl;
+    if (meta.Nstop != Nstop)
+      std::cout << GridLogMessage << className << ": checkpoint Nstop = " << meta.Nstop
+                << " -> continuing with Nstop = " << Nstop << std::endl;
+    if (meta.ritzFilter != (int)ritzFilter)
+      std::cout << GridLogWarning << className << ": checkpoint ritzFilter = "
+                << meta.ritzFilter << " differs from current = " << (int)ritzFilter
+                << std::endl;
+
+    rtol   = meta.rtol;
+    beta_k = meta.beta_k;
+    iter0  = meta.iter + 1;
+
+    H = CMat::Zero(Nm, Nm);
+    for (int i = 0; i < Nk; i++)
+      for (int j = 0; j < Nk; j++)
+        H(i, j) = std::complex<double>(meta.Hdata[2*(i*Nk + j)],
+                                       meta.Hdata[2*(i*Nk + j) + 1]);
+    B = CMat::Zero(Nm, Nblock);
+    for (int i = 0; i < Nk; i++)
+      for (int t = 0; t < Nblock; t++)
+        B(i, t) = std::complex<double>(meta.Bdata[2*(i*Nblock + t)],
+                                       meta.Bdata[2*(i*Nblock + t) + 1]);
+
+    basis.clear();
+    for (int i = 0; i < Nk; i++) {
+      Field tmp(Grid_);
+      fieldRead(tmp, base + ".basis." + std::to_string(i));
+      basis.push_back(tmp);
+    }
+    F.clear();
+    for (int t = 0; t < Nblock; t++) {
+      Field tmp(Grid_);
+      fieldRead(tmp, base + ".F." + std::to_string(t));
+      F.push_back(tmp);
+    }
   }
 
   //--------------------------------------------------------------------
@@ -666,17 +896,23 @@ protected:
     std::vector<Field> W(Nblock, Field(Grid_));
     applyBlock(W, kBase);
 
-    // Orthogonalise W against all current basis vectors (full reorthogonalisation)
-    // H[i, kBase + t] = <basis[i] | W[t]>
-    for (int pass = 0; pass < (doubleOrthog ? 2 : 1); pass++) {
-      for (int i = 0; i < prevN; i++) {
-        for (int t = 0; t < Nblock; t++) {
-          ComplexD coeff = innerProduct(basis[i], W[t]);
-          if (pass == 0)
-            H(i, kBase + t) = toStdCmplx(coeff);
-          else
-            H(i, kBase + t) += toStdCmplx(coeff);
-          W[t] -= coeff * basis[i];
+    // Orthogonalise W against all current basis vectors (full reorthogonalisation).
+    // H[i, kBase + t] = <basis[i] | W[t]>.  Two equivalent implementations:
+    //   - scalar Gram-Schmidt (default, always available)
+    //   - batched BLAS block Gram-Schmidt (useBlasLinalg, needs GridBLAS)
+    if (useBlasLinalg)
+      orthogonaliseBlockBlas(W, k, doubleOrthog);
+    else {
+      for (int pass = 0; pass < (doubleOrthog ? 2 : 1); pass++) {
+        for (int i = 0; i < prevN; i++) {
+          for (int t = 0; t < Nblock; t++) {
+            ComplexD coeff = innerProduct(basis[i], W[t]);
+            if (pass == 0)
+              H(i, kBase + t) = toStdCmplx(coeff);
+            else
+              H(i, kBase + t) += toStdCmplx(coeff);
+            W[t] -= coeff * basis[i];
+          }
         }
       }
     }
@@ -717,6 +953,53 @@ protected:
     // Append normalised residual block to basis
     for (int t = 0; t < Nblock; t++)
       basis.push_back(F[t]);
+  }
+
+  //--------------------------------------------------------------------
+  // Batched-BLAS block Gram-Schmidt orthogonalisation
+  //--------------------------------------------------------------------
+  /**
+   * Orthogonalise the residual block W (Nblock vectors) against all current
+   * basis vectors basis[0 .. (k+1)*Nblock-1] using MultiRHSBlockCGLinalg
+   * (GridBLAS gemmBatched), storing the coefficients into
+   *   H[b*Nblock + i, kBase + t] = <basis[b*Nblock+i] | W[t]>.
+   *
+   * MultiRHSBlockCGLinalg operates on square nrhs x nrhs blocks, so the
+   * projection against the full (k+1)*Nblock basis panel is done one Nblock
+   * block at a time (block modified Gram-Schmidt).  For each prior block b:
+   *
+   *   Cb(i,t) = <Pb[i] | W[t]>            (InnerProductMatrix, Nblock x Nblock)
+   *   W[t]   -= sum_i Pb[i] Cb(i,t)       (MaddMatrix,  W = -Pb*Cb + W)
+   *
+   * With doubleOrthog the whole panel sweep is repeated and the coefficients
+   * accumulated into H, exactly as the scalar two-pass reorthogonalisation.
+   */
+  void orthogonaliseBlockBlas(std::vector<Field>& W, int k, bool doubleOrthog)
+  {
+    int kBase   = k * Nblock;
+    int nBlocks = k + 1;   // prior blocks 0..k (includes the current block)
+
+    for (int pass = 0; pass < (doubleOrthog ? 2 : 1); pass++) {
+      for (int b = 0; b < nBlocks; b++) {
+        int bBase = b * Nblock;
+
+        std::vector<Field> Pb(basis.begin() + bBase,
+                              basis.begin() + bBase + Nblock);
+
+        CMat Cb(Nblock, Nblock);
+        mrhsLinalg.InnerProductMatrix(Cb, Pb, W);   // Cb(i,t) = <Pb[i]|W[t]>
+
+        for (int i = 0; i < Nblock; i++)
+          for (int t = 0; t < Nblock; t++) {
+            if (pass == 0) H(bBase + i, kBase + t)  = Cb(i, t);
+            else           H(bBase + i, kBase + t) += Cb(i, t);
+          }
+
+        // W = -Pb * Cb + W  (MaddMatrix copies its Y argument first, so
+        // aliasing AP == Y is safe)
+        mrhsLinalg.MaddMatrix(W, Cb, Pb, W, -1.0);
+      }
+    }
   }
 
   //--------------------------------------------------------------------
@@ -775,17 +1058,25 @@ protected:
   //--------------------------------------------------------------------
   // Basis rotation: UR[i] = sum_j U[j] * R(j, i)
   //--------------------------------------------------------------------
+  /**
+   * Rotate the basis U by the dense matrix R, producing UR[i] = sum_j U[j] R(j,i).
+   *
+   * Grid's accelerator kernel basisRotate computes, in place,
+   *   out[j] = sum_k Qt(j,k) in[k],
+   * so the coefficient passed must satisfy Qt(i,j) = R(j,i).  We copy R^T into
+   * a namespace-scope KSCoeffMat (ComplexD storage, GPU-safe) and rotate in
+   * place, offloading the field arithmetic to the device instead of the host
+   * triple loop.
+   */
   void constructUR(std::vector<Field>& UR, std::vector<Field>& U,
                    CMat& R, int N)
   {
-    UR.clear();
-    Field tmp(Grid_);
-    for (int i = 0; i < N; i++) {
-      tmp = Zero();
+    KSCoeffMat Rt(N);
+    for (int i = 0; i < N; i++)
       for (int j = 0; j < N; j++)
-        tmp += U[j] * R(j, i);
-      UR.push_back(tmp);
-    }
+        Rt(i, j) = ComplexD(R(j, i).real(), R(j, i).imag());
+    UR = U;
+    basisRotate(UR, Rt, 0, N, 0, N, N);
   }
 
   //--------------------------------------------------------------------

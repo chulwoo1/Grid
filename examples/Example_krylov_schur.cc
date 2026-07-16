@@ -106,6 +106,15 @@ template <class T> void writeFile(T& in, std::string const fname){
   // What is the appropriate way to throw error?
 }
 
+template <class T> void readFile(T& out, std::string const fname){
+  std::cout << Grid::GridLogMessage << "Reads from: " << fname << std::endl;
+  Grid::emptyUserRecord record;
+  Grid::ScidacReader RD;
+  RD.open(fname);
+  RD.readScidacFieldRecord(out,record);
+  RD.close();
+}
+
 
 typedef WilsonFermionD WilsonOp;
 typedef typename WilsonFermionD::FermionField FermionField;
@@ -190,6 +199,10 @@ int main (int argc, char ** argv)
   Grid_init(&argc,&argv);
 
   const int Ls=16;
+//  RitzFilter KSfilter=EvalImNormSmall;
+  RitzFilter KSfilter=EvalReSmall;
+
+  std::cout << "Sorting eigenvalues using " << rfToString(KSfilter) << std::endl;
 
 //   GridCartesian         * UGrid   = SpaceTimeGrid::makeFourDimGrid(GridDefaultLatt(), GridDefaultSimd(Nd,vComplex::Nsimd()),GridDefaultMpi());
 //  std::vector<int> lat_size {32, 32, 32, 32};
@@ -343,11 +356,38 @@ int main (int argc, char ** argv)
     bool useBlockKS  = GridCmdOptionExists(argv, argv+argc, std::string("--use-blockKS"));
     bool useHarmonic = GridCmdOptionExists(argv, argv+argc, std::string("--use-harmonic"));
 
+    // --checkpoint-prefix <p>   : enable job-level checkpointing to <p>.{A,B}.*
+    // --checkpoint-interval <n> : write every n restart iterations (default 1)
+    // --resume                  : resume from the newest valid slot at <p>
+    // (block family only; the non-block KrylovSchur has no checkpoint support)
+    std::string checkpointPrefix = "";
+    int  checkpointInterval = 1;
+    bool doResume = GridCmdOptionExists(argv, argv+argc, std::string("--resume"));
+    if (GridCmdOptionExists(argv, argv+argc, std::string("--checkpoint-prefix")))
+      checkpointPrefix = GridCmdOptionPayload(argv, argv+argc, std::string("--checkpoint-prefix"));
+    if (GridCmdOptionExists(argv, argv+argc, std::string("--checkpoint-interval"))) {
+      std::string arg = GridCmdOptionPayload(argv, argv+argc, std::string("--checkpoint-interval"));
+      GridCmdOptionInt(arg, checkpointInterval);
+    }
+    if (doResume) assert(!checkpointPrefix.empty() && "--resume requires --checkpoint-prefix");
+
     std::vector<LatticeFermion> finalEvecs;
 
+    // Job-level checkpoint/resume wiring: field I/O goes through the same
+    // Scidac machinery as the evec output.  Works for both the block family
+    // and the non-block KrylovSchur.
+    auto setupCheckpoint = [&](auto& KS) {
+      KS.checkpointPrefix     = checkpointPrefix;
+      KS.checkpointInterval   = checkpointInterval;
+      KS.resumeFromCheckpoint = doResume;
+      KS.fieldWrite = [](FermionField& f, const std::string& fn){ writeFile(f, fn); };
+      KS.fieldRead  = [](FermionField& f, const std::string& fn){ readFile(f, fn); };
+    };
+
     if (!useBlockKS) {
-      KrylovSchur KrySchur (Dwilson, UGrid, resid,EvalImNormSmall);
+      KrylovSchur<FermionField> KrySchur (Dwilson, UGrid, resid,KSfilter);
       KrySchur.doEvalCheck=true;
+      setupCheckpoint(KrySchur);
       if (useHarmonic) {
         std::cout << GridLogMessage << "Running KrylovSchur (shifted/harmonic Ritz)" << std::endl;
         KrySchur(src[0], maxIter, Nm, Nk, Nstop,&shift);
@@ -370,17 +410,19 @@ int main (int argc, char ** argv)
 
       if (useHarmonic) {
         std::cout << GridLogMessage << "Running TrueHarmonicBlockKrylovSchur" << std::endl;
-        TrueHarmonicBlockKrylovSchur<FermionField> KrySchur (Dwilson, UGrid, resid,shift,EvalImNormSmall);
+        TrueHarmonicBlockKrylovSchur<FermionField> KrySchur (Dwilson, UGrid, resid,shift,KSfilter);
         KrySchur.doEvalCheck=true;
         KrySchur.gamma5Func = gamma5Lambda;
+        setupCheckpoint(KrySchur);
         KrySchur(src, maxIter, Nm, Nk, Nstop,Nblock,true,if_verify);
         std::cout << GridLogMessage << "TrueHarmonicBlockKrylovSchur evec.size= " << KrySchur.evecs.size()<< std::endl;
         finalEvecs = KrySchur.evecs;
       } else {
         std::cout << GridLogMessage << "Running BlockKrylovSchur" << std::endl;
-        BlockKrylovSchur<FermionField> KrySchur (Dwilson, UGrid, resid,EvalImNormSmall);
+        BlockKrylovSchur<FermionField> KrySchur (Dwilson, UGrid, resid,KSfilter);
         KrySchur.doEvalCheck=true;
         KrySchur.gamma5Func = gamma5Lambda;
+        setupCheckpoint(KrySchur);
         KrySchur(src, maxIter, Nm, Nk, Nstop,Nblock,true,if_verify);
         std::cout << GridLogMessage << "BlockKrylovSchur evec.size= " << KrySchur.evecs.size()<< std::endl;
         finalEvecs = KrySchur.evecs;
