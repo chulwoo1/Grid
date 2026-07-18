@@ -77,6 +77,16 @@ template <class T> void writeFile(T& in, std::string const fname){
   #endif
 }
 
+template <class T> void readFile(T& out, std::string const fname){
+  std::cout << Grid::GridLogMessage << "Reads from: " << fname << std::endl;
+  Grid::emptyUserRecord record;
+  Grid::ScidacReader RD;
+  RD.open(fname);
+  RD.readScidacFieldRecord(out,record);
+  RD.close();
+}
+
+
 /**
  * Writes the eigensystem of a Krylov Schur object to a directory. 
  * 
@@ -283,14 +293,27 @@ int main (int argc, char ** argv)
   std::string outDir     = argv[6];
 
   RitzFilter RF;
-  if (argc == 8) {
+  if (argc >7 ) {
     std::string rf       = argv[7];
     RF = selectRitzFilter(rf);
   } else {
     RF = EvalReSmall;
   }
+  int  checkpointInterval = 0;
+  if (argc >8 ) 
+  checkpointInterval = atoi(argv[8]) ;
+  bool doResume = false;
+  if ( checkpointInterval > 0 ) doResume=true;
+  if ( checkpointInterval < 0 ) checkpointInterval = - checkpointInterval ;
+
+  std::string checkpointPrefix = outDir +"/KStemp";
+
   std::cout << GridLogMessage << "Sorting eigenvalues using " << rfToString(RF) << std::endl;
   std::cout << GridLogMessage << "Reading gauge field from: " << file << std::endl;
+  if ( checkpointInterval > 0 ) 
+	  std::cout << GridLogMessage << " checkpointInterval : " << checkpointInterval << std::endl;
+  if ( doResume ) 
+	  std::cout << GridLogMessage << " Resume from : " << checkpointPrefix << std::endl;
 
   const int Ls=24;
   // const int Ls = 8;
@@ -427,9 +450,15 @@ int main (int argc, char ** argv)
                   << ", Nstop = " << Nstop << std::endl;
   
   KrylovSchur KrySchur (PVdagM, FGrid, 1e-8, RF);      // use preconditioned PV^\dag D_{dwf}
+  KrySchur.checkpointPrefix     = checkpointPrefix;
+  KrySchur.checkpointInterval   = checkpointInterval;
+  KrySchur.resumeFromCheckpoint = doResume;
+  KrySchur.fieldWrite = [](LatticeFermionD& f, const std::string& fn){ writeFile(f, fn); };
+  KrySchur.fieldRead  = [](LatticeFermionD& f, const std::string& fn){ readFile(f, fn); };
+
   // KrylovSchur KrySchur (DLinOp, FGrid, 1e-8, RF);         // use D_{dwf}
-  KrySchur(src, maxIter, Nm, Nk, Nstop);
-//  KrySchur(src, maxIter, Nm, Nk, Nstop,&shift);
+//  KrySchur(src, maxIter, Nm, Nk, Nstop);
+  KrySchur(src, maxIter, Nm, Nk, Nstop,&shift);
 
   std::cout<<GridLogMessage << "*******************************************" << std::endl;
   std::cout<<GridLogMessage << "***************** RESULTS *****************" << std::endl;
