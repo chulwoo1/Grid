@@ -51,7 +51,16 @@ Author: paboyle <paboyle@ph.ed.ac.uk>
 #endif
 #ifdef __x86_64__
 #ifdef GRID_CUDA
+// When nvcc's host compiler is clang (-ccbin clang++, which is what
+// /usr/bin/mpicxx becomes if MPICH_CXX=clang++), __rdtsc is already a host
+// builtin returning unsigned long long.  Defining it is rejected either as
+// "cannot overload functions distinguished by return type alone" (uint64_t)
+// or "definition of builtin function" (unsigned long long), so leave it be.
+// Every caller is host-side (perfmon/Stat.cc), so the host builtin suffices.
+// __rdpmc is not a clang builtin and still needs the stub.
+#ifndef __clang__
 accelerator_inline uint64_t __rdtsc(void) {  return 0; }
+#endif
 accelerator_inline uint64_t __rdpmc(int ) {  return 0; }
 #else
 #include <x86intrin.h>
