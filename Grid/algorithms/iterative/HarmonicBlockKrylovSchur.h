@@ -132,8 +132,8 @@ protected:
     CMat S = schur.getMatrixS();
     std::cout << GridLogMessage << className
               << ": Ritz values nearest shift (first Nk):" << std::endl;
-    for (int i = 0; i < Nk; i++)
-      std::cout << GridLogMessage << "  [" << i << "] " << S(i, i) + shift << std::endl;
+//    for (int i = 0; i < Nk; i++)
+//      std::cout << GridLogMessage << "  [" << i << "] " << S(i, i) + shift << std::endl;
 
     Q    = schur.getMatrixQ();
     Hnew = S + shift * CMat::Identity(N, N);

@@ -417,6 +417,9 @@ class KrylovSchur {
     Eigen::VectorXcd    getEvals()             { return evals;         }
     std::vector<RealD>  getRitzEstimates()     { return ritzEstimates; }
     std::vector<Field>  getEvecs()             { return evecs;         }
+    Eigen::VectorXcd    getB()                 { return b;             }
+    RealD               getBeta()              { return beta_k;        }
+
 
     /**
      * Runs the non-harmonic Krylov-Schur loop.

@@ -96,6 +96,6 @@ NAMESPACE_CHECK(multigrid);
 #include <Grid/algorithms/iterative/LanczosBidiagonalization.h>
 #include <Grid/algorithms/iterative/RestartedLanczosBidiagonalization.h>
 //#include <Grid/algorithms/iterative/GCR.h>
-#include <Grid/algorithms/iterative/MultiSplittingPreconditionedCG.h>
+//#include <Grid/algorithms/iterative/MultiSplittingPreconditionedCG.h>
 
 #endif
