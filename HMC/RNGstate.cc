@@ -40,10 +40,28 @@ int main(int argc, char **argv)
 
   GridCartesian         * UGrid   = SpaceTimeGrid::makeFourDimGrid(latt4,simd,mpi);
 
-  GridSerialRNG   sRNG;         sRNG.SeedUniqueString(std::string("The Serial RNG"));
-  GridParallelRNG pRNG(UGrid);  pRNG.SeedUniqueString(std::string("The 4D RNG"));
+  // Optional RNG seed from the command line:  --rng-seed <string>
+  // The payload is appended to the two base strings rather than replacing
+  // them, so the serial and parallel streams stay decorrelated, and so that
+  // omitting the flag reproduces the original seeds byte-for-byte.
+  std::string seed("");
+  if (GridCmdOptionExists(argv, argv + argc, std::string("--rng-seed")))
+    seed = " " + GridCmdOptionPayload(argv, argv + argc, std::string("--rng-seed"));
 
+  std::string sSeed = std::string("The Serial RNG") + seed;
+  std::string pSeed = std::string("The 4D RNG")     + seed;
+
+  std::cout << GridLogMessage << "Serial RNG seed string: \"" << sSeed << "\"" << std::endl;
+  std::cout << GridLogMessage << "4D     RNG seed string: \"" << pSeed << "\"" << std::endl;
+
+  GridSerialRNG   sRNG;         sRNG.SeedUniqueString(sSeed);
+  GridParallelRNG pRNG(UGrid);  pRNG.SeedUniqueString(pSeed);
+
+  // --rng-file <name> overrides the output; default is unchanged.
   std::string rngfile("ckpoint_rng.0");
+  if (GridCmdOptionExists(argv, argv + argc, std::string("--rng-file")))
+    rngfile = GridCmdOptionPayload(argv, argv + argc, std::string("--rng-file"));
+  std::cout << GridLogMessage << "Writing RNG state to: " << rngfile << std::endl;
   NerscIO::writeRNGState(sRNG, pRNG, rngfile);
   
   Grid_finalize();
