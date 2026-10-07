@@ -207,7 +207,7 @@ public:
   void restart(const Field& v0, const Field& v1, int maxRestarts, int Nstep, int Nk, int Nstop,
                bool reorthog = false, RitzFilter filter = EvalImNormSmall)
   {
-    assert(Nk >= Nstop);
+    assert(Nk >= 2 && Nk >= Nstop);
     Field src(Grid_), src2(Grid_);
     src  = v0;
     src2 = v1;

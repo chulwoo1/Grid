@@ -5,7 +5,7 @@
     <mstep>-0.025</mstep>
     <M5>1.8</M5>
     <Ls>48</Ls>
-    <Nstop>100</Nstop>
+    <Nstop>90</Nstop>
     <Nk>100</Nk>
     <Np>100</Np>
     <ReadEvec>0</ReadEvec>
@@ -13,7 +13,7 @@
     <reorthog>1</reorthog>
     <Nblock>4</Nblock>
     <verify>0</verify>
-    <shift>0.8</shift>
+    <shift>1.5</shift>
     <resid>1e-8</resid>
     <ChebyLow>1</ChebyLow>
     <ChebyHigh>100</ChebyHigh>

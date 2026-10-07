@@ -88,7 +88,25 @@ struct LanczosParameters: Serializable {
 //    std::cout << GridLogMessage << "[HMC parameters] Starting type           : " << StartingType << "\n";
 //    MD.print_parameters();
   }
-  
+
+};
+
+/**
+ * Overlap matrices between the eigenvectors written to disk.
+ *
+ *   Mdata : M[i][j] = <v_i, v_j>          (plain L2 inner product)
+ *   Gdata : G[i][j] = <v_i, gamma5 v_j>   (gamma5 inner product)
+ *
+ * Both are N x N complex, flattened row-major as 2*N*N doubles with
+ * (real, imag) interleaved -- the same convention KSCheckpointMeta uses for
+ * Rdata/bdata, so the files can be parsed by the same helpers.
+ */
+struct EvecOverlaps: Serializable {
+  GRID_SERIALIZABLE_CLASS_MEMBERS(EvecOverlaps,
+    int,                 N,
+    double,              mass,
+    std::vector<double>, Mdata,
+    std::vector<double>, Gdata);
 };
 
 }
@@ -444,6 +462,57 @@ int main (int argc, char ** argv)
         std::string evfile ("./evec_"+std::to_string(mass)+"_sum");
 //        auto evdensity = localInnerProduct(evec[i],evec[i] );
         writeFile(src[0],evfile);
+  }
+
+  // ---- Overlap matrices between the saved eigenvectors -------------------
+  // M[i][j] = <v_i, v_j>  and  G[i][j] = <v_i, gamma5 v_j>, over exactly the
+  // Nover vectors written above, so row/column index == the _<i> file suffix.
+  {
+    int Nover = std::min(Nstop, (int)finalEvecs.size());
+
+    EvecOverlaps ov;
+    ov.N    = Nover;
+    ov.mass = mass;
+    ov.Mdata.resize(2 * Nover * Nover);
+    ov.Gdata.resize(2 * Nover * Nover);
+
+    Gamma g5(Gamma::Algebra::Gamma5);
+    FermionField g5v(UGrid);
+
+    // gamma5 is applied to the ket, so each j costs one gamma5 multiply
+    // rather than one per (i,j) pair.
+    for (int j = 0; j < Nover; j++) {
+      g5v = g5 * finalEvecs[j];
+      for (int i = 0; i < Nover; i++) {
+        ComplexD m = innerProduct(finalEvecs[i], finalEvecs[j]);
+        ComplexD g = innerProduct(finalEvecs[i], g5v);
+        ov.Mdata[2*(i*Nover + j)    ] = m.real();
+        ov.Mdata[2*(i*Nover + j) + 1] = m.imag();
+        ov.Gdata[2*(i*Nover + j)    ] = g.real();
+        ov.Gdata[2*(i*Nover + j) + 1] = g.imag();
+      }
+    }
+
+    std::string ovfile("./evec_"+std::to_string(mass)+"_overlaps.xml");
+    if (UGrid->IsBoss()) {
+      // Full double precision: the default 6-digit formatting would make the
+      // off-diagonal (near-zero) entries useless.  Matches saveCheckpoint.
+      XmlWriter WR(ovfile);
+      WR.setPrecision(17);
+      WR.scientificFormat(true);
+      write(WR, "EvecOverlaps", ov);
+    }
+    UGrid->Barrier();
+    std::cout << GridLogMessage << "Wrote " << Nover << "x" << Nover
+              << " overlap matrices to: " << ovfile << std::endl;
+
+    // Quick sanity readout: diagonals should be ||v_i||^2 and v_i^dag gamma5 v_i.
+    for (int i = 0; i < std::min(Nover, 8); i++)
+      std::cout << GridLogMessage << "  overlap diag [" << i << "]"
+                << "  <v,v> = ("   << ov.Mdata[2*(i*Nover+i)] << ","
+                                   << ov.Mdata[2*(i*Nover+i)+1] << ")"
+                << "  <v,g5 v> = ("<< ov.Gdata[2*(i*Nover+i)] << ","
+                                   << ov.Gdata[2*(i*Nover+i)+1] << ")" << std::endl;
   }
 
 
