@@ -199,8 +199,8 @@ int main (int argc, char ** argv)
   Grid_init(&argc,&argv);
 
   const int Ls=16;
-//  RitzFilter KSfilter=EvalImNormSmall;
-  RitzFilter KSfilter=EvalReSmall;
+  RitzFilter KSfilter=EvalImNormSmall;
+//  RitzFilter KSfilter=EvalReSmall;
 
   std::cout << "Sorting eigenvalues using " << rfToString(KSfilter) << std::endl;
 
