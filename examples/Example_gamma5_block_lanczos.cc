@@ -151,8 +151,8 @@ int main(int argc, char** argv)
   G5BL.doEvalCheck = (Params.verify != 0);
   G5BL.doVerify = (Params.verify != 0);
 //  G5BL(src, src2, Params.maxIter, Params.Nstop, Params.reorthog != 0);
-  G5BL.restart(src, src2, Params.maxIter, Params.Nk+Params.Np, Params.Nk, Params.Nstop, Params.reorthog != 0, EvalNormSmall);
-//  G5BL.implicitRestart(src, src2, Params.maxIter, Params.Nk+Params.Np, Params.Nk, Params.Nstop, Params.reorthog != 0, EvalNormSmall);
+//  G5BL.restart(src, src2, Params.maxIter, Params.Nk+Params.Np, Params.Nk, Params.Nstop, Params.reorthog != 0, EvalNormSmall);
+  G5BL.implicitRestart(src, src2, Params.maxIter, Params.Nk+Params.Np, Params.Nk, Params.Nstop, Params.reorthog != 0, EvalNormSmall);
   if (Params.verify ) G5BL.verify("after restart");
 
   // Summary of results

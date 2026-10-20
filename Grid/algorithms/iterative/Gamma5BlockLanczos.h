@@ -112,7 +112,7 @@ public:
     assert(nrm > 1e-14 && "first starting vector is zero");
     u0 *= (1.0 / nrm);
 
-#if 0
+#if 1
 //HACK
     applyGamma5(u0,u1);
 #else
@@ -427,6 +427,7 @@ public:
         Ncur   = Nmax;
         H_hess = CMat::Zero(Ncur, Ncur);
         H_hess.block(0, 0, Nk, Nk) = H_L2;
+        addLinkingRow(H_hess, Nk, F_vec);
 
         // Trim basis to Nk (Q_{m+1} replaced by F_vec below)
         // Use erase instead of resize: resize instantiates _M_default_append
@@ -468,6 +469,7 @@ public:
         Ncur   = Nmax;
         H_hess = CMat::Zero(Ncur, Ncur);
         H_hess.block(0, 0, Nk, Nk) = schur.getMatrixS().block(0, 0, Nk, Nk);
+        addLinkingRow(H_hess, Nk, F_vec);
 
         // Trim basis back to Nk (extension will re-grow it)
         basis.erase(basis.begin() + Nk, basis.end());
@@ -602,6 +604,33 @@ public:
     }
     std::cout << GridLogMessage
               << "  max γ5-Gram diagonal error = " << maxGramErr << std::endl;
+
+    // ---- Basis conditioning diagnostics ----
+    // The LDL normalisation fixes q†γ5q = ±1 but leaves ||q||_2 completely
+    // free.  Near-breakdown (small |d| with a non-small residual) inflates
+    // ||q||_2, which silently wrecks the conditioning of T_m even though the
+    // γ5-orthogonality checks above still pass.
+    {
+      RealD nmin = 1e300, nmax = 0.0;
+      std::cout << GridLogMessage << "  ||basis[k]||_2 :" << std::endl;
+      for (int k = 0; k < (int)basis.size(); k++) {
+        RealD nk = std::sqrt(norm2(basis[k]));
+        nmin = std::min(nmin, nk);
+        nmax = std::max(nmax, nk);
+        if (k < 8 || k >= (int)basis.size() - 4 || (k % 16) == 0)
+          std::cout << GridLogMessage << "    k=" << k << "  ||q||_2 = " << nk << std::endl;
+      }
+      std::cout << GridLogMessage
+                << "  basis L2 norm range: min=" << nmin << "  max=" << nmax
+                << "  spread=" << (nmin > 0 ? nmax / nmin : -1.0) << std::endl;
+
+      Eigen::JacobiSVD<CMat> svd(Tm);
+      auto sv = svd.singularValues();
+      RealD smax = sv(0), smin = sv(sv.size() - 1);
+      std::cout << GridLogMessage
+                << "  T_m singular values: max=" << smax << "  min=" << smin
+                << "  cond=" << (smin > 0 ? smax / smin : -1.0) << std::endl;
+    }
 
     // ---- Check γ5-orthogonality between different blocks: Q_i†γ5 Q_j ≈ 0 for i≠j ----
     RealD maxOffDiag = 0.0;
@@ -1127,6 +1156,53 @@ private:
     residuals_ = res_new;
   }
 
+  /**
+   * Fill the Krylov-Schur linking row of the combined Hessenberg.
+   *
+   * After compression the relation is  A W = W H + f b^T,  where W is the Nk
+   * compressed (L2-orthonormal) vectors, H the Nk x Nk block already written
+   * into the top-left of Hc, and f = F_vec the normalised residual that seeds
+   * the extension.  Row Nk of Hc is that b^T:  b_j = <F_vec, A W_j>.
+   *
+   * Omitting it leaves Hc block upper-triangular.  The spectrum then splits
+   * into eig(H) and eig(extension); every eigenvector inherited from H has
+   * identically zero weight on the extension, so the Arnoldi residual
+   * estimate beta_last*|y(dim-1)| evaluates to exactly 0 and those pairs are
+   * reported as converged when they are not.
+   */
+  void addLinkingRow(CMat& Hc, int Nk, const Field& F_vec)
+  {
+    Field w(Grid_);
+    for (int j = 0; j < Nk; j++) {
+      Linop.Op(basis[j], w);
+      Hc(Nk, j) = toStdCmplx(innerProduct(F_vec, w));
+    }
+
+    // Verify the relation the whole restart rests on:  A W = W H + f b^T.
+    // If this residual is not ~0 the compressed factorisation does not
+    // represent D_W, and every Ritz value drawn from Hc is meaningless no
+    // matter what the cheap estimate beta*|y(last)| reports.
+    // Costs Nk extra matvecs per cycle, so only under doVerify.
+    if (!doVerify) return;
+    RealD maxrel = 0.0, maxnrm = 0.0;
+    Field r(Grid_);
+    for (int j = 0; j < Nk; j++) {
+      Linop.Op(basis[j], w);
+      r = w;
+      for (int i = 0; i < Nk; i++) r = r - basis[i] * toGridC(Hc(i, j));
+      r = r - F_vec * toGridC(Hc(Nk, j));
+      RealD rn = std::sqrt(norm2(r));
+      maxrel = std::max(maxrel, rn);
+      maxnrm = std::max(maxnrm, std::sqrt(norm2(w)));
+    }
+    std::cout << GridLogMessage
+              << "Gamma5BlockLanczos: Krylov-Schur relation ||A W - W H - f b^T||_max = "
+              << maxrel << "   (||A W||_max = " << maxnrm
+              << ", rel = " << (maxnrm > 0 ? maxrel / maxnrm : -1.0) << ")" << std::endl;
+  }
+
+  static ComplexD toGridC(const std::complex<double>& c) { return ComplexD(c.real(), c.imag()); }
+
   // L2 modified Gram-Schmidt: orthonormalizes basis[start..start+count-1] in L2.
   // Returns upper-triangular R (count×count) such that V_old = W·R.
   CMat l2QRFactor(int start, int count)
@@ -1189,10 +1265,16 @@ private:
     if (doEvalCheck) {
       Field w(Grid_);
       int nCheck = std::min((int)evecs_.size(), 2 * Nstop);
+      Field v(Grid_);
       for (int k = 0; k < nCheck; k++) {
-        Linop.Op(evecs_[k], w);
-        ComplexD eval_est = toStdCmplx(innerProduct(evecs_[k], w));
-        w -= eval_est * evecs_[k];
+        // Ritz vectors are not L2-normalised, so the Rayleigh quotient needs
+        // the <v,v> denominator; without it eval_est is scaled by ||v||^2 and
+        // the residual is meaningless.
+        RealD nv = std::sqrt(norm2(evecs_[k]));
+        v = evecs_[k] * (nv > 1e-30 ? 1.0 / nv : 1.0);
+        Linop.Op(v, w);
+        ComplexD eval_est = toStdCmplx(innerProduct(v, w));
+        w -= eval_est * v;
         RealD res_check = std::sqrt(norm2(w));
         std::cout << GridLogMessage
                   << "Gamma5BlockLanczos: evec[" << k << "]"
