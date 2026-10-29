@@ -61,27 +61,45 @@ template<class Field>
 class FeastShiftedOperator : public LinearOperatorBase<Field> {
 private:
   LinearOperatorBase<Field>& A_;
+  LinearOperatorBase<Field>* B_;   // nullptr => B = I (standard problem)
   ComplexD                   z_;
   bool                       useAdjoint_;
+  mutable Field*             tmp_;
 
 public:
-  FeastShiftedOperator(LinearOperatorBase<Field>& A)
-    : A_(A), z_(0.0, 0.0), useAdjoint_(false) {}
+  FeastShiftedOperator(LinearOperatorBase<Field>& A,
+                       LinearOperatorBase<Field>* B = nullptr,
+                       Field* tmp = nullptr)
+    : A_(A), B_(B), z_(0.0, 0.0), useAdjoint_(false), tmp_(tmp) {}
 
-  /// adj == false : represent (z - A);  adj == true : represent (conj(z) - A^H)
+  /// adj == false : represent (z B - A);  adj == true : represent (conj(z) B^H - A^H)
   void setShift(ComplexD z, bool adj) { z_ = z; useAdjoint_ = adj; }
 
   void Op(const Field& in, Field& out) {
     ComplexD zc(z_.real(), -z_.imag());
-    if (useAdjoint_) { A_.AdjOp(in, out); out = zc * in - out; }
-    else             { A_.Op   (in, out); out = z_ * in - out; }
+    if (useAdjoint_) {
+      A_.AdjOp(in, out);
+      if (B_) { B_->AdjOp(in, *tmp_); out = zc * (*tmp_) - out; }
+      else    {                       out = zc * in      - out; }
+    } else {
+      A_.Op(in, out);
+      if (B_) { B_->Op(in, *tmp_);    out = z_ * (*tmp_) - out; }
+      else    {                       out = z_ * in      - out; }
+    }
   }
 
   void AdjOp(const Field& in, Field& out) {
-    // (z - A)^H = conj(z) - A^H, and (conj(z) - A^H)^H = z - A
+    // (zB - A)^H = conj(z) B^H - A^H, and (conj(z) B^H - A^H)^H = zB - A
     ComplexD zc(z_.real(), -z_.imag());
-    if (useAdjoint_) { A_.Op   (in, out); out = z_ * in - out; }
-    else             { A_.AdjOp(in, out); out = zc * in - out; }
+    if (useAdjoint_) {
+      A_.Op(in, out);
+      if (B_) { B_->Op(in, *tmp_);    out = z_ * (*tmp_) - out; }
+      else    {                       out = z_ * in      - out; }
+    } else {
+      A_.AdjOp(in, out);
+      if (B_) { B_->AdjOp(in, *tmp_); out = zc * (*tmp_) - out; }
+      else    {                       out = zc * in      - out; }
+    }
   }
 
   void OpDiag(const Field&, Field&)                       { assert(0); }
@@ -115,6 +133,7 @@ public:
 
 private:
   LinearOperatorBase<Field>& Linop;
+  LinearOperatorBase<Field>* Bop;    // nullptr => standard problem (B = I)
   GridBase*                  Grid_;
 
   // --- contour (ellipse: centre Emid, horizontal radius r, axis ratio, rotation)
@@ -139,6 +158,7 @@ private:
   std::vector<RealD> residuals_;
 
   std::shared_ptr<FeastShiftedOperator<Field> > shiftedOp_;
+  std::shared_ptr<Field>                        shiftScratch_;
 
 public:
   ShiftSolveFunc shiftSolve;
@@ -149,7 +169,7 @@ public:
                     RealD tol = 1e-8, int maxIter = 20,
                     RealD ratio = 1.0, RealD angle = 0.0,
                     FeastQuadrature quad = FeastGaussLegendre)
-    : Linop(op), Grid_(grid), Emid_(Emid), radius_(radius), ratio_(ratio),
+    : Linop(op), Bop(nullptr), Grid_(grid), Emid_(Emid), radius_(radius), ratio_(ratio),
       angle_(angle), Ne_(Ne), quadrature_(quad), M0_(M0),
       Tolerance_(tol), maxIter_(maxIter)
   {
@@ -157,6 +177,24 @@ public:
     assert(M0_  >= 1  && "FEAST: subspace size must be positive");
     assert(radius_ > 0.0);
     computeContour();
+  }
+
+  /**
+   * Switch to the generalised problem  A x = lambda B x.
+   *
+   * The contour quadrature then needs (z B - A)^{-1}, a single shifted solve
+   * in the composite operators -- no nested inversion of B.  This is the
+   * right way to get the spectrum of B^{-1}A (e.g. PV^{-1}M for domain wall)
+   * without ever forming B^{-1} or approximating it by B^dag.
+   */
+  void setB(LinearOperatorBase<Field>& B)
+  {
+    // useGMRES()/useBiCGSTAB() capture Bop when they build the shifted
+    // operator, so a later setB() would be silently ignored.  Fail loudly
+    // instead of quietly solving the wrong problem.
+    assert(!shiftedOp_ &&
+           "FEAST: setB() must be called before useGMRES()/useBiCGSTAB()");
+    Bop = &B;
   }
 
   CVec               getEvals()     { return evals_;     }
@@ -176,7 +214,8 @@ public:
    */
   void useBiCGSTAB(RealD innerTol = 1e-8, int innerMaxIter = 10000)
   {
-    shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop);
+    shiftScratch_ = std::make_shared<Field>(Grid_);
+    shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop, Bop, shiftScratch_.get());
     auto op    = shiftedOp_;
     shiftSolve = [op, innerTol, innerMaxIter]
                  (ComplexD z, bool adj, const Field& in, Field& out) {
@@ -198,7 +237,8 @@ public:
   void useGMRES(RealD innerTol = 1e-8, int innerMaxIter = 10000,
                 int restartLength = 50)
   {
-    shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop);
+    shiftScratch_ = std::make_shared<Field>(Grid_);
+    shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop, Bop, shiftScratch_.get());
     auto op    = shiftedOp_;
     shiftSolve = [op, innerTol, innerMaxIter, restartLength]
                  (ComplexD z, bool adj, const Field& in, Field& out) {
@@ -284,11 +324,13 @@ public:
       // ---- 2. oblique Rayleigh-Ritz --------------------------------------
       CMat Aq = CMat::Zero(M0_, M0_);
       CMat Bq = CMat::Zero(M0_, M0_);
+      Field bwork(Grid_);
       for (int j = 0; j < M0_; j++) {
         Linop.Op(QR[j], work);
+        if (Bop) Bop->Op(QR[j], bwork); else bwork = QR[j];
         for (int i = 0; i < M0_; i++) {
           Aq(i, j) = toStdCmplx(innerProduct(QL[i], work ));
-          Bq(i, j) = toStdCmplx(innerProduct(QL[i], QR[j]));
+          Bq(i, j) = toStdCmplx(innerProduct(QL[i], bwork));
         }
       }
 
@@ -332,7 +374,8 @@ public:
         XL.push_back(xl);
 
         Linop.Op(xr, work);
-        work = work - toGrid(lambda) * xr;
+        if (Bop) { Bop->Op(xr, bwork); work = work - toGrid(lambda) * bwork; }
+        else     {                     work = work - toGrid(lambda) * xr;    }
         RealD r = std::sqrt(norm2(work));
 
         lam.push_back(lambda);

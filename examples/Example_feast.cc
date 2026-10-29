@@ -44,6 +44,7 @@ struct FeastParameters : Serializable {
     Integer, M0,          // subspace size (oversample!)
     Integer, maxIter,
     Integer, gaussLegendre,
+    Integer, identityB,   // 1 = pass B = I explicitly (self-test of the zB-A path)
     Integer, useGMRES,    // 1 = GMRES (robust near the spectrum), 0 = BiCGSTAB
     Integer, gmresRestart, // GMRES restart length
     RealD,   resid,       // outer (eigenpair) tolerance
@@ -52,12 +53,31 @@ struct FeastParameters : Serializable {
 
   FeastParameters()
     : mass(0.0), EmidRe(1.0), EmidIm(0.0), radius(0.5), ratio(1.0), angle(0.0),
-      Ne(8), M0(16), maxIter(20), gaussLegendre(1), useGMRES(1), gmresRestart(50),
+      Ne(8), M0(16), maxIter(20), gaussLegendre(1), identityB(0), useGMRES(1), gmresRestart(50),
       resid(1e-8), innerResid(1e-8), innerMaxIter(10000)
   {}
 };
 
 } // namespace Grid
+
+/**
+ * Identity operator, used to exercise the generalised (z B - A) code path
+ * against a known answer: with B = I explicitly supplied, the generalised
+ * solver must reproduce the standard (B = nullptr) result exactly.
+ */
+template<class Field>
+class IdentityLinearOperator : public LinearOperatorBase<Field> {
+public:
+  void Op   (const Field& in, Field& out) { out = in; }
+  void AdjOp(const Field& in, Field& out) { out = in; }
+  void OpDiag(const Field&, Field&)                        { assert(0); }
+  void OpDir (const Field&, Field&, int, int)              { assert(0); }
+  void OpDirAll(const Field&, std::vector<Field>&)         { assert(0); }
+  void HermOp(const Field& in, Field& out)                 { out = in; }
+  void HermOpAndNorm(const Field& in, Field& out, RealD& n1, RealD& n2) {
+    out = in; n1 = norm2(in); n2 = norm2(in);
+  }
+};
 
 typedef WilsonFermionD WilsonOp;
 typedef typename WilsonFermionD::FermionField FermionField;
@@ -100,6 +120,15 @@ int main(int argc, char** argv)
       DLinOp, UGrid, Emid, Params.radius, Params.Ne, Params.M0,
       Params.resid, Params.maxIter, Params.ratio, Params.angle,
       Params.gaussLegendre ? FeastGaussLegendre : FeastTrapezoidal);
+
+  // setB() must precede the solver factory: it captures B.
+  IdentityLinearOperator<FermionField> Bident;
+  if (Params.identityB) {
+    std::cout << GridLogMessage
+              << "FEAST: generalised path with B = I (self-test); results must"
+              << " match the standard path exactly" << std::endl;
+    feast.setB(Bident);
+  }
 
   if (Params.useGMRES) {
     std::cout << GridLogMessage << "FEAST inner solver: GMRES (restart "
