@@ -217,7 +217,8 @@ int main (int argc, char ** argv)
   Grid_init(&argc,&argv);
 
   const int Ls=16;
-  RitzFilter KSfilter=EvalImNormSmall;
+  RitzFilter KSfilter=EvalNormSmall;
+//  RitzFilter KSfilter=EvalImNormSmall;
 //  RitzFilter KSfilter=EvalReSmall;
 
   std::cout << "Sorting eigenvalues using " << rfToString(KSfilter) << std::endl;
@@ -449,7 +450,7 @@ int main (int argc, char ** argv)
 
   src[0]=finalEvecs[0];
   std::cout << GridLogMessage << "finalEvecs= "<< finalEvecs.size() <<std::endl;
-  for (int i=1;i<Nk;i++) src[0]+=finalEvecs[i];
+//  for (int i=1;i<Nk;i++) src[0]+=finalEvecs[i];
   for (int i=0;i<Nstop;i++)
   {
 	std::string evfile ("./evec_"+std::to_string(mass)+"_"+std::to_string(i));
@@ -458,10 +459,10 @@ int main (int argc, char ** argv)
 
   }
 
+  for (int i=0;i<Nk;i++) 
   {
-        std::string evfile ("./evec_"+std::to_string(mass)+"_sum");
-//        auto evdensity = localInnerProduct(evec[i],evec[i] );
-        writeFile(src[0],evfile);
+	std::string evfile ("./evecfield_"+std::to_string(mass)+"_"+std::to_string(i));
+        writeFile(finalEvecs[i],evfile);
   }
 
   // ---- Overlap matrices between the saved eigenvectors -------------------

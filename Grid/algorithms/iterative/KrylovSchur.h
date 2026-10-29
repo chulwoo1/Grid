@@ -144,8 +144,8 @@ struct ComplexComparator
   bool operator()(std::complex<double> z1, std::complex<double> z2) { 
 	  RealD tmp1=std::abs(std::imag(z1));
 	  RealD tmp2=std::abs(std::imag(z2));
-	  if ( std::abs(std::real(z1)) >2.) tmp1 += 100.;
-	  if ( std::abs(std::real(z2)) >2.) tmp2 += 100.;
+	  if ( std::abs(std::real(z1)) >4.) tmp1 += 100.;
+	  if ( std::abs(std::real(z2)) >4.) tmp2 += 100.;
     switch (RF) {
       case EvalNormSmall:
         return std::abs(z1) < std::abs(z2);
