@@ -62,10 +62,15 @@ struct ReffParameters : Serializable {
     std::string, config2,
     RealD,       mass,
     Integer,     Nk,          // wanted eigenvectors = size of V
-    Integer,     Nm,          // Lanczos basis size, Nm > Nk
+    Integer,     Nm,          // Krylov basis size, Nm > Nk
+    Integer,     Nstop,       // how many must converge; V is truncated to this
     RealD,       lanTol,
     Integer,     lanMaxIter,
-    RealD,       chebLo,      // Chebyshev window for IRL
+    Integer,     Ls,          // NON-HERMITIAN MODE ONLY (Mobius DWF)
+    RealD,       M5,          // NON-HERMITIAN MODE ONLY
+    RealD,       mobiusB,     // NON-HERMITIAN MODE ONLY
+    RealD,       mobiusC,     // NON-HERMITIAN MODE ONLY
+    RealD,       chebLo,      // HERMITIAN MODE ONLY: Chebyshev window
     RealD,       chebHi,
     Integer,     chebOrd,
     Integer,     selfTest,    // 1 = also run config2 == config1 baseline
@@ -76,7 +81,8 @@ struct ReffParameters : Serializable {
 
   ReffParameters()
     : config1("config1"), config2("config2"), mass(0.01),
-      Nk(16), Nm(48), lanTol(1e-8), lanMaxIter(10000),
+      Nk(16), Nm(48), Nstop(16), lanTol(1e-8), lanMaxIter(10000),
+      Ls(12), M5(1.8), mobiusB(1.5), mobiusC(0.5),
       chebLo(0.01), chebHi(64.0), chebOrd(40), selfTest(1),
       driftScan(0), driftMin(1e-3), driftMax(1e-1), driftPts(5)
   {}
@@ -88,24 +94,104 @@ struct ReffParameters : Serializable {
 static inline ComplexD toGridCmplx(const std::complex<double>& c)
 { return ComplexD(c.real(), c.imag()); }
 
-typedef WilsonFermionD                      WilsonOp;
+typedef WilsonFermionD                        WilsonOp;
 typedef typename WilsonFermionD::FermionField FermionField;
 
-/// Applying A to a field; mode independent from here on.
-typedef std::function<void(const FermionField&, FermionField&)> ApplyOp;
+/**
+ * PV^dag M, lifted from Example_spec_kryschur.cc.  That file defines the
+ * operator inline; it is not in the library, which is why the references to
+ * PVdagMLinearOperator in Example_krylov_schur.cc are commented out.
+ */
+template<class Matrix, class Field>
+class PVdagMLinearOperator : public LinearOperatorBase<Field> {
+  Matrix &_Mat;
+  Matrix &_PV;
+public:
+  PVdagMLinearOperator(Matrix& Mat, Matrix& PV) : _Mat(Mat), _PV(PV) {}
+  void Op(const Field& in, Field& out) {
+    Field tmp(in.Grid());
+    _Mat.M(in, tmp);
+    _PV.Mdag(tmp, out);
+  }
+  void AdjOp(const Field& in, Field& out) {
+    Field tmp(in.Grid());
+    _PV.M(in, tmp);
+    _Mat.Mdag(tmp, out);
+  }
+  void HermOp(const Field& in, Field& out) {
+    Field tmp(in.Grid());
+    Op(in, tmp);
+    AdjOp(tmp, out);
+  }
+  void OpDiag(const Field&, Field&)                        { assert(0); }
+  void OpDir (const Field&, Field&, int, int)              { assert(0); }
+  void OpDirAll(const Field&, std::vector<Field>&)         { assert(0); }
+  void HermOpAndNorm(const Field&, Field&, RealD&, RealD&) { assert(0); }
+};
 
-// ===== MODE DIFFERENCE 1 and 2: operator wrapper, and how it is applied =====
+// ===== MODE DIFFERENCE 1 and 2: action, operator, and how it is applied ====
+//
+// NB the modes differ in FIELD TYPE and GRID as well:
+//   Hermitian      4D Wilson MdagM, fields live on UGrid
+//   non-Hermitian  5D Mobius DWF PV^dag M, fields live on FGrid = Ls x UGrid
+// Downstream code is written against FermType and a workGrid pointer so the
+// measurement itself is untouched.
 #ifdef REFF_NONHERMITIAN
-typedef NonHermitianLinearOperator<WilsonOp, FermionField> ReffOp;
-static inline ApplyOp makeApply(ReffOp& A)
-{ return [&A](const FermionField& in, FermionField& out) { A.Op(in, out); }; }
-static const char* kModeName = "NON-HERMITIAN (bare Dirac, KrylovSchur)";
+typedef MobiusFermionD                          ActionD;
+typedef LatticeFermionD                         FermType;
+typedef PVdagMLinearOperator<ActionD, FermType> ReffOp;
+static const char* kModeName =
+  "NON-HERMITIAN (Mobius DWF, PV^dag M, KrylovSchur) - follows Example_spec_kryschur";
 #else
-typedef MdagMLinearOperator<WilsonOp, FermionField>        ReffOp;
-static inline ApplyOp makeApply(ReffOp& A)
-{ return [&A](const FermionField& in, FermionField& out) { A.HermOp(in, out); }; }
-static const char* kModeName = "HERMITIAN (MdagM, Implicitly Restarted Lanczos)";
+typedef WilsonOp                                ActionD;
+typedef FermionField                            FermType;
+typedef MdagMLinearOperator<ActionD, FermType>  ReffOp;
+static const char* kModeName =
+  "HERMITIAN (Wilson MdagM, Implicitly Restarted Lanczos)";
 #endif
+
+/// Applying A to a field; mode independent from here on.
+typedef std::function<void(const FermType&, FermType&)> ApplyOp;
+
+static inline ApplyOp makeApply(ReffOp& A)
+{
+#ifdef REFF_NONHERMITIAN
+  return [&A](const FermType& in, FermType& out) { A.Op(in, out); };
+#else
+  return [&A](const FermType& in, FermType& out) { A.HermOp(in, out); };
+#endif
+}
+
+/**
+ * Owns the fermion action(s) and the operator for one gauge field, so the
+ * call sites are identical in both modes.  The actions must outlive the
+ * operator, hence holding them by value here.
+ */
+struct OpHolder {
+#ifdef REFF_NONHERMITIAN
+  ActionD Ddwf, Dpv;
+  ReffOp  A;
+  OpHolder(LatticeGaugeField& U,
+           GridCartesian* UG, GridRedBlackCartesian* Urb,
+           GridCartesian* FG, GridRedBlackCartesian* Frb,
+           const ReffParameters& P)
+    : Ddwf(U, *FG, *Frb, *UG, *Urb, P.mass, P.M5, P.mobiusB, P.mobiusC),
+      Dpv (U, *FG, *Frb, *UG, *Urb, 1.0,    P.M5, P.mobiusB, P.mobiusC),
+      A(Ddwf, Dpv) {}
+#else
+  std::vector<Complex>  boundary;
+  WilsonOp::ImplParams  ip;
+  ActionD               Dw;
+  ReffOp                A;
+  OpHolder(LatticeGaugeField& U,
+           GridCartesian* UG, GridRedBlackCartesian* Urb,
+           GridCartesian* FG, GridRedBlackCartesian* Frb,
+           const ReffParameters& P)
+    : boundary({1,1,1,-1}), ip(boundary),
+      Dw(U, *UG, *Urb, P.mass, ip),
+      A(Dw) {}
+#endif
+};
 
 /**
  * Low Nk modes of the chosen operator.  MODE DIFFERENCES 3 and 4 live
@@ -113,17 +199,21 @@ static const char* kModeName = "HERMITIAN (MdagM, Implicitly Restarted Lanczos)"
  */
 static void lowModes(LatticeGaugeField& Umu,
                      GridCartesian* UGrid, GridRedBlackCartesian* UrbGrid,
-                     GridParallelRNG& RNG,
+                     GridCartesian* FGrid, GridRedBlackCartesian* FrbGrid,
+                     GridParallelRNG& RNG,   // must match workGrid
                      const ReffParameters& P,
-                     std::vector<FermionField>& evec,
+                     std::vector<FermType>& evec,
                      std::vector<std::complex<double> >& eval)
 {
-  std::vector<Complex> boundary = {1,1,1,-1};
-  WilsonOp::ImplParams ip(boundary);
-  WilsonOp Dw(Umu, *UGrid, *UrbGrid, P.mass, ip);
-  ReffOp A(Dw);
+  OpHolder H1(Umu, UGrid, UrbGrid, FGrid, FrbGrid, P);
+  ReffOp& A = H1.A;
+#ifdef REFF_NONHERMITIAN
+  GridCartesian* workGrid = FGrid;
+#else
+  GridCartesian* workGrid = UGrid;
+#endif
 
-  FermionField src(UGrid);
+  FermType src(workGrid);
   gaussian(RNG, src);
 
   // NB: std::vector<Lattice>::resize needs a default ctor, which Lattice
@@ -132,25 +222,27 @@ static void lowModes(LatticeGaugeField& Umu,
 #ifdef REFF_NONHERMITIAN
   // ---- MODE DIFFERENCE 3: KrylovSchur; RitzFilter, no Chebyshev.
   //      chebLo / chebHi / chebOrd are ignored in this mode.
-  KrylovSchur<FermionField> KS(A, UGrid, P.lanTol, EvalNormSmall);
-  KS(src, P.lanMaxIter, P.Nm, P.Nk, P.Nk);
+  KrylovSchur<FermType> KS(A, workGrid, P.lanTol, EvalNormSmall);
+  KS(src, P.lanMaxIter, P.Nm, P.Nk, P.Nstop);
 
-  std::vector<FermionField> ev = KS.evecs;
-  int keep = std::min((int)P.Nk, (int)ev.size());
+  // Keep only the Nstop vectors that were required to converge; including
+  // unconverged ones pollutes the baseline, where R must vanish.
+  std::vector<FermType> ev = KS.evecs;
+  int keep = std::min((int)P.Nstop, (int)ev.size());
   ev.erase(ev.begin() + keep, ev.end());
   evec.swap(ev);
   std::cout << GridLogMessage << "  KrylovSchur returned " << evec.size()
-            << " vectors (wanted " << P.Nk << ")" << std::endl;
+            << " vectors (Nstop=" << P.Nstop << ", Nk=" << P.Nk << ")" << std::endl;
 
   // ---- MODE DIFFERENCE 4: KrylovSchur::evals is private, and the
   //      eigenvalues are complex; recover them as Rayleigh quotients.
   {
     ApplyOp apply = makeApply(A);
-    FermionField w(UGrid);
+    FermType w(workGrid);
     eval.clear();
     for (size_t i = 0; i < evec.size(); i++) {
       RealD n = std::sqrt(norm2(evec[i]));
-      FermionField v = evec[i] * (n > 1e-30 ? 1.0/n : 1.0);
+      FermType v = evec[i] * (n > 1e-30 ? 1.0/n : 1.0);
       apply(v, w);
       eval.push_back(toStdCmplx(innerProduct(v, w)));
     }
@@ -158,22 +250,22 @@ static void lowModes(LatticeGaugeField& Umu,
 #else
   // ---- MODE DIFFERENCE 3: IRL, needs a Chebyshev accelerator and the
   //      PlainHermOp / FunctionHermOp wrappers.
-  PlainHermOp<FermionField>    hermop_wrap(A);
-  Chebyshev<FermionField>      Cheb(P.chebLo, P.chebHi, P.chebOrd + 1);
-  FunctionHermOp<FermionField> Cheb_wrap(Cheb, A);
+  PlainHermOp<FermType>    hermop_wrap(A);
+  Chebyshev<FermType>      Cheb(P.chebLo, P.chebHi, P.chebOrd + 1);
+  FunctionHermOp<FermType> Cheb_wrap(Cheb, A);
 
-  ImplicitlyRestartedLanczos<FermionField> IRL(Cheb_wrap, hermop_wrap,
-                                               P.Nk, P.Nk, P.Nm,
+  ImplicitlyRestartedLanczos<FermType> IRL(Cheb_wrap, hermop_wrap,
+                                               P.Nstop, P.Nk, P.Nm,
                                                P.lanTol, P.lanMaxIter);
   std::vector<RealD> rval(P.Nm);
-  std::vector<FermionField> ev(P.Nm, FermionField(UGrid));
+  std::vector<FermType> ev(P.Nm, FermType(workGrid));
 
   int Nconv = 0;
   IRL.calc(rval, ev, src, Nconv);
   std::cout << GridLogMessage << "  IRL converged " << Nconv
-            << " of " << P.Nk << " wanted" << std::endl;
+            << " of " << P.Nstop << " wanted (Nk=" << P.Nk << ")" << std::endl;
 
-  int keep = std::min((int)P.Nk, std::max(Nconv, 0));
+  int keep = std::min((int)P.Nstop, std::max(Nconv, 0));
   ev.erase(ev.begin() + keep, ev.end());
   evec.swap(ev);
 
@@ -208,9 +300,9 @@ static void driftConfig(const LatticeGaugeField& U1, LatticeGaugeField& U2,
 /**
  * The measurement.  V is assumed L2-orthonormal.
  */
-static void measureReff(std::vector<FermionField>& V,
+static void measureReff(std::vector<FermType>& V,
                         ApplyOp apply,
-                        GridCartesian* UGrid,
+                        GridCartesian* workGrid,
                         const std::string& label)
 {
   int k = V.size();
@@ -219,7 +311,7 @@ static void measureReff(std::vector<FermionField>& V,
   // Build R column by column, converting A2 V into R in place.  Holding V,
   // W and R at once would be 3k fields; at 32^4 a fermion field is ~201 MB,
   // so this matters.  Peak here is V (k) + R (k) + 1 scratch.
-  std::vector<FermionField> R(k, FermionField(UGrid));
+  std::vector<FermType> R(k, FermType(workGrid));
   Eigen::MatrixXcd H(k, k);
   RealD normAV2 = 0.0, normR2 = 0.0;
   for (int j = 0; j < k; j++) {
@@ -272,9 +364,21 @@ int main(int argc, char** argv)
   GridCartesian* UGrid = SpaceTimeGrid::makeFourDimGrid(
       GridDefaultLatt(), GridDefaultSimd(Nd, vComplex::Nsimd()), GridDefaultMpi());
   GridRedBlackCartesian* UrbGrid = SpaceTimeGrid::makeFourDimRedBlackGrid(UGrid);
+  GridCartesian*         FGrid   = SpaceTimeGrid::makeFiveDimGrid(P.Ls, UGrid);
+  GridRedBlackCartesian* FrbGrid = SpaceTimeGrid::makeFiveDimRedBlackGrid(P.Ls, UGrid);
 
-  std::vector<int> seeds({1,2,3,4});
-  GridParallelRNG RNG(UGrid); RNG.SeedFixedIntegers(seeds);
+  std::vector<int> seeds4({1,2,3,4}), seeds5({5,6,7,8});
+  GridParallelRNG RNG(UGrid);  RNG.SeedFixedIntegers(seeds4);   // gauge drift
+  GridParallelRNG RNG5(FGrid); RNG5.SeedFixedIntegers(seeds5);
+
+  // the RNG whose grid matches the fermion fields in this mode
+#ifdef REFF_NONHERMITIAN
+  GridParallelRNG& RNGwork = RNG5;
+  GridCartesian*   workGrid = FGrid;
+#else
+  GridParallelRNG& RNGwork = RNG;
+  GridCartesian*   workGrid = UGrid;
+#endif
 
   FieldMetaData h1, h2;
   LatticeGaugeField U1(UGrid), U2(UGrid);
@@ -295,9 +399,9 @@ int main(int argc, char** argv)
 
   // --- V = low modes of config 1 ---
   std::cout << GridLogMessage << "--- low modes on config1 ---" << std::endl;
-  std::vector<FermionField> V;
+  std::vector<FermType> V;
   std::vector<std::complex<double> > eval1;
-  lowModes(U1, UGrid, UrbGrid, RNG, P, V, eval1);
+  lowModes(U1, UGrid, UrbGrid, FGrid, FrbGrid, RNGwork, P, V, eval1);
 
   // IRL output should already be orthonormal; enforce it so H and R are clean
   for (size_t j = 0; j < V.size(); j++) {
@@ -307,21 +411,19 @@ int main(int argc, char** argv)
     if (n > 1e-12) V[j] = V[j] * (1.0/n);
   }
 
-  std::vector<Complex> boundary = {1,1,1,-1};
-  WilsonOp::ImplParams ip(boundary);
-
-  // --- baseline: same config, R must vanish ---
+  // --- baseline: same config, R must vanish.  Check this first: if it is
+  //     not tiny, V is not converged and nothing below means anything.
   if (P.selfTest) {
-    WilsonOp Dw1(U1, *UGrid, *UrbGrid, P.mass, ip);
-    ReffOp A1(Dw1);
-    measureReff(V, makeApply(A1), UGrid, "baseline: config2 == config1 (R should vanish)");
+    OpHolder H1(U1, UGrid, UrbGrid, FGrid, FrbGrid, P);
+    measureReff(V, makeApply(H1.A), workGrid,
+                "baseline: config2 == config1 (R should vanish)");
   }
 
   // --- the measurement ---
   if (!P.driftScan) {
-    WilsonOp Dw2(U2, *UGrid, *UrbGrid, P.mass, ip);
-    ReffOp A2(Dw2);
-    measureReff(V, makeApply(A2), UGrid, "config1 low modes vs config2 operator");
+    OpHolder H2(U2, UGrid, UrbGrid, FGrid, FrbGrid, P);
+    measureReff(V, makeApply(H2.A), workGrid,
+                "config1 low modes vs config2 operator");
   } else {
     // scan synthetic drift: this is the regime the HMC reuse argument needs,
     // which two configs ten trajectories apart do not reach.
@@ -334,9 +436,8 @@ int main(int argc, char** argv)
       RealD dnorm = std::sqrt(norm2(dU)/norm2(U1));
       std::cout << GridLogMessage << "drift eps = " << eps
                 << "   ||dU||/||U|| = " << dnorm << std::endl;
-      WilsonOp Dwd(Ud, *UGrid, *UrbGrid, P.mass, ip);
-      ReffOp Ad(Dwd);
-      measureReff(V, makeApply(Ad), UGrid,
+      OpHolder Hd(Ud, UGrid, UrbGrid, FGrid, FrbGrid, P);
+      measureReff(V, makeApply(Hd.A), workGrid,
                   "drift eps=" + std::to_string(eps)
                   + "  ||dU||/||U||=" + std::to_string(dnorm));
     }
