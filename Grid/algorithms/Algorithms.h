@@ -75,6 +75,7 @@ NAMESPACE_CHECK(BiCGSTAB);
 #include <Grid/algorithms/iterative/FlexibleGeneralisedMinimalResidual.h>
 #include <Grid/algorithms/iterative/FlexibleCommunicationAvoidingGeneralisedMinimalResidual.h>
 #include <Grid/algorithms/iterative/MixedPrecisionFlexibleGeneralisedMinimalResidual.h>
+#include <Grid/algorithms/iterative/EigenSolverCheckpoint.h>
 #include <Grid/algorithms/iterative/ImplicitlyRestartedLanczos.h>
 #include <Grid/algorithms/iterative/SimpleLanczos.h>
 #include <Grid/algorithms/iterative/PowerMethod.h>

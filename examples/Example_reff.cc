@@ -66,13 +66,16 @@ struct ReffParameters : Serializable {
     Integer,     Nstop,       // how many must converge; V is truncated to this
     RealD,       lanTol,
     Integer,     lanMaxIter,
-    Integer,     Ls,          // NON-HERMITIAN MODE ONLY (Mobius DWF)
-    RealD,       M5,          // NON-HERMITIAN MODE ONLY
-    RealD,       mobiusB,     // NON-HERMITIAN MODE ONLY
-    RealD,       mobiusC,     // NON-HERMITIAN MODE ONLY
+    Integer,     Ls,          // Mobius 5th dimension (both modes)
+    RealD,       M5,
+    RealD,       mobiusB,     // Mobius scale, b+c=2
+    RealD,       mobiusC,
     RealD,       chebLo,      // HERMITIAN MODE ONLY: Chebyshev window
     RealD,       chebHi,
     Integer,     chebOrd,
+    std::string, checkpointPrefix,  // both modes; "" disables checkpointing
+    Integer,     checkpointInterval,
+    Integer,     resume,
     Integer,     selfTest,    // 1 = also run config2 == config1 baseline
     Integer,     driftScan,   // 1 = ignore config2, scan synthetic HMC-like drift
     RealD,       driftMin,    // smallest eps in U -> exp(i eps T) U
@@ -83,12 +86,66 @@ struct ReffParameters : Serializable {
     : config1("config1"), config2("config2"), mass(0.01),
       Nk(16), Nm(48), Nstop(16), lanTol(1e-8), lanMaxIter(10000),
       Ls(12), M5(1.8), mobiusB(1.5), mobiusC(0.5),
-      chebLo(0.01), chebHi(64.0), chebOrd(40), selfTest(1),
+      chebLo(0.01), chebHi(64.0), chebOrd(40),
+      checkpointPrefix(""), checkpointInterval(1), resume(0),
+      selfTest(1),
       driftScan(0), driftMin(1e-3), driftMax(1e-1), driftPts(5)
   {}
 };
 
 } // namespace Grid
+
+
+template <class T> void writeFile(T& in, std::string const fname) {
+#ifdef HAVE_LIME
+  std::cout << Grid::GridLogMessage << "Writes to: " << fname << std::endl;
+  Grid::emptyUserRecord record;
+  Grid::ScidacWriter WR(in.Grid()->IsBoss());
+  WR.open(fname);
+  WR.writeScidacFieldRecord(in, record, 0);
+  WR.close();
+#endif
+}
+
+template <class T> void readFile(T& out, std::string const fname) {
+  std::cout << Grid::GridLogMessage << "Reads from: " << fname << std::endl;
+  Grid::emptyUserRecord record;
+  Grid::ScidacReader RD;
+  RD.open(fname);
+  RD.readScidacFieldRecord(out, record);
+  RD.close();
+}
+
+/**
+ * Checkpointing works in both modes, with the same parameters.
+ *
+ * KrylovSchur, BlockKrylovSchur, TrueHarmonicBlockKrylovSchur and (newly)
+ * ImplicitlyRestartedLanczos all expose the same four controls --
+ * checkpointPrefix, checkpointInterval, resumeFromCheckpoint and the
+ * fieldWrite/fieldRead hooks -- so this helper is one mode-independent
+ * template rather than two branches.
+ *
+ * What is checkpointed differs, because the solvers' resumable states differ:
+ * KrylovSchur stores the basis, the residual vector u, the Rayleigh quotient
+ * and b; IRL stores evec[0:Nk] and the real tridiagonal alpha/beta.  Both
+ * resume at a restart boundary, and both can change Nm and Nstop across a
+ * resume but not Nk.
+ */
+template<class Solver>
+static void setupCheckpoint(Solver& S, const ReffParameters& P)
+{
+  if (P.checkpointPrefix.empty()) return;
+  S.checkpointPrefix     = P.checkpointPrefix;
+  S.checkpointInterval   = (int)P.checkpointInterval;
+  S.resumeFromCheckpoint = (P.resume != 0);
+  // Generic lambdas so this helper does not depend on FermType being
+  // declared yet; they convert to the solver's std::function hooks.
+  S.fieldWrite = [](auto& f, const std::string& fn){ writeFile(f, fn); };
+  S.fieldRead  = [](auto& f, const std::string& fn){ readFile(f, fn); };
+  std::cout << GridLogMessage << "checkpointing: prefix=" << P.checkpointPrefix
+            << "  interval=" << P.checkpointInterval
+            << "  resume=" << P.resume << std::endl;
+}
 
 /// ComplexD is thrust::complex in CUDA builds; Eigen uses std::complex.
 static inline ComplexD toGridCmplx(const std::complex<double>& c)
@@ -131,11 +188,11 @@ public:
 
 // ===== MODE DIFFERENCE 1 and 2: action, operator, and how it is applied ====
 //
-// NB the modes differ in FIELD TYPE and GRID as well:
-//   Hermitian      4D Wilson MdagM, fields live on UGrid
-//   non-Hermitian  5D Mobius DWF PV^dag M, fields live on FGrid = Ls x UGrid
-// Downstream code is written against FermType and a workGrid pointer so the
-// measurement itself is untouched.
+// Both modes use the same Mobius action, field type and grid (FGrid), so
+// they differ only in which operator is formed from it:
+//   Hermitian      MdagM        -> Implicitly Restarted Lanczos
+//   non-Hermitian  PV^dag M     -> KrylovSchur
+// The measurement code is identical either way.
 #ifdef REFF_NONHERMITIAN
 typedef MobiusFermionD                          ActionD;
 typedef LatticeFermionD                         FermType;
@@ -143,11 +200,11 @@ typedef PVdagMLinearOperator<ActionD, FermType> ReffOp;
 static const char* kModeName =
   "NON-HERMITIAN (Mobius DWF, PV^dag M, KrylovSchur) - follows Example_spec_kryschur";
 #else
-typedef WilsonOp                                ActionD;
-typedef FermionField                            FermType;
+typedef MobiusFermionD                          ActionD;
+typedef LatticeFermionD                         FermType;
 typedef MdagMLinearOperator<ActionD, FermType>  ReffOp;
 static const char* kModeName =
-  "HERMITIAN (Wilson MdagM, Implicitly Restarted Lanczos)";
+  "HERMITIAN (Mobius MdagM, Implicitly Restarted Lanczos)";
 #endif
 
 /// Applying A to a field; mode independent from here on.
@@ -161,6 +218,51 @@ static inline ApplyOp makeApply(ReffOp& A)
   return [&A](const FermType& in, FermType& out) { A.HermOp(in, out); };
 #endif
 }
+
+
+// Chebyshev acceleration only exists in the Hermitian mode, so this check
+// is compiled and called there only.
+#ifndef REFF_NONHERMITIAN
+/**
+ * Estimate the upper spectral bound of A.HermOp by power iteration, using
+ * the same idiom as the HDCG tests (PowerMethod PM; PM(HermOp, src)).
+ *
+ * The Chebyshev accelerator suppresses [chebLo, chebHi] and amplifies
+ * outside it.  If chebHi < lambda_max the TOP of the spectrum is amplified
+ * and the eigensolver silently returns the largest modes instead of the
+ * smallest -- a failure that looks like success.  Stop here instead.
+ */
+static RealD checkSpectralBound(ReffOp& A, GridCartesian* workGrid,
+                                GridParallelRNG& RNG, const ReffParameters& P)
+{
+  FermType src(workGrid);
+  gaussian(RNG, src);
+  PowerMethod<FermType> PM;
+  RealD lmax = PM(A, src);
+
+  std::cout << GridLogMessage << "spectral bound: lambda_max(HermOp) ~ "
+            << lmax << "   Chebyshev window [" << P.chebLo << ", "
+            << P.chebHi << "]" << std::endl;
+
+  if (lmax > P.chebHi) {
+    std::cout << GridLogError
+              << "chebHi = " << P.chebHi << " is BELOW lambda_max = " << lmax
+              << ".  The Chebyshev would amplify the top of the spectrum and"
+              << " the solver would return the LARGEST modes, not the"
+              << " smallest.  Raise chebHi above " << lmax << " and rerun."
+              << std::endl;
+    assert(0 && "chebHi below lambda_max");
+  }
+  if (P.chebLo >= lmax) {
+    std::cout << GridLogError
+              << "chebLo = " << P.chebLo << " is at or above lambda_max = "
+              << lmax << "; the whole spectrum would be amplified." << std::endl;
+    assert(0 && "chebLo above lambda_max");
+  }
+  return lmax;
+}
+#endif
+
 
 /**
  * Owns the fermion action(s) and the operator for one gauge field, so the
@@ -179,17 +281,14 @@ struct OpHolder {
       Dpv (U, *FG, *Frb, *UG, *Urb, 1.0,    P.M5, P.mobiusB, P.mobiusC),
       A(Ddwf, Dpv) {}
 #else
-  std::vector<Complex>  boundary;
-  WilsonOp::ImplParams  ip;
-  ActionD               Dw;
-  ReffOp                A;
+  ActionD Ddwf;
+  ReffOp  A;
   OpHolder(LatticeGaugeField& U,
            GridCartesian* UG, GridRedBlackCartesian* Urb,
            GridCartesian* FG, GridRedBlackCartesian* Frb,
            const ReffParameters& P)
-    : boundary({1,1,1,-1}), ip(boundary),
-      Dw(U, *UG, *Urb, P.mass, ip),
-      A(Dw) {}
+    : Ddwf(U, *FG, *Frb, *UG, *Urb, P.mass, P.M5, P.mobiusB, P.mobiusC),
+      A(Ddwf) {}
 #endif
 };
 
@@ -207,11 +306,7 @@ static void lowModes(LatticeGaugeField& Umu,
 {
   OpHolder H1(Umu, UGrid, UrbGrid, FGrid, FrbGrid, P);
   ReffOp& A = H1.A;
-#ifdef REFF_NONHERMITIAN
   GridCartesian* workGrid = FGrid;
-#else
-  GridCartesian* workGrid = UGrid;
-#endif
 
   FermType src(workGrid);
   gaussian(RNG, src);
@@ -223,6 +318,7 @@ static void lowModes(LatticeGaugeField& Umu,
   // ---- MODE DIFFERENCE 3: KrylovSchur; RitzFilter, no Chebyshev.
   //      chebLo / chebHi / chebOrd are ignored in this mode.
   KrylovSchur<FermType> KS(A, workGrid, P.lanTol, EvalNormSmall);
+  setupCheckpoint(KS, P);
   KS(src, P.lanMaxIter, P.Nm, P.Nk, P.Nstop);
 
   // Keep only the Nstop vectors that were required to converge; including
@@ -257,6 +353,7 @@ static void lowModes(LatticeGaugeField& Umu,
   ImplicitlyRestartedLanczos<FermType> IRL(Cheb_wrap, hermop_wrap,
                                                P.Nstop, P.Nk, P.Nm,
                                                P.lanTol, P.lanMaxIter);
+  setupCheckpoint(IRL, P);
   std::vector<RealD> rval(P.Nm);
   std::vector<FermType> ev(P.Nm, FermType(workGrid));
 
@@ -372,13 +469,8 @@ int main(int argc, char** argv)
   GridParallelRNG RNG5(FGrid); RNG5.SeedFixedIntegers(seeds5);
 
   // the RNG whose grid matches the fermion fields in this mode
-#ifdef REFF_NONHERMITIAN
-  GridParallelRNG& RNGwork = RNG5;
+  GridParallelRNG& RNGwork  = RNG5;    // fermion fields live on FGrid
   GridCartesian*   workGrid = FGrid;
-#else
-  GridParallelRNG& RNGwork = RNG;
-  GridCartesian*   workGrid = UGrid;
-#endif
 
   FieldMetaData h1, h2;
   LatticeGaugeField U1(UGrid), U2(UGrid);

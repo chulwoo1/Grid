@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<grid>
+  <ReuseParameters>
+    <config1>/home/chulwoo/DBW2/1Gev/ckpoint_lat.10000</config1>
+    <config2>/home/chulwoo/Claude/CPS/QCD-ML/test_runs/gfix_orig/ckpoint_lat.500000</config2>
+    <mass>0.01</mass>
+    <Ls>8</Ls>
+    <M5>1.8</M5>
+    <mobiusB>1.5</mobiusB>
+    <mobiusC>0.5</mobiusC>
+    <Nk>6</Nk>
+    <Nm>24</Nm>
+    <Nstop>4</Nstop>
+    <lanTol>1e-6</lanTol>
+    <lanMaxIter>20000</lanMaxIter>
+    <chebLo>0.01</chebLo>
+    <chebHi>200.0</chebHi>
+    <chebOrd>24</chebOrd>
+    <checkpointPrefix></checkpointPrefix>
+    <checkpointInterval>1</checkpointInterval>
+    <resume>0</resume>
+    <compressMode>0</compressMode>
+    <Nreduced>0</Nreduced>
+    <doFresh>1</doFresh>
+    <doSeeded>1</doSeeded>
+  </ReuseParameters>
+</grid>

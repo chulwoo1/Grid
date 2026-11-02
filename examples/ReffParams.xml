@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<grid>
+  <ReffParameters>
+    <config1>config1</config1>
+    <config2>config2</config2>
+    <mass>0.01</mass>
+    <Nk>6</Nk>
+    <Nm>24</Nm>
+    <Nstop>4</Nstop>
+    <lanTol>1e-6</lanTol>
+    <lanMaxIter>20000</lanMaxIter>
+    <chebLo>1.0</chebLo>
+    <chebHi>70.0</chebHi>
+    <chebOrd>24</chebOrd>
+    <selfTest>1</selfTest>
+    <driftScan>0</driftScan>
+    <driftMin>1e-3</driftMin>
+    <driftMax>1e-1</driftMax>
+    <driftPts>4</driftPts>
+    <Ls>8</Ls>
+    <M5>1.8</M5>
+    <mobiusB>1.5</mobiusB>
+    <mobiusC>0.5</mobiusC>
+  </ReffParameters>
+</grid>
