@@ -105,9 +105,48 @@ template<class Field> class ImplicitlyRestartedLanczosHermOpTester  : public Imp
   }
 };
 
-template<class Field> 
+/**
+ * Sidecar metadata for an ImplicitlyRestartedLanczos job-level checkpoint.
+ *
+ * The resumable state of IRL is far smaller than that of Krylov-Schur: at the
+ * top of the restart loop the factorisation is the Nk-step Lanczos relation
+ *
+ *     A V_k = V_k T_k + beta_k v_{k+1} e_k^dag
+ *
+ * so all that is needed is the real tridiagonal T_k - its diagonal alpha and
+ * off-diagonal beta - together with the Nk+1 basis vectors (the extra one
+ * being the normalised residual v_{k+1}, which the restart has already stored
+ * in evec[Nk]).  The Nm-Nk trailing Lanczos steps and everything derived from
+ * them are recomputed by the resumed iteration, so none of it is stored.
+ *
+ * evalMaxApprox is saved because it is the normalisation of the convergence
+ * test; recomputing it would cost 50 matvecs and, worse, give a slightly
+ * different number, so a resumed run would not apply quite the same test as
+ * the run it continues.
+ *
+ * alpha/beta are real, so unlike the Krylov-Schur sidecars no re/im
+ * interleaving is needed - but the same full-precision XML path is used, for
+ * the same reason.
+ */
+class IRLCheckpointMeta : Serializable {
+public:
+  GRID_SERIALIZABLE_CLASS_MEMBERS(IRLCheckpointMeta,
+                                  int,    Nm,
+                                  int,    Nk,
+                                  int,    Nstop,
+                                  int,    iter,
+                                  int,    eigsort,
+                                  double, eresid,
+                                  double, evalMaxApprox,
+                                  double, beta_k,
+                                  std::vector<double>, alpha,
+                                  std::vector<double>, beta);
+};
+
+template<class Field>
 class ImplicitlyRestartedLanczos {
  private:
+  const std::string cname = "ImplicitlyRestartedLanczos";
   const RealD small = 1.0e-8;
   int MaxIter;
   int MinRestart; // Minimum number of restarts; only check for convergence after
@@ -134,7 +173,29 @@ class ImplicitlyRestartedLanczos {
  public:
   IRLeigsort EigSort;
 
-  
+  ////////////////////////////////////////////////////////////////////
+  // Job-level checkpoint / resume.
+  //
+  // Deliberately the same member names as KrylovSchur::checkpointPrefix etc,
+  // so a caller can wire either solver with one piece of code.
+  //
+  // A non-empty prefix enables checkpoint writing every checkpointInterval
+  // restarts, alternating between the slots <prefix>.A and <prefix>.B.
+  // resumeFromCheckpoint picks up from the newer of the two instead of
+  // starting from src.  The lattice-field I/O hooks must be set whenever
+  // either is in use - the solver has no opinion on the file format, so the
+  // caller supplies it (e.g. ScidacWriter).
+  ////////////////////////////////////////////////////////////////////
+  std::string checkpointPrefix     = "";
+  int         checkpointInterval   = 1;
+  bool        resumeFromCheckpoint = false;
+  std::function<void(Field&, const std::string&)> fieldWrite;
+  std::function<void(Field&, const std::string&)> fieldRead;
+ private:
+  int checkpointCounter = 0;              // alternates the A/B checkpoint slot
+ public:
+
+
   //////////////////////////////////////////////////////////////////
   // PAB:
   //////////////////////////////////////////////////////////////////
@@ -248,8 +309,29 @@ until convergence
 	
     GRID_ASSERT(Nm <= evec.size() && Nm <= eval.size());
     
-    // quickly get an idea of the largest eigenvalue to more properly normalize the residuum
+    std::vector<RealD> lme(Nm);
+    std::vector<RealD> lme2(Nm);
+    std::vector<RealD> eval2(Nm);
+    std::vector<RealD> eval2_copy(Nm);
+    Eigen::MatrixXd Qt = Eigen::MatrixXd::Zero(Nm,Nm);
+
+    Field f(grid);
+    Field v(grid);
+    int k1 = 1;
+    int k2 = Nk;
+    RealD beta_k = 0.0;
     RealD evalMaxApprox = 0.0;
+    int iter0 = 0;
+
+    Nconv = 0;
+
+    if ( resumeFromCheckpoint ) {
+
+      loadCheckpoint(iter0,eval,lme,evec,evalMaxApprox,beta_k);
+
+    } else {
+
+    // quickly get an idea of the largest eigenvalue to more properly normalize the residuum
     {
       auto src_n = src;
       auto tmp = src;
@@ -272,36 +354,24 @@ until convergence
       }
     }
     std::cout << GridLogIRL << " Final evalMaxApprox  " << evalMaxApprox << std::endl;
-	
-    std::vector<RealD> lme(Nm);  
-    std::vector<RealD> lme2(Nm);
-    std::vector<RealD> eval2(Nm);
-    std::vector<RealD> eval2_copy(Nm);
-    Eigen::MatrixXd Qt = Eigen::MatrixXd::Zero(Nm,Nm);
 
-    Field f(grid);
-    Field v(grid);
-    int k1 = 1;
-    int k2 = Nk;
-    RealD beta_k;
-
-    Nconv = 0;
-  
     // Set initial vector
     evec[0] = src;
     normalise(evec[0]);
-	
+
     // Initial Nk steps
     OrthoTime=0.;
     for(int k=0; k<Nk; ++k) step(eval,lme,evec,f,Nm,k);
     std::cout<<GridLogIRL <<"Initial "<< Nk <<"steps done "<<std::endl;
     std::cout<<GridLogIRL <<"Initial steps:OrthoTime "<<OrthoTime<< "seconds"<<std::endl;
 
+    } // end of start-from-scratch branch
+
     //////////////////////////////////
     // Restarting loop begins
     //////////////////////////////////
     int iter;
-    for(iter = 0; iter<MaxIter; ++iter){
+    for(iter = iter0; iter<MaxIter; ++iter){
       
       OrthoTime=0.;
 
@@ -422,8 +492,20 @@ until convergence
 	  
       } else {
 	std::cout << GridLogIRL << "iter < MinRestart: do not yet test for convergence\n";
-      } // end of iter loop
-    }
+      }
+
+      ////////////////////////////////////////////////////
+      // Job-level checkpoint.  Taken here, at the bottom of the restart
+      // body, because this is the one point in the iteration where the
+      // state is exactly the Nk-step relation the resume expects:
+      // evec[0:Nk] and the tridiagonal eval/lme[0:Nk] have been rotated and
+      // recompressed, and the convergence test above left them untouched
+      // (it diagonalises copies and rotates into a scratch field).
+      ////////////////////////////////////////////////////
+      if ( !checkpointPrefix.empty() && ((iter + 1) % checkpointInterval == 0) )
+	saveCheckpoint(iter,eval,lme,evec,evalMaxApprox,beta_k);
+
+    } // end of iter loop
 
     std::cout<<GridLogError<<"\n NOT converged.\n";
     abort();
@@ -467,6 +549,107 @@ until convergence
   }
 
  private:
+
+  //------------------------------------------------------------------
+  // Job-level checkpoint / resume
+  //------------------------------------------------------------------
+  /**
+   * Write the resumable state to the next A/B slot:
+   *   <prefix>.<slot>.evec.<i>   i = 0..Nk   (lattice fields; evec[Nk] is the
+   *                                           normalised residual v_{k+1})
+   *   <prefix>.<slot>.meta.xml   alpha[0:Nk], beta[0:Nk], evalMaxApprox, ...
+   *
+   * Fields go first and the sidecar last, so an interrupted write leaves the
+   * slot without a sidecar and loadCheckpoint simply never selects it.
+   */
+  void saveCheckpoint(int iter,
+		      const std::vector<RealD>& lmd,
+		      const std::vector<RealD>& lme,
+		      std::vector<Field>& evec,
+		      RealD evalMaxApprox,
+		      RealD beta_k)
+  {
+    assert(fieldWrite && "checkpoint: fieldWrite hook must be set");
+    assert((int)evec.size() > Nk);
+
+    std::string base = EigCheckpoint::nextSlot(checkpointPrefix,checkpointCounter);
+
+    std::cout << GridLogIRL << cname << ": writing checkpoint to slot "
+	      << base << " (iter " << iter << ")" << std::endl;
+
+    EigCheckpoint::writeFields(fieldWrite,evec,Nk+1,base,"evec");
+
+    IRLCheckpointMeta meta;
+    meta.Nm            = Nm;
+    meta.Nk            = Nk;
+    meta.Nstop         = Nstop;
+    meta.iter          = iter;
+    meta.eigsort       = (int)EigSort;
+    meta.eresid        = eresid;
+    meta.evalMaxApprox = evalMaxApprox;
+    meta.beta_k        = beta_k;
+    EigCheckpoint::flattenReal(lmd,Nk,meta.alpha);
+    EigCheckpoint::flattenReal(lme,Nk,meta.beta);
+
+    EigCheckpoint::writeMeta(evec[0].Grid(),base,"IRLCheckpoint",meta);
+
+    std::cout << GridLogIRL << cname << ": checkpoint slot "
+	      << base << " complete." << std::endl;
+  }
+
+  /**
+   * Load the newer valid slot, restoring evec[0:Nk], the tridiagonal
+   * lmd/lme[0:Nk], evalMaxApprox and beta_k, and returning the restart
+   * iteration to continue from in iter0.
+   *
+   * Nk must match the checkpoint, since it fixes the layout of the stored
+   * state.  Nm may differ: the resumed iteration simply extends to the new
+   * Nm.  eresid is restored from the checkpoint rather than taken from the
+   * current object, so that a resumed run applies the same convergence test
+   * as the run it continues; a differing input value is reported, not used.
+   */
+  void loadCheckpoint(int& iter0,
+		      std::vector<RealD>& lmd,
+		      std::vector<RealD>& lme,
+		      std::vector<Field>& evec,
+		      RealD& evalMaxApprox,
+		      RealD& beta_k)
+  {
+    assert(fieldRead && "checkpoint: fieldRead hook must be set");
+
+    IRLCheckpointMeta meta;
+    std::string base = EigCheckpoint::newestSlot(checkpointPrefix,"IRLCheckpoint",
+						 meta,checkpointCounter);
+
+    std::cout << GridLogIRL << cname << ": loading checkpoint from slot "
+	      << base << " (saved at iter " << meta.iter << ")" << std::endl;
+
+    // Hard requirement: the stored state is laid out by Nk.
+    GRID_ASSERT(meta.Nk == Nk && "checkpoint: Nk mismatch");
+    // Soft differences: allowed, but report them.
+    EigCheckpoint::reportSoft(cname,"Nm",meta.Nm,Nm);
+    EigCheckpoint::reportSoft(cname,"Nstop",meta.Nstop,Nstop);
+    EigCheckpoint::warnSoft(cname,"EigSort",meta.eigsort,(int)EigSort);
+    if ( meta.eresid != eresid )
+      std::cout << GridLogWarning << cname << ": checkpoint eresid = " << meta.eresid
+		<< " overrides the input value " << eresid << std::endl;
+
+    eresid        = meta.eresid;
+    evalMaxApprox = meta.evalMaxApprox;
+    beta_k        = meta.beta_k;
+    iter0         = meta.iter + 1;
+
+    EigCheckpoint::unflattenReal(meta.alpha,Nk,lmd);
+    EigCheckpoint::unflattenReal(meta.beta,Nk,lme);
+
+    // evec is preallocated by the caller (Nm fields), so read in place.
+    EigCheckpoint::readFields(fieldRead,evec,Nk+1,base,"evec");
+
+    std::cout << GridLogIRL << cname << ": resuming at restart iteration "
+	      << iter0 << ", evalMaxApprox = " << evalMaxApprox
+	      << ", beta(k) = " << beta_k << std::endl;
+  }
+
 /* Saad PP. 195
 1. Choose an initial vector v1 of 2-norm unity. Set β1 ≡ 0, v0 ≡ 0
 2. For k = 1,2,...,m Do:

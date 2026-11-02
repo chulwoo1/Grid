@@ -412,17 +412,13 @@ public:
     assert(fieldWrite && "checkpoint: fieldWrite hook must be set");
     assert((int)basis.size() == Nk && (int)F.size() == Nblock);
 
-    std::string slot = (checkpointCounter % 2 == 0) ? "A" : "B";
-    checkpointCounter++;
-    std::string base = checkpointPrefix + "." + slot;
+    std::string base = EigCheckpoint::nextSlot(checkpointPrefix, checkpointCounter);
 
     std::cout << GridLogMessage << className << ": writing checkpoint to slot "
               << base << " (iter " << iter << ")" << std::endl;
 
-    for (int i = 0; i < Nk; i++)
-      fieldWrite(basis[i], base + ".basis." + std::to_string(i));
-    for (int t = 0; t < Nblock; t++)
-      fieldWrite(F[t], base + ".F." + std::to_string(t));
+    EigCheckpoint::writeFields(fieldWrite, basis, Nk, base, "basis");
+    EigCheckpoint::writeFields(fieldWrite, F, Nblock, base, "F");
 
     BKSCheckpointMeta meta;
     meta.Nm         = Nm;
@@ -434,28 +430,10 @@ public:
     meta.rtol       = rtol;
     meta.beta_k     = beta_k;
 
-    meta.Hdata.resize(2 * Nk * Nk);
-    for (int i = 0; i < Nk; i++)
-      for (int j = 0; j < Nk; j++) {
-        meta.Hdata[2*(i*Nk + j)    ] = H(i, j).real();
-        meta.Hdata[2*(i*Nk + j) + 1] = H(i, j).imag();
-      }
-    meta.Bdata.resize(2 * Nk * Nblock);
-    for (int i = 0; i < Nk; i++)
-      for (int t = 0; t < Nblock; t++) {
-        meta.Bdata[2*(i*Nblock + t)    ] = B(i, t).real();
-        meta.Bdata[2*(i*Nblock + t) + 1] = B(i, t).imag();
-      }
+    EigCheckpoint::flatten(H, Nk, Nk, meta.Hdata);
+    EigCheckpoint::flatten(B, Nk, Nblock, meta.Bdata);
 
-    if (Grid_->IsBoss()) {
-      XmlWriter WR(base + ".meta.xml");
-      // Full double precision: XmlWriter's default 6-digit formatting would
-      // truncate H/B/rtol and break the exactness of the resumed KS relation.
-      WR.setPrecision(17);
-      WR.scientificFormat(true);
-      write(WR, "BKSCheckpoint", meta);
-    }
-    Grid_->Barrier();
+    EigCheckpoint::writeMeta(Grid_, base, "BKSCheckpoint", meta);
 
     std::cout << GridLogMessage << className << ": checkpoint slot "
               << base << " complete." << std::endl;
@@ -471,31 +449,10 @@ public:
   void loadCheckpoint(int& iter0)
   {
     assert(fieldRead && "checkpoint: fieldRead hook must be set");
-    assert(!checkpointPrefix.empty() && "checkpoint: checkpointPrefix must be set");
-
-    auto metaExists = [](const std::string& fn) {
-      std::ifstream f(fn);
-      return f.good();
-    };
-
-    BKSCheckpointMeta metaA, metaB;
-    bool haveA = metaExists(checkpointPrefix + ".A.meta.xml");
-    bool haveB = metaExists(checkpointPrefix + ".B.meta.xml");
-    if (haveA) { XmlReader RD(checkpointPrefix + ".A.meta.xml"); read(RD, "BKSCheckpoint", metaA); }
-    if (haveB) { XmlReader RD(checkpointPrefix + ".B.meta.xml"); read(RD, "BKSCheckpoint", metaB); }
-    assert((haveA || haveB) && "checkpoint: no meta file found for either slot");
 
     BKSCheckpointMeta meta;
-    std::string base;
-    if (haveA && (!haveB || metaA.iter >= metaB.iter)) {
-      base = checkpointPrefix + ".A";
-      meta = metaA;
-      checkpointCounter = 1;   // next write goes to slot B
-    } else {
-      base = checkpointPrefix + ".B";
-      meta = metaB;
-      checkpointCounter = 0;   // next write goes to slot A
-    }
+    std::string base = EigCheckpoint::newestSlot(checkpointPrefix, "BKSCheckpoint",
+                                                 meta, checkpointCounter);
 
     std::cout << GridLogMessage << className << ": loading checkpoint from slot "
               << base << " (saved at iter " << meta.iter << ")" << std::endl;
@@ -504,31 +461,18 @@ public:
     assert(meta.Nk == Nk         && "checkpoint: Nk mismatch");
     assert(meta.Nblock == Nblock && "checkpoint: Nblock mismatch");
     // Soft differences: allowed, but report them.
-    if (meta.Nm != Nm)
-      std::cout << GridLogMessage << className << ": checkpoint Nm = " << meta.Nm
-                << " -> continuing with Nm = " << Nm << std::endl;
-    if (meta.Nstop != Nstop)
-      std::cout << GridLogMessage << className << ": checkpoint Nstop = " << meta.Nstop
-                << " -> continuing with Nstop = " << Nstop << std::endl;
-    if (meta.ritzFilter != (int)ritzFilter)
-      std::cout << GridLogWarning << className << ": checkpoint ritzFilter = "
-                << meta.ritzFilter << " differs from current = " << (int)ritzFilter
-                << std::endl;
+    EigCheckpoint::reportSoft(className, "Nm", meta.Nm, Nm);
+    EigCheckpoint::reportSoft(className, "Nstop", meta.Nstop, Nstop);
+    EigCheckpoint::warnSoft(className, "ritzFilter", meta.ritzFilter, (int)ritzFilter);
 
     rtol   = meta.rtol;
     beta_k = meta.beta_k;
     iter0  = meta.iter + 1;
 
     H = CMat::Zero(Nm, Nm);
-    for (int i = 0; i < Nk; i++)
-      for (int j = 0; j < Nk; j++)
-        H(i, j) = std::complex<double>(meta.Hdata[2*(i*Nk + j)],
-                                       meta.Hdata[2*(i*Nk + j) + 1]);
+    EigCheckpoint::unflatten(meta.Hdata, Nk, Nk, H);
     B = CMat::Zero(Nm, Nblock);
-    for (int i = 0; i < Nk; i++)
-      for (int t = 0; t < Nblock; t++)
-        B(i, t) = std::complex<double>(meta.Bdata[2*(i*Nblock + t)],
-                                       meta.Bdata[2*(i*Nblock + t) + 1]);
+    EigCheckpoint::unflatten(meta.Bdata, Nk, Nblock, B);
 
     basis.clear();
     for (int i = 0; i < Nk; i++) {
