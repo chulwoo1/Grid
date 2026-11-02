@@ -4,6 +4,8 @@
 
     Source file: ./examples/Example_reff.cc
 
+    Author: Chulwoo Jung <chulwoo@bnl.gov>
+
     Measure the effective rank r_eff of the restart residual between two
     gauge configurations.
 
@@ -48,6 +50,8 @@
     directory
 *************************************************************************************/
 /*  END LEGAL */
+
+#define REFF_NONHERMITIAN
 
 #include <Grid/Grid.h>
 
