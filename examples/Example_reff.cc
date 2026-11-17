@@ -458,7 +458,9 @@ int main(int argc, char** argv)
   Grid_init(&argc, &argv);
 
   ReffParameters P;
+  { XmlWriter wr("ReffParams.xml.template"); write(wr,"ReffParams",P); }
   { XmlReader rd("ReffParams.xml"); read(rd, "ReffParameters", P); }
+  { XmlWriter wr("ReffParams.xml.out"); write(wr,"ReffParams",P); }
   std::cout << GridLogMessage << P << std::endl;
   std::cout << GridLogMessage << "MODE: " << kModeName << std::endl;
 
