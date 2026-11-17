@@ -40,6 +40,7 @@
 /*  END LEGAL */
 
 #include <Grid/Grid.h>
+#include <sstream>
 
 using namespace std;
 using namespace Grid;
@@ -70,7 +71,24 @@ struct PVParameters : Serializable {
     // contour for the generalised run (physical PV^{-1}M low modes)
     RealD,   genEmidRe,
     RealD,   genEmidIm,
-    RealD,   genRadius)
+    RealD,   genRadius,
+    // --- head to head ---
+    RealD,   h2hResTarget,  // ||A v - lambda v||/||v|| counted as converged
+    Integer, feastInner,    // 0 = GMRES, 1 = BiCGSTAB, 2 = CGNR
+    // The inner stopping condition and iteration cap are the dominant FEAST
+    // tuning knobs: the contour nodes sit close to the spectrum, so (z-A) is
+    // near-singular and nearly all the time is spent in these solves.  Both
+    // are swept as a cross product so the trade-off is visible in one run.
+    // A cap that bites is not a failure -- FEAST tolerates inexact solves
+    // (IFEAST); the question is whether the outer iteration still converges.
+    std::vector<RealD>,   feastInnerTols,
+    std::vector<Integer>, feastInnerMaxIts,
+    // Contour radius = feastRadiusFactor * (max distance of a KS eigenvalue
+    // from their centroid).  This trades two things directly against each
+    // other: a larger factor pushes the quadrature nodes away from the
+    // spectrum, so (z-A) is better conditioned and the inner solves are much
+    // cheaper, but it encloses more eigenvalues and so needs a larger M0.
+    RealD,   feastRadiusFactor)
 
   PVParameters()
     : mass(0.01), M5(1.8), Ls(8), stage(1),
@@ -78,7 +96,10 @@ struct PVParameters : Serializable {
       ksNk(32), ksNp(32), ksNstop(16), ksMaxIter(100), ksResid(1e-8),
       feastNe(8), feastM0(12), feastMaxIter(3),
       gmresRestart(50), gmresMaxIt(3000),
-      genEmidRe(0.05), genEmidIm(0.0), genRadius(0.15)
+      genEmidRe(0.05), genEmidIm(0.0), genRadius(0.15),
+      h2hResTarget(1e-6), feastInner(2),
+      feastInnerTols({1e-2, 1e-3}), feastInnerMaxIts({200, 1000}),
+      feastRadiusFactor(1.5)
   {}
 };
 
@@ -160,6 +181,120 @@ public:
   void HermOpAndNorm(const Field&, Field&, RealD&, RealD&) { assert(0); }
 };
 
+
+// The counting wrapper now lives in the library as CountingLinearOperator
+// (Grid/algorithms/CountingLinearOperator.h), shared with Example_reuse.cc.
+template<class Field> using CountingOp = CountingLinearOperator<Field>;
+
+/**
+ * One row of the head-to-head table.  Residuals are recomputed here with a
+ * single definition, ||A v - lambda v|| / ||v||, rather than trusting each
+ * solver's internal estimate -- KS reports a Ritz estimate and FEAST its own
+ * block residual, and they are not the same quantity.
+ */
+struct CostRow {
+  std::string method;
+  double      wall    = 0.0;   // seconds
+  long        calls   = 0;     // operator applications
+  long        matvecs = 0;     // sparse applications
+  int         found   = 0;     // eigenpairs returned
+  int         conv    = 0;     // of those, meeting resTarget
+  double      bestRes = -1.0;
+  double      worstRes = -1.0;
+};
+
+static void printCostTable(const std::vector<CostRow>& rows, double resTarget)
+{
+  std::cout << GridLogMessage << std::endl;
+  std::cout << GridLogMessage << "================ head to head ================" << std::endl;
+  std::cout << GridLogMessage << "  converged means ||A v - lambda v||/||v|| < "
+            << resTarget << ", recomputed identically for both methods" << std::endl;
+  std::cout << GridLogMessage << std::endl;
+  std::cout << GridLogMessage
+            << "  method                        wall_s     calls   matvecs  found conv"
+            << "   mv/pair   best_res  worst_res" << std::endl;
+  for (const auto& r : rows) {
+    std::cout << GridLogMessage << "  " << std::left << std::setw(28) << r.method
+              << std::right
+              << std::setw(9)  << std::fixed << std::setprecision(2) << r.wall
+              << std::setw(10) << r.calls
+              << std::setw(10) << r.matvecs
+              << std::setw(7)  << r.found
+              << std::setw(5)  << r.conv
+              << std::setw(10) << (r.conv > 0 ? r.matvecs / r.conv : 0)
+              << std::setw(11) << std::scientific << std::setprecision(2) << r.bestRes
+              << std::setw(11) << r.worstRes
+              << std::endl;
+  }
+  std::cout << GridLogMessage << "==============================================" << std::endl;
+}
+
+/**
+ * Recompute residuals for a set of eigenpairs under one definition and fill in
+ * the convergence columns of a row.
+ */
+template<class Field>
+static void scorePairs(LinearOperatorBase<Field>& A,
+                       const Eigen::VectorXcd& evals,
+                       const std::vector<Field>& evecs,
+                       double resTarget, CostRow& row,
+                       const std::string& label)
+{
+  int n = std::min((int)evals.size(), (int)evecs.size());
+  row.found = n;
+  row.conv  = 0;
+  row.bestRes = 1e30; row.worstRes = 0.0;
+  if (n == 0) { row.bestRes = -1.0; row.worstRes = -1.0; return; }
+
+  Field w(evecs[0].Grid());
+  for (int i = 0; i < n; i++) {
+    RealD nv = std::sqrt(norm2(evecs[i]));
+    if (nv < 1e-30) continue;
+    A.Op(evecs[i], w);
+    ComplexD lam(evals(i).real(), evals(i).imag());
+    w = w - lam * evecs[i];
+    RealD r = std::sqrt(norm2(w)) / nv;
+    row.bestRes  = std::min(row.bestRes,  (double)r);
+    row.worstRes = std::max(row.worstRes, (double)r);
+    if (r < resTarget) row.conv++;
+    std::cout << GridLogMessage << "    " << label << "[" << std::setw(2) << i
+              << "]  lambda = " << evals(i) << "   |res| = " << r
+              << (r < resTarget ? "" : "   (not converged)") << std::endl;
+  }
+}
+
+/**
+ * Cross-match two eigenvalue lists.  Reports how many of each side's values
+ * the other side also found, which is what decides whether the cost figures
+ * are comparable at all: a cheap run that found half the spectrum is not
+ * cheaper, it answered a smaller question.
+ */
+static void matchEvals(const Eigen::VectorXcd& a, const std::string& la,
+                       const Eigen::VectorXcd& b, const std::string& lb,
+                       double rtol)
+{
+  std::cout << GridLogMessage << std::endl;
+  std::cout << GridLogMessage << "--- eigenvalue cross-match, relative tol " << rtol
+            << " ---" << std::endl;
+  auto countIn = [&](const Eigen::VectorXcd& x, const Eigen::VectorXcd& y) {
+    int hit = 0;
+    for (int i = 0; i < x.size(); i++) {
+      double scale = std::max(1e-30, std::abs(x(i)));
+      for (int j = 0; j < y.size(); j++)
+        if (std::abs(x(i) - y(j)) / scale < rtol) { hit++; break; }
+    }
+    return hit;
+  };
+  int aInB = countIn(a, b), bInA = countIn(b, a);
+  std::cout << GridLogMessage << "  " << la << " values also found by " << lb
+            << " : " << aInB << " / " << a.size() << std::endl;
+  std::cout << GridLogMessage << "  " << lb << " values also found by " << la
+            << " : " << bInA << " / " << b.size() << std::endl;
+  if (aInB < a.size() || bInA < b.size())
+    std::cout << GridLogMessage
+              << "  NOTE: the two did not answer the same question; compare costs with care"
+              << std::endl;
+}
 
 /// L2 modified Gram-Schmidt in place; returns the rank actually retained.
 template<class Field>
@@ -306,17 +441,26 @@ int main(int argc, char** argv)
 
 
   // ================= Stage 2 : Krylov-Schur on PV^dag M =================
+  // One counted PV^dag M, shared by stage 2 and stage 3a so that both sides
+  // of the head-to-head are measured through the same instrument.  costPerOp
+  // = 2: one Op() is M followed by PV^dag.
+  PVdagMOp<DwfOp, FermionField> PVdagMbare(Ddwf, Dpv);
+  CountingOp<FermionField>      PVdagM(PVdagMbare, 2);
+
   std::vector<FermionField> ksEvecs;
   Eigen::VectorXcd          ksEvals;
+  std::vector<CostRow>      rows;
+  const double resTarget = P.h2hResTarget;
+
   if (P.stage >= 2) {
     std::cout << GridLogMessage << "--- Stage 2: Krylov-Schur on PV^dag M ---" << std::endl;
     std::cout << GridLogMessage << "  Nk=" << P.ksNk << " Np=" << P.ksNp
               << " Nstop=" << P.ksNstop << " maxIter=" << P.ksMaxIter
               << " resid=" << P.ksResid << "  filter=EvalNormSmall" << std::endl;
 
-    PVdagMOp<DwfOp, FermionField> PVdagM(Ddwf, Dpv);
     FermionField src(FGrid); random(RNG5, src);
 
+    PVdagM.reset();
     double t0 = usecond();
     KrylovSchur<FermionField> KS(PVdagM, FGrid, P.ksResid, EvalNormSmall);
     KS.doEvalCheck = true;
@@ -324,11 +468,28 @@ int main(int argc, char** argv)
     double t1 = usecond();
 
     ksEvecs = KS.evecs;
-    ksEvals = KS.evals;
-    std::cout << GridLogMessage << "  KS(PV^dag M) wall = " << (t1-t0)/1e6
-              << " s,  evecs = " << ksEvecs.size() << std::endl;
-    for (int i = 0; i < std::min((int)ksEvals.size(), P.ksNstop); i++)
-      std::cout << GridLogMessage << "   ks lambda[" << i << "] = " << ksEvals(i) << std::endl;
+    ksEvals = KS.getEvals();   // evals itself is private
+
+    CostRow r;
+    r.method  = "KrylovSchur";
+    r.wall    = (t1-t0)/1e6;
+    r.calls   = PVdagM.calls();
+    r.matvecs = PVdagM.matvecs();
+    // Score only the Nstop that KS was asked to converge; the tail of the
+    // basis is not a claim.
+    {
+      int nk = std::min((int)ksEvals.size(), (int)ksEvecs.size());
+      nk = std::min(nk, (int)P.ksNstop);
+      Eigen::VectorXcd ev = ksEvals.head(nk);
+      std::vector<FermionField> vv(ksEvecs.begin(), ksEvecs.begin() + nk);
+      scorePairs(PVdagMbare, ev, vv, resTarget, r, "ks");
+      ksEvals = ev;
+    }
+    rows.push_back(r);
+
+    std::cout << GridLogMessage << "  KS(PV^dag M) wall = " << r.wall
+              << " s,  calls = " << r.calls << ",  matvecs = " << r.matvecs
+              << ",  converged " << r.conv << "/" << r.found << std::endl;
   }
 
   // ================= Stage 3 : FEAST, both operators =================
@@ -336,46 +497,78 @@ int main(int argc, char** argv)
     // Inner-tolerance sweep.  FEAST (IFEAST) tolerates inexact solves; the
     // question is how loose we can go before the outer rate degrades.
     // Everything is recorded, loosest-first.
-    std::vector<RealD> tols = {1e-3, 1e-4, 1e-5, 1e-6};
-
-    PVdagMOp<DwfOp, FermionField> PVdagM(Ddwf, Dpv);
+    std::vector<RealD>   tols    = P.feastInnerTols;
+    std::vector<Integer> maxIts  = P.feastInnerMaxIts;
+    if (tols.empty())   tols   = {1e-3};
+    if (maxIts.empty()) maxIts = {(Integer)P.gmresMaxIt};
 
     // --- contour for PV^dag M, taken from the measured KS spectrum ---
     std::complex<double> cen(0.0, 0.0);
     double rad = 1.0;
     if (ksEvals.size() > 0) {
-      int n = std::min((int)ksEvals.size(), P.ksNstop);
+      int n = std::min((int)ksEvals.size(), (int)P.ksNstop);
       for (int i = 0; i < n; i++) cen += std::complex<double>(ksEvals(i).real(), ksEvals(i).imag());
       cen /= (double)n;
       rad = 0.0;
       for (int i = 0; i < n; i++)
         rad = std::max(rad, std::abs(std::complex<double>(ksEvals(i).real(), ksEvals(i).imag()) - cen));
-      rad *= 1.5;
+      rad *= P.feastRadiusFactor;
     }
     std::cout << GridLogMessage << "--- Stage 3a: FEAST on PV^dag M ---" << std::endl;
-    std::cout << GridLogMessage << "  contour from KS: Emid=" << cen << " radius=" << rad << std::endl;
+    std::cout << GridLogMessage << "  contour from KS: Emid=" << cen << " radius=" << rad
+              << "  (factor " << P.feastRadiusFactor << " on the KS spread)" << std::endl;
 
     std::vector<FermionField> feastPVdagM;
+    Eigen::VectorXcd          feastBestEvals;
     for (auto tol : tols) {
-      std::cout << GridLogMessage << "  [sweep] PV^dag M, innerTol = " << tol << std::endl;
+     for (auto mit : maxIts) {
+      std::cout << GridLogMessage << "  [sweep] PV^dag M, innerTol = " << tol
+                << "  innerMaxIt = " << mit << std::endl;
       FeastNonHermitian<FermionField> F(PVdagM, FGrid, cen, rad,
                                         P.feastNe, P.feastM0,
                                         1e-7, P.feastMaxIter, 1.0, 0.0,
                                         FeastGaussLegendre);
-      F.useGMRES(tol, P.gmresMaxIt, P.gmresRestart);
+      std::string innerName;
+      if      (P.feastInner == 2) { F.useCGNR(tol, mit);                      innerName = "CGNR"; }
+      else if (P.feastInner == 1) { F.useBiCGSTAB(tol, mit);                  innerName = "BiCGSTAB"; }
+      else                        { F.useGMRES(tol, mit, P.gmresRestart);     innerName = "GMRES"; }
       std::vector<FermionField> Y0(P.feastM0, FermionField(FGrid));
       for (int m = 0; m < (int)P.feastM0; m++) random(RNG5, Y0[m]);
+      PVdagM.reset();
+      F.resetCounters();
       double t0 = usecond();
       F(Y0);
       double t1 = usecond();
-      auto ev = F.getEvals(); auto rs = F.getResiduals();
-      std::cout << GridLogMessage << "  [sweep] PV^dag M tol=" << tol
-                << "  wall=" << (t1-t0)/1e6 << " s  found=" << ev.size();
-      RealD best = 1e30; for (auto r : rs) best = std::min(best, r);
-      std::cout << "  best|res|=" << (rs.empty() ? -1.0 : best) << std::endl;
-      for (int i = 0; i < (int)ev.size(); i++)
-        std::cout << GridLogMessage << "      lambda=" << ev(i) << "  |res|=" << rs[i] << std::endl;
-      if (!F.getEvecsR().empty()) feastPVdagM = F.getEvecsR();
+      auto ev = F.getEvals();
+
+      CostRow r;
+      std::ostringstream nm;
+      nm << "FEAST " << innerName << " t=" << std::scientific << std::setprecision(0) << tol
+         << " n=" << mit;
+      r.method  = nm.str();
+      r.wall    = (t1-t0)/1e6;
+      r.calls   = PVdagM.calls();
+      r.matvecs = PVdagM.matvecs();
+      scorePairs(PVdagMbare, ev, F.getEvecsR(), resTarget, r, "feast");
+      rows.push_back(r);
+
+      long ns = F.nInnerSolves;
+      std::cout << GridLogMessage << "  [sweep] PV^dag M tol=" << tol << " maxIt=" << mit
+                << "  wall=" << r.wall << " s  outer=" << F.getIterations()
+                << "  innerSolves=" << ns
+                << "  calls/solve=" << (ns ? r.calls/ns : 0)
+                << "  matvecs=" << r.matvecs
+                << "  converged " << r.conv << "/" << r.found << std::endl;
+
+      if (!F.getEvecsR().empty()) { feastPVdagM = F.getEvecsR(); feastBestEvals = ev; }
+     }
+    }
+
+    // --- the head-to-head on PV^dag M: same operator, same residual test ---
+    if (!rows.empty()) {
+      printCostTable(rows, resTarget);
+      if (ksEvals.size() > 0 && feastBestEvals.size() > 0)
+        matchEvals(ksEvals, "KS", feastBestEvals, "FEAST", 1e-3);
     }
 
     // --- generalised:  M x = lambda PV x,  i.e. spectrum of PV^{-1} M ---
@@ -386,31 +579,76 @@ int main(int argc, char** argv)
               << "   (DWF PV^{-1}M is overlap-like: circle through 0 and 1,"
               << " physical low modes near the origin)" << std::endl;
 
-    NonHermitianLinearOperator<DwfOp, FermionField> Mop(Ddwf);
-    NonHermitianLinearOperator<DwfOp, FermionField> PVop(Dpv);
+    NonHermitianLinearOperator<DwfOp, FermionField> MopBare(Ddwf);
+    NonHermitianLinearOperator<DwfOp, FermionField> PVopBare(Dpv);
+    // Count M and PV separately: in the generalised form z PV - M, each
+    // shifted application costs one of each, so the two counters should
+    // track one another and their sum is the Dirac-application cost.
+    CountingOp<FermionField> Mop (MopBare,  1);
+    CountingOp<FermionField> PVop(PVopBare, 1);
 
     std::vector<FermionField> feastPVinvM;
+    std::vector<CostRow>      genRows;
     for (auto tol : tols) {
-      std::cout << GridLogMessage << "  [sweep] generalised, innerTol = " << tol << std::endl;
+     for (auto mit : maxIts) {
+      std::cout << GridLogMessage << "  [sweep] generalised, innerTol = " << tol
+                << "  innerMaxIt = " << mit << std::endl;
       FeastNonHermitian<FermionField> G(Mop, FGrid, gcen, P.genRadius,
                                         P.feastNe, P.feastM0,
                                         1e-7, P.feastMaxIter, 1.0, 0.0,
                                         FeastGaussLegendre);
-      G.setB(PVop);                      // must precede useGMRES
-      G.useGMRES(tol, P.gmresMaxIt, P.gmresRestart);
+      G.setB(PVop);                      // must precede the solver factory
+      std::string innerName;
+      if      (P.feastInner == 2) { G.useCGNR(tol, mit);                   innerName = "CGNR"; }
+      else if (P.feastInner == 1) { G.useBiCGSTAB(tol, mit);               innerName = "BiCGSTAB"; }
+      else                        { G.useGMRES(tol, mit, P.gmresRestart);  innerName = "GMRES"; }
       std::vector<FermionField> Y0(P.feastM0, FermionField(FGrid));
       for (int m = 0; m < (int)P.feastM0; m++) random(RNG5, Y0[m]);
+      Mop.reset(); PVop.reset();
+      G.resetCounters();
       double t0 = usecond();
       G(Y0);
       double t1 = usecond();
       auto ev = G.getEvals(); auto rs = G.getResiduals();
-      std::cout << GridLogMessage << "  [sweep] generalised tol=" << tol
-                << "  wall=" << (t1-t0)/1e6 << " s  found=" << ev.size();
-      RealD best = 1e30; for (auto r : rs) best = std::min(best, r);
-      std::cout << "  best|res|=" << (rs.empty() ? -1.0 : best) << std::endl;
+
+      CostRow r;
+      std::ostringstream nm;
+      nm << "FEAST gen " << innerName << " t=" << std::scientific << std::setprecision(0)
+         << tol << " n=" << mit;
+      r.method  = nm.str();
+      r.wall    = (t1-t0)/1e6;
+      r.calls   = Mop.calls() + PVop.calls();
+      r.matvecs = Mop.matvecs() + PVop.matvecs();
+      r.found   = (int)ev.size();
+      r.conv    = 0;
+      r.bestRes = rs.empty() ? -1.0 : 1e30; r.worstRes = rs.empty() ? -1.0 : 0.0;
+      for (auto x : rs) {
+        r.bestRes  = std::min(r.bestRes,  (double)x);
+        r.worstRes = std::max(r.worstRes, (double)x);
+        if (x < resTarget) r.conv++;
+      }
+      genRows.push_back(r);
+
+      long ns = G.nInnerSolves;
+      std::cout << GridLogMessage << "  [sweep] generalised tol=" << tol << " maxIt=" << mit
+                << "  wall=" << r.wall << " s  outer=" << G.getIterations()
+                << "  innerSolves=" << ns
+                << "  calls/solve=" << (ns ? r.calls/ns : 0)
+                << "  M=" << Mop.calls() << " PV=" << PVop.calls()
+                << "  found=" << r.found << "  conv=" << r.conv << std::endl;
       for (int i = 0; i < (int)ev.size(); i++)
         std::cout << GridLogMessage << "      lambda=" << ev(i) << "  |res|=" << rs[i] << std::endl;
       if (!G.getEvecsR().empty()) feastPVinvM = G.getEvecsR();
+     }
+    }
+
+    if (!genRows.empty()) {
+      std::cout << GridLogMessage << std::endl;
+      std::cout << GridLogMessage
+                << "  NOTE: the table below is FEAST on PV^{-1}M, a DIFFERENT operator"
+                << " from the PV^dag M table above. Costs are not comparable across"
+                << " the two tables; residuals are FEAST's own." << std::endl;
+      printCostTable(genRows, resTarget);
     }
 
     // --- the comparison that actually matters ---

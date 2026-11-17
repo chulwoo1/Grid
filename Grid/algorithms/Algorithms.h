@@ -35,6 +35,7 @@ NAMESPACE_CHECK(blas);
 NAMESPACE_CHECK(algorithms);
 #include <Grid/algorithms/SparseMatrix.h>
 #include <Grid/algorithms/LinearOperator.h>
+#include <Grid/algorithms/CountingLinearOperator.h>
 #include <Grid/algorithms/Preconditioner.h>
 NAMESPACE_CHECK(SparseMatrix);
 

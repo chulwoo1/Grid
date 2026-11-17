@@ -105,8 +105,31 @@ public:
   void OpDiag(const Field&, Field&)                       { assert(0); }
   void OpDir (const Field&, Field&, int, int)             { assert(0); }
   void OpDirAll(const Field&, std::vector<Field>&)        { assert(0); }
-  void HermOp(const Field&, Field&)                       { assert(0); }
-  void HermOpAndNorm(const Field&, Field&, RealD&, RealD&){ assert(0); }
+
+  /**
+   * The normal-equations operator (zB-A)^dag (zB-A), which is Hermitian
+   * positive definite whenever (zB-A) is nonsingular.  This is what lets a
+   * plain CG be used for the shifted solves (see useCGNR): restarted GMRES
+   * stagnates badly on these systems, and BiCGSTAB can break down, but CG on
+   * the normal equations cannot fail -- it only costs twice the applications
+   * per iteration and squares the condition number.
+   *
+   * Needs its own scratch, since tmp_ is in use by the B path inside Op().
+   */
+  void HermOp(const Field& in, Field& out) {
+    assert(tmp2_ && "FeastShiftedOperator: HermOp needs the second scratch field");
+    Op(in, *tmp2_);
+    AdjOp(*tmp2_, out);
+  }
+  void HermOpAndNorm(const Field& in, Field& out, RealD& n1, RealD& n2) {
+    HermOp(in, out);
+    n1 = real(innerProduct(in, out));
+    n2 = norm2(out);
+  }
+  void setScratch2(Field* t) { tmp2_ = t; }
+
+private:
+  mutable Field* tmp2_ = nullptr;
 };
 
 enum FeastQuadrature {
@@ -156,12 +179,25 @@ private:
   std::vector<Field> evecsR_;
   std::vector<Field> evecsL_;
   std::vector<RealD> residuals_;
+  int                itersUsed_ = 0;
 
   std::shared_ptr<FeastShiftedOperator<Field> > shiftedOp_;
   std::shared_ptr<Field>                        shiftScratch_;
+  std::shared_ptr<Field>                        shiftScratch2_;  // CGNR only
+  std::shared_ptr<Field>                        shiftRhs_;       // CGNR only
 
 public:
   ShiftSolveFunc shiftSolve;
+
+  // Inner-solver accounting.  The inner stopping condition and iteration cap
+  // are the dominant tuning knobs for FEAST on these operators -- the contour
+  // nodes sit close to the spectrum, so (zB-A) is near-singular and the inner
+  // solve is where essentially all the time goes.  These counters let the
+  // caller see the cost per solve rather than inferring it.
+  mutable long nInnerSolves  = 0;   // shiftSolve calls
+  mutable long nInnerCapped  = 0;   // of those, ones that hit innerMaxIter
+  int  getIterations() const { return itersUsed_; }
+  void resetCounters() { nInnerSolves = 0; nInnerCapped = 0; itersUsed_ = 0; }
   bool           verbose = true;
 
   FeastNonHermitian(LinearOperatorBase<Field>& op, GridBase* grid,
@@ -217,12 +253,13 @@ public:
     shiftScratch_ = std::make_shared<Field>(Grid_);
     shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop, Bop, shiftScratch_.get());
     auto op    = shiftedOp_;
-    shiftSolve = [op, innerTol, innerMaxIter]
+    shiftSolve = [this, op, innerTol, innerMaxIter]
                  (ComplexD z, bool adj, const Field& in, Field& out) {
       op->setShift(z, adj);
       BiCGSTAB<Field> solver(innerTol, innerMaxIter, /*err_on_no_conv=*/false);
       out = Zero();
       solver(*op, in, out);
+      nInnerSolves++;
     };
   }
 
@@ -240,7 +277,7 @@ public:
     shiftScratch_ = std::make_shared<Field>(Grid_);
     shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop, Bop, shiftScratch_.get());
     auto op    = shiftedOp_;
-    shiftSolve = [op, innerTol, innerMaxIter, restartLength]
+    shiftSolve = [this, op, innerTol, innerMaxIter, restartLength]
                  (ComplexD z, bool adj, const Field& in, Field& out) {
       op->setShift(z, adj);
       GeneralisedMinimalResidual<Field> solver(innerTol, innerMaxIter,
@@ -248,6 +285,43 @@ public:
                                                /*err_on_no_conv=*/false);
       out = Zero();
       solver(*op, in, out);
+      nInnerSolves++;
+    };
+  }
+
+  /**
+   * CGNR for the shifted solves: CG on (zB-A)^dag (zB-A) x = (zB-A)^dag b.
+   *
+   * Use this when GMRES stagnates, which on PV^dag M it does badly -- with
+   * restart 50 it failed to converge at most contour nodes, each failure
+   * burning the full inner iteration budget.  CG on the normal equations
+   * cannot stagnate or break down; the price is two operator applications per
+   * iteration and a squared condition number, so the iteration count is
+   * higher but bounded and predictable.
+   *
+   * Note the tolerance is measured on the normal-equations residual
+   * ||(zB-A)^dag (b - (zB-A)x)||, not on ||b - (zB-A)x||.  The latter is what
+   * FEAST actually cares about, and CGNR tends to overshoot it, so a given
+   * innerTol here buys a somewhat better solve than the same number would
+   * from GMRES.
+   */
+  void useCGNR(RealD innerTol = 1e-8, int innerMaxIter = 10000)
+  {
+    shiftScratch_  = std::make_shared<Field>(Grid_);
+    shiftScratch2_ = std::make_shared<Field>(Grid_);
+    shiftRhs_      = std::make_shared<Field>(Grid_);
+    shiftedOp_ = std::make_shared<FeastShiftedOperator<Field> >(Linop, Bop, shiftScratch_.get());
+    shiftedOp_->setScratch2(shiftScratch2_.get());
+    auto op  = shiftedOp_;
+    auto rhs = shiftRhs_;
+    shiftSolve = [this, op, rhs, innerTol, innerMaxIter]
+                 (ComplexD z, bool adj, const Field& in, Field& out) {
+      op->setShift(z, adj);
+      op->AdjOp(in, *rhs);                 // normal-equations right-hand side
+      ConjugateGradient<Field> solver(innerTol, innerMaxIter, /*err_on_no_conv=*/false);
+      out = Zero();
+      solver(*op, *rhs, out);
+      nInnerSolves++;
     };
   }
 
@@ -280,6 +354,7 @@ public:
     Field tmp(Grid_), work(Grid_);
 
     for (int iter = 0; iter < maxIter_; iter++) {
+      itersUsed_ = iter + 1;
 
       if (verbose)
         std::cout << GridLogMessage << "FEAST: ---- iteration " << iter

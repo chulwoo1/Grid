@@ -190,7 +190,7 @@ static const char* kModeName = "HERMITIAN (Mobius MdagM, IRL)";
 
 typedef std::function<void(const FermType&, FermType&)> ApplyOp;
 
-static inline ApplyOp makeApply(ReuseOp& A)
+static inline ApplyOp makeApply(LinearOperatorBase<FermType>& A)
 {
 #ifdef REFF_NONHERMITIAN
   return [&A](const FermType& in, FermType& out) { A.Op(in, out); };
@@ -205,7 +205,11 @@ struct OpHolder {
 #ifdef REFF_NONHERMITIAN
   ActionD Dpv;
 #endif
-  ReuseOp A;
+  ReuseOp Abare;
+  // Everything downstream uses the counted wrapper, so matvecs are attributed
+  // to whichever phase is running.  costPerCall = 2: one call of either
+  // PV^dag M or MdagM is two applications of the 5D Dirac operator.
+  CountingLinearOperator<FermType> A;
   OpHolder(LatticeGaugeField& U,
            GridCartesian* UG, GridRedBlackCartesian* Urb,
            GridCartesian* FG, GridRedBlackCartesian* Frb,
@@ -213,10 +217,11 @@ struct OpHolder {
     : Ddwf(U, *FG, *Frb, *UG, *Urb, P.mass, P.M5, P.mobiusB, P.mobiusC)
 #ifdef REFF_NONHERMITIAN
     , Dpv (U, *FG, *Frb, *UG, *Urb, 1.0,    P.M5, P.mobiusB, P.mobiusC)
-    , A(Ddwf, Dpv)
+    , Abare(Ddwf, Dpv)
 #else
-    , A(Ddwf)
+    , Abare(Ddwf)
 #endif
+    , A(Abare, 2)
   {}
 };
 
@@ -233,7 +238,7 @@ struct OpHolder {
  * and the eigensolver silently returns the largest modes instead of the
  * smallest -- a failure that looks like success.  Stop here instead.
  */
-static RealD checkSpectralBound(ReuseOp& A, GridCartesian* workGrid,
+static RealD checkSpectralBound(LinearOperatorBase<FermType>& A, GridCartesian* workGrid,
                                 GridParallelRNG& RNG, const ReuseParameters& P)
 {
   FermType src(workGrid);
@@ -269,7 +274,7 @@ static RealD checkSpectralBound(ReuseOp& A, GridCartesian* workGrid,
  * Low modes of A, optionally from a supplied starting vector.
  * Returns wall seconds.
  */
-static double lowModes(ReuseOp& A, GridCartesian* workGrid,
+static double lowModes(LinearOperatorBase<FermType>& A, GridCartesian* workGrid,
                        GridParallelRNG& RNG, const ReuseParameters& P,
                        const FermType* seed, const std::string& phase,
                        std::vector<FermType>& evec,
@@ -543,11 +548,13 @@ int main(int argc, char** argv)
   std::cout << GridLogMessage << "=== Phase A: eigensolve on config1 ===" << std::endl;
   std::vector<FermType> V;
   std::vector<std::complex<double> > ev1;
+  H1.A.reset();
   double tA = lowModes(H1.A, FGrid, RNG5, P, nullptr, "phaseA", V, ev1);
+  long mvA = H1.A.matvecs();
   int nv = orthonormalise(V);
   V.erase(V.begin() + nv, V.end());
   std::cout << GridLogMessage << "  config1: " << V.size()
-            << " modes in " << tA << " s" << std::endl;
+            << " modes in " << tA << " s, " << mvA << " matvecs" << std::endl;
   for (size_t i = 0; i < ev1.size(); i++)
     std::cout << GridLogMessage << "    eval1[" << i << "] = " << ev1[i] << std::endl;
 
@@ -578,23 +585,31 @@ int main(int argc, char** argv)
   // ---- Phase B: reuse without solving ----
   std::cout << GridLogMessage << "=== Phase B: reuse V on config2, no solve ==="
             << "   (block size " << Vuse.size() << ")" << std::endl;
+  H2.A.reset();
   rayleighRitz(Vuse, makeApply(H2.A), FGrid, P.lanTol);
+  long mvB = H2.A.matvecs();
+  std::cout << GridLogMessage << "  phase B cost: " << mvB
+            << " matvecs (exact residuals, no solve)" << std::endl;
 
   // ---- Phase C: fresh solve on config2 ----
   double tC = -1.0;
+  long   mvC = -1;
   std::vector<std::complex<double> > evC;
   if (P.doFresh) {
     std::cout << GridLogMessage << "=== Phase C: fresh eigensolve on config2 ===" << std::endl;
     std::vector<FermType> Vc;
+    H2.A.reset();
     tC = lowModes(H2.A, FGrid, RNG5, P, nullptr, "phaseC", Vc, evC);
+    mvC = H2.A.matvecs();
     std::cout << GridLogMessage << "  config2 fresh: " << Vc.size()
-              << " modes in " << tC << " s" << std::endl;
+              << " modes in " << tC << " s, " << mvC << " matvecs" << std::endl;
     for (size_t i = 0; i < evC.size(); i++)
       std::cout << GridLogMessage << "    evalC[" << i << "] = " << evC[i] << std::endl;
   }
 
   // ---- Phase D: seeded solve on config2 ----
   double tD = -1.0;
+  long   mvD = -1;
   std::vector<std::complex<double> > evD;
   if (P.doSeeded && !Vuse.empty()) {
     std::cout << GridLogMessage << "=== Phase D: seeded eigensolve on config2 ===" << std::endl;
@@ -603,19 +618,37 @@ int main(int argc, char** argv)
     RealD n = std::sqrt(norm2(seed));
     if (n > 1e-30) seed = seed * (1.0/n);
     std::vector<FermType> Vd;
+    H2.A.reset();
     tD = lowModes(H2.A, FGrid, RNG5, P, &seed, "phaseD", Vd, evD);
+    mvD = H2.A.matvecs();
     std::cout << GridLogMessage << "  config2 seeded: " << Vd.size()
-              << " modes in " << tD << " s" << std::endl;
+              << " modes in " << tD << " s, " << mvD << " matvecs" << std::endl;
     for (size_t i = 0; i < evD.size(); i++)
       std::cout << GridLogMessage << "    evalD[" << i << "] = " << evD[i] << std::endl;
   }
 
   std::cout << GridLogMessage << "=== summary ===" << std::endl;
-  std::cout << GridLogMessage << "  A config1 solve       : " << tA << " s" << std::endl;
-  std::cout << GridLogMessage << "  C config2 fresh solve : " << tC << " s" << std::endl;
-  std::cout << GridLogMessage << "  D config2 seeded solve: " << tD << " s" << std::endl;
+  std::cout << GridLogMessage
+            << "  phase                     wall_s      matvecs" << std::endl;
+  std::cout << GridLogMessage << "  A config1 solve       "
+            << std::setw(10) << tA << std::setw(13) << mvA << std::endl;
+  std::cout << GridLogMessage << "  B reuse test on cfg2  "
+            << std::setw(10) << "-" << std::setw(13) << mvB << std::endl;
+  std::cout << GridLogMessage << "  C config2 fresh       "
+            << std::setw(10) << tC << std::setw(13) << mvC << std::endl;
+  std::cout << GridLogMessage << "  D config2 seeded      "
+            << std::setw(10) << tD << std::setw(13) << mvD << std::endl;
+  // Matvecs are the figure to trust.  Wall time on a shared GPU has swung by
+  // two orders of magnitude in this tree for an unchanged calculation, so a
+  // wall-time speedup near 1 is not evidence either way on its own.
+  if (mvC > 0 && mvD > 0)
+    std::cout << GridLogMessage << "  seeding speedup, matvecs: "
+              << (double)mvC/(double)mvD << " x" << std::endl;
   if (tC > 0 && tD > 0)
-    std::cout << GridLogMessage << "  speedup from seeding  : " << tC/tD << " x" << std::endl;
+    std::cout << GridLogMessage << "  seeding speedup, wall   : " << tC/tD << " x" << std::endl;
+  std::cout << GridLogMessage
+            << "  (phase B is the reuse test itself: " << mvB
+            << " matvecs against " << mvC << " to rebuild from scratch)" << std::endl;
 
   std::cout << GridLogMessage << std::endl << "Done" << std::endl;
   Grid_finalize();
